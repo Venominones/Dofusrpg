@@ -345,6 +345,11 @@ textarea{min-height:110px;font-family:var(--f-mono);font-size:.8rem}
       <div class="tablewrap" id="bank2Out"></div>
     </div>
     <div class="panel">
+      <h2 style="margin-top:0">Stuffs les plus aimés (vitrines)</h2>
+      <p class="note" style="margin-top:0">Lus par le script sur la page Vitrines du jeu (une fois par jour, à l'export). « Simuler » charge le stuff et le deck dans le Simulateur, avec tes caractéristiques : les objets que tu n'as pas sont pris tels quels, les sorts que tu n'as pas sont ignorés.</p>
+      <div class="tablewrap" id="vitOut"></div>
+    </div>
+    <div class="panel">
       <h2 style="margin-top:0">Effets des Dofus</h2>
       <p class="note" style="margin-top:0">Effets spéciaux (patch du 10 octobre), simulés dans l'Optimiseur, l'Ascension et le Simulateur quand le Dofus est porté. Le Kaliptus n'agit pas en combat : l'Optimiseur le met dans un emplacement libre. Les stats des Dofus s'affichent dans la tier list (Emplacement : Dofus).</p>
       <div class="tablewrap" id="dofusFx"></div>
@@ -355,7 +360,7 @@ textarea{min-height:110px;font-family:var(--f-mono);font-size:.8rem}
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:end;margin:8px 0">
         <div class="field" style="margin:0"><label for="tlFor">Pour le perso</label><select id="tlFor"><option value="principal">Principal</option><option value="saison">Héroïque (saison)</option></select></div>
         <div class="field" style="margin:0"><label for="tlSlot">Emplacement</label><select id="tlSlot"><option value="">Tous</option><option>chapeau</option><option>cape</option><option>amulette</option><option>anneau</option><option>ceinture</option><option>bottes</option><option>arme</option><option>bouclier</option><option>familier</option><option>dofus</option></select></div>
-        <div class="field" style="margin:0"><label for="tlSrc">Objets</label><select id="tlSrc"><option value="all">Tous (possédés + bestiaire)</option><option value="own">Possédés (un des deux persos)</option><option value="saison">Possédés par l'Héroïque</option><option value="principal">Possédés par le principal</option><option value="best">Bestiaire, pas encore obtenus</option></select></div>
+        <div class="field" style="margin:0"><label for="tlSrc">Objets</label><select id="tlSrc"><option value="all">Tous (possédés + bestiaire)</option><option value="own">Possédés (un des deux persos)</option><option value="saison">Possédés par l'Héroïque</option><option value="principal">Possédés par le principal</option><option value="best">Pas encore obtenus (bestiaire + vitrines)</option><option value="vit">Portés dans les vitrines</option></select></div>
         <div class="field" style="margin:0"><label>Niveaux</label><span style="display:flex;gap:4px;align-items:center"><input type="number" id="tlMin" min="1" max="200" value="1" style="width:4.6em"> à <input type="number" id="tlMax" min="1" max="200" value="200" style="width:4.6em"></span></div>
         <div class="field" style="margin:0"><label for="tlStyle">Style</label><select id="tlStyle"><option value="0.3">Farm</option><option value="0.6" selected>Équilibré</option><option value="1.2">Survie</option></select></div>
         <label class="chk" style="margin:0 0 6px"><input type="checkbox" id="tlSet" checked>Bonus de panoplie (part par pièce, panoplie complète)</label>
@@ -511,7 +516,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   const DRAWS_MAX = 3;
   const CLASS_SPECTRAL = { 9: 26 }; // Crâ : Œil de lynx (patch du 10/10 : 18 → 26 %, plafond 60 %)
   // Passifs de classe observés en combat : 8 = « Enchaînement » (+15 % sur les sorts de dégâts suivants du tour, cumulable)
-  const CLASS_PASSIVE = { 8: { chainPct: 15 } }; const CHAIN_MAX = 3;
+  const CLASS_PASSIVE = { 8: { chainPct: 15 } }; const CHAIN_MAX = 3; const CARACS_ALL = ['force', 'intelligence', 'chance', 'agilite'];
   const SPECTRAL_PER_PO = 0.4, SPECTRAL_MAX = 60;
   const POINTS_PER_LEVEL = 5;
   const CARAC_TIERS = [[0, 1], [100, 2], [200, 3], [300, 4]];
@@ -651,28 +656,30 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   function dmgLine(S, line, crit, buffPuiss, dmgPct, spectral, resPct, withFixed, isWeapon) {
     const base = line.min + RND() * (line.max - line.min + 1);
     const b = Math.min(line.max, Math.floor(base));
-    const carac = (S[CARAC_OF_EL[line.el || 0]] || 0) + (S.puissance || 0) + buffPuiss;
+    const carac = (S[CARAC_OF_EL[line.el || 0]] || 0) + (S.puissance || 0) + buffPuiss + ((S._cb && S._cb[CARAC_OF_EL[line.el || 0]]) || 0);
     let fixed = 0;
     if (withFixed) fixed = (S.dommages || 0) + (S['dommages' + EL_NAMES[line.el || 0]] || 0) + (crit ? (S.dommagesCritiques || 0) : 0);
-    let v = (b * (1 + carac / 100) * (crit === 'boost' ? CRIT_MULT : 1) + fixed) * (1 + (isWeapon ? 0 : dmgPct) / 100) * (spectral ? 2 : 1) * (1 - resPct / 100);
+    let v = (b * (1 + carac / 100) * (crit === 'boost' ? CRIT_MULT : 1) + fixed) * (1 + (isWeapon ? (S.dmgPctArmes || 0) : dmgPct) / 100) * (spectral ? 2 : 1) * (1 - resPct / 100);
     return Math.max(0, Math.floor(v));
   }
   // Valeur moyenne attendue d'une ligne (pour la politique de jeu)
   function expLine(S, line, critP, buffPuiss, dmgPct, specP, resPct, withFixed, isWeapon, critLine) {
     const avg = l => (l.min + l.max) / 2;
-    const carac = (S[CARAC_OF_EL[line.el || 0]] || 0) + (S.puissance || 0) + buffPuiss;
+    const carac = (S[CARAC_OF_EL[line.el || 0]] || 0) + (S.puissance || 0) + buffPuiss + ((S._cb && S._cb[CARAC_OF_EL[line.el || 0]]) || 0);
     const fixed = withFixed ? (S.dommages || 0) + (S['dommages' + EL_NAMES[line.el || 0]] || 0) : 0;
     const nc = avg(line) * (1 + carac / 100) + fixed;
     const cl = critLine || line;
     const cr = avg(cl) * (1 + carac / 100) * (critLine ? 1 : CRIT_MULT) + fixed + (withFixed ? (S.dommagesCritiques || 0) : 0);
-    const v = ((1 - critP) * nc + critP * cr) * (1 + (isWeapon ? 0 : dmgPct) / 100) * (1 + (isWeapon ? 0 : specP)) * (1 - resPct / 100);
+    const v = ((1 - critP) * nc + critP * cr) * (1 + (isWeapon ? (S.dmgPctArmes || 0) : dmgPct) / 100) * (1 + (isWeapon ? 0 : specP)) * (1 - resPct / 100);
     return Math.max(0, v);
   }
 
   // ---------- Préparation des cartes ----------
   function prepCard(c, uid) {
     const isDmg = l => l.k === 'dmg' || l.k === 'steal';
-    const eff = c.eff || [];
+    // Gain de PA : immédiat (Précipitation, vérifié en jeu), sauf si la description dit « au tour suivant » (Odorat)
+    const apLater = /PA au tour suivant|augmenter les PA au tour suivant/i.test(String(c.d || c.desc || ''));
+    const eff = (c.eff || []).map(l => l.k === 'apGain' ? Object.assign({}, l, { now: !apLater }) : l);
     const chanceLines = eff.filter(l => l.chance);
     return {
       uid, id: c.id, name: c.n || c.name, ap: c.ap, cc: c.cc || 0, eff, crit: c.crit || null,
@@ -712,7 +719,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const wMode = opts.weaponMode || (WEAPON_LAST ? 'last' : WEAPON_MODE);
     const chainPct = opts.chainPct != null ? opts.chainPct : ((CLASS_PASSIVE[S._breed] || {}).chainPct || 0);
     const T = { buffP: 0, buffC: 0, dmgPct: 0, sustainLeft: 0, weaponUsed: false, inv: false, invS: false, half: false, cards: 0, lastEl: null, round: 0 };
-    const DF = S._dofus || {}; let vulb = 0, critTurn = false, pourpreUsed = !DF.pourpre, emeraudeUsed = !DF.emeraude;
+    const DF = S._dofus || {}; const pers = []; S._cb = {}; /* bonus qui durent plusieurs tours (Prélude au Fer, Évolution…) et caracs volées (Drain Élémentaire) */ let vulb = 0, critTurn = false, pourpreUsed = !DF.pourpre, emeraudeUsed = !DF.emeraude;
     const saved = () => { if (P.hp <= 0 && !emeraudeUsed) { emeraudeUsed = true; P.hp = Math.max(1, Math.round(maxHp * 0.2)); } return P.hp > 0; }; // Émeraude : survit une fois avec 20 % de PV
     // Mécaniques de boss : chaque boss encore debout applique les siennes (bestiaire + mécaniques apprises en combat)
     const alive = () => mons.filter(x => x.alive);
@@ -730,7 +737,8 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       // ----- tour du joueur -----
       let ap = S._paTotal + P.apNext + (critTurn ? 1 : 0); P.apNext = 0; critTurn = false; // Turquoise : +1 PA (au-delà du plafond) le tour après un critique
       while (hand.length < HAND_SIZE + (round === 1 && DF.ocre ? 1 : 0)) { const c = draw(); if (!c) break; hand.push(c); }
-      T.buffP = 0; T.buffC = 0; T.chainN = 0; T.dmgPct = S.dmgPctSorts || 0; T.sustainLeft = SUSTAIN.perTurn; T.weaponUsed = false; T.cards = 0; let drawsLeft = DRAWS_MAX;
+      T.buffP = 0; T.buffC = 0; T.chainN = 0; T.dmgPct = S.dmgPctSorts || 0; S._cb = {};
+      for (const b of pers) if (b.until >= round) { if (b.stat === 'puissance') T.buffP += b.v; else if (b.stat === 'critique') T.buffC += b.v; else if (b.stat === 'dmgPctSorts') T.dmgPct += b.v; else S._cb[b.stat] = (S._cb[b.stat] || 0) + b.v; } T.sustainLeft = SUSTAIN.perTurn; T.weaponUsed = false; T.cards = 0; let drawsLeft = DRAWS_MAX;
       const invFrom = opts.invertFrom || mv('invertFrom', 0), sealPa = opts.sealPa || mv('sealPa', 0), sealFrom = opts.sealFrom || mv('sealFrom', 1);
       const halfFrom = mv('healHalfFrom', 0);
       T.inv = invFrom > 0 && round >= invFrom; T.invS = T.inv && !!(opts.invertShields || mv('invertShields', false)); T.seal = (sealPa > 0 && round >= sealFrom) ? sealPa : 0;
@@ -770,6 +778,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
             : c.weapon && wMode === 'prio' ? 2e9
             : c.weapon && wMode === 'last' ? -1
             : c.hasDmg ? 1e9 + (AUTO_ORDER === 'hand' ? 1e6 - hand.indexOf(c) : AUTO_ORDER === 'eff' ? dmgCardValue(c, T.buffP, T.buffC, T.dmgPct) / Math.max(1, c.ap) : AUTO_ORDER === 'effmono' ? dmgCardValue(c, T.buffP, T.buffC, T.dmgPct, true) / Math.max(1, c.ap) : AUTO_ORDER === 'mono' ? dmgCardValue(c, T.buffP, T.buffC, T.dmgPct, true) : dmgCardValue(c, T.buffP, T.buffC, T.dmgPct))
+            : (c.eff && c.eff.some(l => l.k === 'apGain' && l.now && l.max > c.ap)) ? 2.5e9 // gain de PA immédiat : d'abord, il paie les sorts suivants
             : (c.eff && c.eff.some(l => l.k === 'apGain' || l.k === 'apRemove')) ? 1e9 + (AUTO_ORDER === 'eff' ? 0 : maxD * 0.5) : 0;
           const rk = new Map(opts2.map(o => [o, rank(o.c)])); opts2.sort((a, b) => rk.get(b) - rk.get(a)); } // valeur calculée une fois par carte
         } else opts2.sort((a, b) => b.v / Math.max(1, cost(b.c)) - a.v / Math.max(1, cost(a.c)) || b.v - a.v);
@@ -782,6 +791,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         play(pick); if (chainPct && (T.chainN || 0) < CHAIN_MAX) { T.dmgPct += chainPct; T.chainN = (T.chainN || 0) + 1; } // Enchaînement (Iop) : chaque sort lancé (et l'arme, observé) +15 % aux suivants du tour, 3 fois au plus (+45 %) — texte du jeu // l'arme compte aussi dans l'Enchaînement (observé)
         if (opts.trace) (trace[round] = trace[round] || []).push(pick.name + (pick.weapon ? ' (arme)' : ''));
         if (!pick.weapon) T.cards++;
+        if (T.apNow) { ap += T.apNow; T.apNow = 0; } // PA gagnés tout de suite (Précipitation)
         if (P.hp <= 0 && !saved()) return result(false, round);
         ap -= cost(pick); if (!pick.weapon) T.seal = 0;
         if (pick.weapon) T.weaponUsed = true; else { hand.splice(hand.indexOf(pick), 1); discard.push(pick); }
@@ -1001,7 +1011,11 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         } else if (l.k === 'bomb') {
           if (!tgt || !tgt.alive) tgt = target(); if (tgt) tgt.bombs.push(l);
         } else if (l.k === 'buff' && l.tgt === 'self') {
-          if (l.stat === 'puissance') T.buffP += l.max; else if (l.stat === 'critique') T.buffC += l.max; else if (l.stat === 'dmgPctSorts') T.dmgPct += l.max;
+          if (l.stat === 'puissance') T.buffP += l.max; else if (l.stat === 'critique') T.buffC += l.max; else if (l.stat === 'dmgPctSorts') T.dmgPct += l.max; else if (CARACS_ALL.includes(l.stat)) S._cb[l.stat] = (S._cb[l.stat] || 0) + l.max;
+          if ((l.dur || 1) > 1) pers.push({ stat: l.stat, v: l.max, until: T.round + l.dur - 1 });
+        } else if (l.k === 'stealStat' && CARACS_ALL.includes(l.stat)) {
+          // Vol de caractéristique : la carac volée s'ajoute à la tienne pendant la durée (dès ce tour)
+          S._cb[l.stat] = (S._cb[l.stat] || 0) + l.max; if ((l.dur || 1) > 1) pers.push({ stat: l.stat, v: l.max, until: T.round + l.dur - 1 });
         } else if (l.k === 'shieldHp' || l.k === 'shieldLvl') {
           if (T.sustainLeft <= 0 && !sustainUsed) continue;
           sustainUsed = true;
@@ -1017,7 +1031,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
           const n = l.max; if (n <= 0) continue;
           if (l.zone || !c.weapon) { for (const m of mons) if (m.alive && (l.zone || m === tgt || !tgt)) m.weaken = Math.min(100, m.weaken + WEAKEN_PER_PA * n); }
           else if (tgt) tgt.weaken = Math.min(100, tgt.weaken + WEAKEN_PER_PA * n);
-        } else if (l.k === 'apGain') { P.apNext += l.max; }
+        } else if (l.k === 'apGain') { if (l.now) T.apNow = (T.apNow || 0) + l.max; else P.apNext += l.max; }
       }
       if (sustainUsed) T.sustainLeft--;
     }
@@ -1293,7 +1307,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   }
   function evaluate(data, st, ctx, monsters, n, objective, fight) {
     if (!data._memo || data._memoFor !== monsters) { data._memo = new Map(); data._memoFor = monsters; data._memoHits = data._memoHits || 0; }
-    const mk = stateKey(st) + '#' + n + '#' + objective + '#' + JSON.stringify(fight || {});
+    const mk = stateKey(st) + '#' + n + '#' + objective + '#' + JSON.stringify(fight || {}) + (fight && fight.ranked ? '#' + (st.deck || []).join(',') : '');
     const hit = data._memo.get(mk);
     if (hit) { data._memoHits++; return { r: hit.r, S: hit.S, score: hit.score }; }
     const res = evaluateRaw(data, st, ctx, monsters, n, objective, fight);
@@ -1369,6 +1383,17 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         const e = E(cand);
         if (e.score > best.score) { best = e; cur = cand; }
         if (it % 3 === 0) tick('Deck', it, iters, best);
+      }
+    }
+    // Deck plus court : retirer une carte peut aider (on pioche plus souvent ses meilleurs sorts) ; les meilleurs decks du jeu ont 4 à 7 sorts
+    function pruneDeck() {
+      if (!opts.optDeck) return;
+      for (let round = 0; round < 12; round++) {
+        if (cur.deck.length <= (opts.minDeck || 4)) return;
+        let bi = -1, be = best;
+        for (let i = 0; i < cur.deck.length; i++) { const d2 = cur.deck.slice(0, i).concat(cur.deck.slice(i + 1)); const e = E(Object.assign({}, cur, { deck: d2 })); if (e.score > be.score + 0.5) { be = e; bi = i; } }
+        if (bi < 0) return;
+        cur = Object.assign({}, cur, { deck: cur.deck.slice(0, bi).concat(cur.deck.slice(bi + 1)) }); best = be; tick('Deck plus court', round, 12, best);
       }
     }
     // Recherche par archétype : on part des caracs de l'élément et du meilleur deck « dégâts par PA » pour ces caracs
@@ -1502,9 +1527,9 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     gearStage();
 
     // --- 3. Deck (échanges gloutons) ---
-    if (opts.optDeck) { deckPass(budget.deckIter); if (opts.optAlloc) doAlloc(); }
+    if (opts.optDeck) { deckPass(budget.deckIter); pruneDeck(); if (opts.optAlloc) doAlloc(); }
     // Passes supplémentaires : équipement, caracs et sorts se répondent (nouveau deck → nouveaux objets utiles → …)
-    for (let p = 1; p < (opts.passes || 1); p++) { tick('Passe ' + (p + 1), p, opts.passes, best); gearStage(); if (opts.optDeck) { deckPass(budget.deckIter); if (opts.optAlloc) doAlloc(); } }
+    for (let p = 1; p < (opts.passes || 1); p++) { tick('Passe ' + (p + 1), p, opts.passes, best); gearStage(); if (opts.optDeck) { deckPass(budget.deckIter); pruneDeck(); if (opts.optAlloc) doAlloc(); } }
 
     // --- 4. Emplacements restés vides : plus rien n'y améliore le combat, mais un objet utile hors combat vaut mieux que rien
     //     (prospection pour le butin, sagesse pour l'XP, puis vitalité), à condition de ne rien perdre en combat.
@@ -1528,7 +1553,33 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       }
       if (filled.length) cur = Object.assign({}, cur, { _filled: filled });
     }
-    const fin = evaluate(data, cur, ctx, mons, NF, obj, FO);
+    // --- 5. Ordre de l'Auto (page Deck, « Régler un ordre ») : en mode Auto, on cherche la meilleure priorité des sorts
+    //     et on compare avec « sans ordre » (l'Auto choisit seule). L'ordre du deck = l'ordre de priorité.
+    if (opts.optDeck !== false && FO.auto && cur.deck.length > 1 && opts.autoOrder !== false) orderPass();
+    function orderPass() {
+      const FR = Object.assign({}, FO, { ranked: true });
+      const evR = d => { ev++; return evaluate(data, Object.assign({}, cur, { deck: d }), ctx, mons, N, obj, FR).score; };
+      const free = evaluate(data, cur, ctx, mons, N, obj, FO).score;
+      const cards = cur.deck.map(k => data._cardsByKey[k]).filter(Boolean);
+      const b0 = buildState(data, cur, ctx).S;
+      const kind = c => { const ks = (c.eff || []).map(l => l.k); const gain = (c.eff || []).filter(l => l.k === 'apGain').reduce((a, l) => a + (l.max || 0), 0);
+        if (gain > c.ap) return 0; if (ks.includes('shieldHp') || ks.includes('shieldLvl')) return 1; if (ks.includes('buff') && !ks.some(k => k === 'dmg' || k === 'steal')) return 2; if (ks.some(k => k === 'dmg' || k === 'steal' || k === 'bomb')) return 3; return 4; };
+      const dmgPerAp = c => (c.eff || []).filter(l => l.k === 'dmg' || l.k === 'steal').reduce((a, l) => a + ((l.min + l.max) / 2) * (1 + ((b0[R.CARAC_OF_EL[l.el || 0]] || 0) + (b0.puissance || 0)) / 100) * (l.zone ? 1.6 : 1), 0) / Math.max(1, c.ap);
+      let order = cards.slice().sort((a, b) => kind(a) - kind(b) || dmgPerAp(b) - dmgPerAp(a)).map(c => c.key);
+      let bs = evR(order);
+      for (let sweep = 0; sweep < 3; sweep++) {
+        let moved = false;
+        for (let i = 0; i < order.length - 1; i++) { const o2 = order.slice(); [o2[i], o2[i + 1]] = [o2[i + 1], o2[i]]; const sc = evR(o2); if (sc > bs + 0.3) { bs = sc; order = o2; moved = true; } }
+        // déplacer une carte tout en haut (bonus, PA, bouclier placés trop bas)
+        for (let i = 1; i < order.length; i++) { const o2 = [order[i]].concat(order.slice(0, i), order.slice(i + 1)); const sc = evR(o2); if (sc > bs + 0.3) { bs = sc; order = o2; moved = true; } }
+        if (!moved) break;
+        tick('Ordre de l\'Auto', sweep, 3, best);
+      }
+      const ranked = bs > free + 0.5;
+      cur = Object.assign({}, cur, { deck: order, _autoOrder: { ranked, gain: bs - free, free, ordered: bs } });
+    }
+    const FOF = cur._autoOrder && cur._autoOrder.ranked ? Object.assign({}, FO, { ranked: true }) : FO;
+    const fin = evaluate(data, cur, ctx, mons, NF, obj, FOF);
     tick('Terminé', 1, 1, fin);
     return { state: cur, start, final: fin, evals: ev };
   }
@@ -1593,7 +1644,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       }
     }
     const FO = FINAL_FO(opts);
-    for (const r of results.slice(0, keep || 3)) r.final = evaluate(data, r.state, opts.ctx, opts.monsters, 2500, opts.objective, FO);
+    for (const r of results.slice(0, keep || 3)) r.final = evaluate(data, r.state, opts.ctx, opts.monsters, 2500, opts.objective, r.state._autoOrder && r.state._autoOrder.ranked ? Object.assign({}, FO, { ranked: true }) : FO);
     return { results, evals };
   }
   function deepStart(data, opts) { data._cardsByKey = data._cardsByKey || Object.fromEntries(data.cards.map(c => [c.key, c])); return evaluate(data, { gear: opts.start.gear, alloc: opts.start.alloc, deck: opts.start.deck }, opts.ctx, opts.monsters, 2500, opts.objective, FINAL_FO(opts)); }
@@ -1684,7 +1735,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     let off = PAt * perPA * glob;
     if (weapon && weapon.lines) {
       let wt = 0; for (const l of weapon.lines) if (l.k === 'dmg' || l.k === 'steal') { const e = l.el || 0; wt += (((l.min || 0) + (l.max || 0)) / 2) * M(e) * (1 + 0.2 * Math.min(1, (weapon.cc || 0) / 100)) + F(e); }
-      wt *= glob * (weapon.perTurn || 1);
+      wt *= glob * (weapon.perTurn || 1) * (1 + (S.dmgPctArmes || 0) / 100) / (1 + (S.dmgPctSorts || 0) / 100);
       off += Math.max(0, wt - (weapon.ap || 0) * (weapon.perTurn || 1) * off / PAt);
     }
     return off;
@@ -1753,7 +1804,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
 <script type="text/plain" id="src-userscript">// ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.8.1
+// @version      2.9.2
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -1803,7 +1854,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   const DRAWS_MAX = 3;
   const CLASS_SPECTRAL = { 9: 26 }; // Crâ : Œil de lynx (patch du 10/10 : 18 → 26 %, plafond 60 %)
   // Passifs de classe observés en combat : 8 = « Enchaînement » (+15 % sur les sorts de dégâts suivants du tour, cumulable)
-  const CLASS_PASSIVE = { 8: { chainPct: 15 } }; const CHAIN_MAX = 3;
+  const CLASS_PASSIVE = { 8: { chainPct: 15 } }; const CHAIN_MAX = 3; const CARACS_ALL = ['force', 'intelligence', 'chance', 'agilite'];
   const SPECTRAL_PER_PO = 0.4, SPECTRAL_MAX = 60;
   const POINTS_PER_LEVEL = 5;
   const CARAC_TIERS = [[0, 1], [100, 2], [200, 3], [300, 4]];
@@ -1943,28 +1994,30 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   function dmgLine(S, line, crit, buffPuiss, dmgPct, spectral, resPct, withFixed, isWeapon) {
     const base = line.min + RND() * (line.max - line.min + 1);
     const b = Math.min(line.max, Math.floor(base));
-    const carac = (S[CARAC_OF_EL[line.el || 0]] || 0) + (S.puissance || 0) + buffPuiss;
+    const carac = (S[CARAC_OF_EL[line.el || 0]] || 0) + (S.puissance || 0) + buffPuiss + ((S._cb && S._cb[CARAC_OF_EL[line.el || 0]]) || 0);
     let fixed = 0;
     if (withFixed) fixed = (S.dommages || 0) + (S['dommages' + EL_NAMES[line.el || 0]] || 0) + (crit ? (S.dommagesCritiques || 0) : 0);
-    let v = (b * (1 + carac / 100) * (crit === 'boost' ? CRIT_MULT : 1) + fixed) * (1 + (isWeapon ? 0 : dmgPct) / 100) * (spectral ? 2 : 1) * (1 - resPct / 100);
+    let v = (b * (1 + carac / 100) * (crit === 'boost' ? CRIT_MULT : 1) + fixed) * (1 + (isWeapon ? (S.dmgPctArmes || 0) : dmgPct) / 100) * (spectral ? 2 : 1) * (1 - resPct / 100);
     return Math.max(0, Math.floor(v));
   }
   // Valeur moyenne attendue d'une ligne (pour la politique de jeu)
   function expLine(S, line, critP, buffPuiss, dmgPct, specP, resPct, withFixed, isWeapon, critLine) {
     const avg = l => (l.min + l.max) / 2;
-    const carac = (S[CARAC_OF_EL[line.el || 0]] || 0) + (S.puissance || 0) + buffPuiss;
+    const carac = (S[CARAC_OF_EL[line.el || 0]] || 0) + (S.puissance || 0) + buffPuiss + ((S._cb && S._cb[CARAC_OF_EL[line.el || 0]]) || 0);
     const fixed = withFixed ? (S.dommages || 0) + (S['dommages' + EL_NAMES[line.el || 0]] || 0) : 0;
     const nc = avg(line) * (1 + carac / 100) + fixed;
     const cl = critLine || line;
     const cr = avg(cl) * (1 + carac / 100) * (critLine ? 1 : CRIT_MULT) + fixed + (withFixed ? (S.dommagesCritiques || 0) : 0);
-    const v = ((1 - critP) * nc + critP * cr) * (1 + (isWeapon ? 0 : dmgPct) / 100) * (1 + (isWeapon ? 0 : specP)) * (1 - resPct / 100);
+    const v = ((1 - critP) * nc + critP * cr) * (1 + (isWeapon ? (S.dmgPctArmes || 0) : dmgPct) / 100) * (1 + (isWeapon ? 0 : specP)) * (1 - resPct / 100);
     return Math.max(0, v);
   }
 
   // ---------- Préparation des cartes ----------
   function prepCard(c, uid) {
     const isDmg = l => l.k === 'dmg' || l.k === 'steal';
-    const eff = c.eff || [];
+    // Gain de PA : immédiat (Précipitation, vérifié en jeu), sauf si la description dit « au tour suivant » (Odorat)
+    const apLater = /PA au tour suivant|augmenter les PA au tour suivant/i.test(String(c.d || c.desc || ''));
+    const eff = (c.eff || []).map(l => l.k === 'apGain' ? Object.assign({}, l, { now: !apLater }) : l);
     const chanceLines = eff.filter(l => l.chance);
     return {
       uid, id: c.id, name: c.n || c.name, ap: c.ap, cc: c.cc || 0, eff, crit: c.crit || null,
@@ -2004,7 +2057,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const wMode = opts.weaponMode || (WEAPON_LAST ? 'last' : WEAPON_MODE);
     const chainPct = opts.chainPct != null ? opts.chainPct : ((CLASS_PASSIVE[S._breed] || {}).chainPct || 0);
     const T = { buffP: 0, buffC: 0, dmgPct: 0, sustainLeft: 0, weaponUsed: false, inv: false, invS: false, half: false, cards: 0, lastEl: null, round: 0 };
-    const DF = S._dofus || {}; let vulb = 0, critTurn = false, pourpreUsed = !DF.pourpre, emeraudeUsed = !DF.emeraude;
+    const DF = S._dofus || {}; const pers = []; S._cb = {}; /* bonus qui durent plusieurs tours (Prélude au Fer, Évolution…) et caracs volées (Drain Élémentaire) */ let vulb = 0, critTurn = false, pourpreUsed = !DF.pourpre, emeraudeUsed = !DF.emeraude;
     const saved = () => { if (P.hp <= 0 && !emeraudeUsed) { emeraudeUsed = true; P.hp = Math.max(1, Math.round(maxHp * 0.2)); } return P.hp > 0; }; // Émeraude : survit une fois avec 20 % de PV
     // Mécaniques de boss : chaque boss encore debout applique les siennes (bestiaire + mécaniques apprises en combat)
     const alive = () => mons.filter(x => x.alive);
@@ -2022,7 +2075,8 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       // ----- tour du joueur -----
       let ap = S._paTotal + P.apNext + (critTurn ? 1 : 0); P.apNext = 0; critTurn = false; // Turquoise : +1 PA (au-delà du plafond) le tour après un critique
       while (hand.length < HAND_SIZE + (round === 1 && DF.ocre ? 1 : 0)) { const c = draw(); if (!c) break; hand.push(c); }
-      T.buffP = 0; T.buffC = 0; T.chainN = 0; T.dmgPct = S.dmgPctSorts || 0; T.sustainLeft = SUSTAIN.perTurn; T.weaponUsed = false; T.cards = 0; let drawsLeft = DRAWS_MAX;
+      T.buffP = 0; T.buffC = 0; T.chainN = 0; T.dmgPct = S.dmgPctSorts || 0; S._cb = {};
+      for (const b of pers) if (b.until >= round) { if (b.stat === 'puissance') T.buffP += b.v; else if (b.stat === 'critique') T.buffC += b.v; else if (b.stat === 'dmgPctSorts') T.dmgPct += b.v; else S._cb[b.stat] = (S._cb[b.stat] || 0) + b.v; } T.sustainLeft = SUSTAIN.perTurn; T.weaponUsed = false; T.cards = 0; let drawsLeft = DRAWS_MAX;
       const invFrom = opts.invertFrom || mv('invertFrom', 0), sealPa = opts.sealPa || mv('sealPa', 0), sealFrom = opts.sealFrom || mv('sealFrom', 1);
       const halfFrom = mv('healHalfFrom', 0);
       T.inv = invFrom > 0 && round >= invFrom; T.invS = T.inv && !!(opts.invertShields || mv('invertShields', false)); T.seal = (sealPa > 0 && round >= sealFrom) ? sealPa : 0;
@@ -2062,6 +2116,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
             : c.weapon && wMode === 'prio' ? 2e9
             : c.weapon && wMode === 'last' ? -1
             : c.hasDmg ? 1e9 + (AUTO_ORDER === 'hand' ? 1e6 - hand.indexOf(c) : AUTO_ORDER === 'eff' ? dmgCardValue(c, T.buffP, T.buffC, T.dmgPct) / Math.max(1, c.ap) : AUTO_ORDER === 'effmono' ? dmgCardValue(c, T.buffP, T.buffC, T.dmgPct, true) / Math.max(1, c.ap) : AUTO_ORDER === 'mono' ? dmgCardValue(c, T.buffP, T.buffC, T.dmgPct, true) : dmgCardValue(c, T.buffP, T.buffC, T.dmgPct))
+            : (c.eff && c.eff.some(l => l.k === 'apGain' && l.now && l.max > c.ap)) ? 2.5e9 // gain de PA immédiat : d'abord, il paie les sorts suivants
             : (c.eff && c.eff.some(l => l.k === 'apGain' || l.k === 'apRemove')) ? 1e9 + (AUTO_ORDER === 'eff' ? 0 : maxD * 0.5) : 0;
           const rk = new Map(opts2.map(o => [o, rank(o.c)])); opts2.sort((a, b) => rk.get(b) - rk.get(a)); } // valeur calculée une fois par carte
         } else opts2.sort((a, b) => b.v / Math.max(1, cost(b.c)) - a.v / Math.max(1, cost(a.c)) || b.v - a.v);
@@ -2074,6 +2129,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         play(pick); if (chainPct && (T.chainN || 0) < CHAIN_MAX) { T.dmgPct += chainPct; T.chainN = (T.chainN || 0) + 1; } // Enchaînement (Iop) : chaque sort lancé (et l'arme, observé) +15 % aux suivants du tour, 3 fois au plus (+45 %) — texte du jeu // l'arme compte aussi dans l'Enchaînement (observé)
         if (opts.trace) (trace[round] = trace[round] || []).push(pick.name + (pick.weapon ? ' (arme)' : ''));
         if (!pick.weapon) T.cards++;
+        if (T.apNow) { ap += T.apNow; T.apNow = 0; } // PA gagnés tout de suite (Précipitation)
         if (P.hp <= 0 && !saved()) return result(false, round);
         ap -= cost(pick); if (!pick.weapon) T.seal = 0;
         if (pick.weapon) T.weaponUsed = true; else { hand.splice(hand.indexOf(pick), 1); discard.push(pick); }
@@ -2293,7 +2349,11 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         } else if (l.k === 'bomb') {
           if (!tgt || !tgt.alive) tgt = target(); if (tgt) tgt.bombs.push(l);
         } else if (l.k === 'buff' && l.tgt === 'self') {
-          if (l.stat === 'puissance') T.buffP += l.max; else if (l.stat === 'critique') T.buffC += l.max; else if (l.stat === 'dmgPctSorts') T.dmgPct += l.max;
+          if (l.stat === 'puissance') T.buffP += l.max; else if (l.stat === 'critique') T.buffC += l.max; else if (l.stat === 'dmgPctSorts') T.dmgPct += l.max; else if (CARACS_ALL.includes(l.stat)) S._cb[l.stat] = (S._cb[l.stat] || 0) + l.max;
+          if ((l.dur || 1) > 1) pers.push({ stat: l.stat, v: l.max, until: T.round + l.dur - 1 });
+        } else if (l.k === 'stealStat' && CARACS_ALL.includes(l.stat)) {
+          // Vol de caractéristique : la carac volée s'ajoute à la tienne pendant la durée (dès ce tour)
+          S._cb[l.stat] = (S._cb[l.stat] || 0) + l.max; if ((l.dur || 1) > 1) pers.push({ stat: l.stat, v: l.max, until: T.round + l.dur - 1 });
         } else if (l.k === 'shieldHp' || l.k === 'shieldLvl') {
           if (T.sustainLeft <= 0 && !sustainUsed) continue;
           sustainUsed = true;
@@ -2309,7 +2369,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
           const n = l.max; if (n <= 0) continue;
           if (l.zone || !c.weapon) { for (const m of mons) if (m.alive && (l.zone || m === tgt || !tgt)) m.weaken = Math.min(100, m.weaken + WEAKEN_PER_PA * n); }
           else if (tgt) tgt.weaken = Math.min(100, tgt.weaken + WEAKEN_PER_PA * n);
-        } else if (l.k === 'apGain') { P.apNext += l.max; }
+        } else if (l.k === 'apGain') { if (l.now) T.apNow = (T.apNow || 0) + l.max; else P.apNext += l.max; }
       }
       if (sustainUsed) T.sustainLeft--;
     }
@@ -3027,6 +3087,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     let forge = null; try { const fp = await rsc('/forgemagie'); const F = fp.find(p => 'orbs' in p && 'level' in p && 'xp' in p); if (F) { forge = { level: F.level, xp: F.xp }; for (const k in F) { const v = F[k]; if (typeof v === 'number' && !(k in forge)) forge[k] = v; else if (Array.isArray(v) && v.length && v.length <= 250 && JSON.stringify(v).length < 20000) forge[k] = v; } } } catch (e) {}
     // Compagnon (patch du 10/10, perso principal) : niveau et bonus d'équipement, lus sur sa page si elle existe ; structure encore inconnue, on garde un extrait brut pour l'analyse
     let companion = null; if (PROFILE !== 'saison') for (const path of ['/compagnon', '/companion']) { try { const cp = await rsc(path); const holder = cp.find(p => p && p.initial && typeof p.initial === 'object' && ('kibble' in p.initial || 'bonusPct' in p.initial)); const C = (holder && holder.initial) || cp.find(p => p && typeof p === 'object' && !Array.isArray(p) && Object.keys(p).some(k => /croq|kibble|compan|pet|food/i.test(k))) || cp.find(p => p && typeof p === 'object' && 'level' in p && Object.keys(p).some(k => /bonus|pct|percent|mult/i.test(k))); if (C) { companion = { path }; for (const [k, v] of Object.entries(C)) { if (typeof v === 'number' || typeof v === 'string' && v.length < 60) companion[k] = v; } const pk = Object.keys(C).find(k => /bonus|pct|percent|statmult|mult/i.test(k) && typeof C[k] === 'number'); if ('bonusPct' in C) companion.pct = C.bonusPct; else if (pk) companion.pct = C[pk]; companion.raw = JSON.stringify(C).slice(0, 2000); break; } } catch (e) {} }
+    let vitrines = null; try { vitrines = await fetchVitrines(false); } catch (e) {}
     let dofusSets = null; try { const ids = ((best && best.items) || []).map(x => x.setId).concat((I.sets || []).map(x => x.id)).concat((I.entries || []).map(e => e.item && e.item.setId).concat((I.slots || []).map(e => e.item && e.item.setId))); dofusSets = await fetchDofusSets(ids.filter(Boolean)); } catch (e) {}
     const it = (x) => ({ id: x.item.id, n: x.item.n, lvl: x.item.lvl, s: x.item.s, r: x.item.r, setId: x.item.setId || null, st: x.item.st, w: x.item.w || null });
     return {
@@ -3043,11 +3104,42 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       turnLogs: db.turnLogs || [],
       setBonus: loadSets(),
       dofusSets,
+      vitrines,
       setsList: (I.sets || []).map(x => ({ id: x.id, n: x.n, size: x.size, owned: x.owned })),
       bestiary: best
     };
   }
 
+  // ---------- Vitrines publiques (stuffs les plus aimés) : lecture seule, une fois par jour au plus ----------
+  async function rawRsc(path) {
+    const h = await origFetch(path, { credentials: 'include' }).then(r => r.text());
+    return [...h.matchAll(/self\.__next_f\.push\(\[1,"((?:[^"\\]|\\.)*)"\]\)/g)].map(m => { try { return JSON.parse('"' + m[1] + '"'); } catch (e) { return ''; } }).join('');
+  }
+  function jsonAt(t, i) { let d = 0, inS = false; for (let k = i; k < t.length; k++) { const c = t[k]; if (inS) { if (c === '\\') { k++; continue; } if (c === '"') inS = false; continue; } if (c === '"') { inS = true; continue; } if (c === '{') d++; else if (c === '}') { d--; if (!d) return t.slice(i, k + 1); } } return null; }
+  async function fetchVitrines(force) {
+    const KEY = 'labo-vitrines';
+    try { const c = JSON.parse(localStorage.getItem(KEY) || 'null'); if (!force && c && Date.now() - c.t < 864e5) return c; } catch (e) {}
+    const lst = await rawRsc('/vitrines?tri=meilleures');
+    const ids = [...new Set([...lst.matchAll(/\/vitrines\/([0-9a-f-]{36})/g)].map(m => m[1]))].slice(0, 30);
+    const items = {}, cards = {}, builds = [];
+    for (const id of ids) {
+      try {
+        const t = await rawRsc('/vitrines/' + id);
+        const its = []; let i = -1;
+        while ((i = t.indexOf('"item":{', i + 1)) >= 0) { try { const o = JSON.parse(jsonAt(t, i + 7)); if (o && o.id && o.st) { items[o.id] = { id: o.id, n: o.n, lvl: o.lvl, s: o.s, r: o.r, st: o.st, w: o.w || null, setId: o.setId || null }; its.push(o.id); } } catch (e) {} }
+        const deck = [...t.matchAll(/\["\$","div","(\d+)",\{"type":"\$undefined","onClick":"\$undefined","disabled":"\$undefined","title":"((?:[^"\\]|\\.)*)"[\s\S]{0,1500}?"aria-label":"(\d+) PA"[\s\S]{0,900}?line-clamp-2","children":"((?:[^"\\]|\\.)*)"\}\],\["\$","\$L[0-9a-z]+",null,\{"lines":(\[[^\]]*\])/g)].map(m => { const c = { id: +m[1], n: m[4], ap: +m[3], lines: (() => { try { return JSON.parse(m[5]); } catch (e) { return []; } })() }; cards[c.id] = c; return c.id; });
+        const codes = [...new Set([...t.matchAll(/DM-[ES]-[0-9A-Z]+-[0-9A-Z]{4}/g)].map(m => m[0]))];
+        const head = (t.match(/"h1"[^\]]{0,300}"children":"([^"]+)"/) || [])[1] || '';
+        const likes = +((t.match(/"likes":(\d+)/) || [])[1] || 0);
+        const breed = +((t.match(/\/img\/breeds\/symbol_(\d+)\.png"[^\]]{0,200}"alt":"[^"]+"/) || [])[1] || 0) || null;
+        builds.push({ id, head, likes, breed, codes, items: its, deck });
+      } catch (e) {}
+      await new Promise(r => setTimeout(r, 300)); // poli avec le serveur
+    }
+    const out = { t: Date.now(), items: Object.values(items), cards: Object.values(cards), builds };
+    try { localStorage.setItem(KEY, JSON.stringify(out)); } catch (e) {}
+    return out;
+  }
   async function rsc(path) {
       const h = await origFetch(path, { credentials: 'include' }).then(r => r.text());
       const txt = [...h.matchAll(/self\.__next_f\.push\(\[1,"((?:[^"\\]|\\.)*)"\]\)/g)].map(m => { try { return JSON.parse('"' + m[1] + '"'); } catch (e) { return ''; } }).join('');
@@ -3421,6 +3513,8 @@ function deckOptions(sel){
 }
 function packOptions(sel){sel.innerHTML='';packs.forEach((p,i)=>{const o=document.createElement('option');o.value=i;o.textContent=p.label+(p.fights.length?` · ${p.fights.length} combats observés`:'');sel.appendChild(o)})}
 function mainEl(c){const l=(c.eff||[]).find(l=>l.k==='dmg'||l.k==='steal');return l?(l.el||0):null}
+function autoOrderHtml(st){const o=st&&st._autoOrder;if(!o||!PLAY_AUTO)return '';const list=st.deck.map(k=>cardsByKey[k]).filter(Boolean);
+  return `<h3>Ordre de l'Auto (page Deck)</h3>${o.ranked?`<p class="note" style="margin-top:0">Active « Régler un ordre » et place les sorts dans cet ordre : il fait mieux que de laisser l'Auto choisir seule (score ${fmt(o.ordered,1)} contre ${fmt(o.free,1)}).</p>`:`<p class="note" style="margin-top:0">Laisse l'Auto choisir seule (« Ordre réglé » désactivé) : aucun ordre fixe ne fait mieux ici (meilleur ordre trouvé : score ${fmt(o.ordered,1)}, sans ordre : ${fmt(o.free,1)}). Si tu veux quand même en régler un, voici le meilleur :</p>`}<ol style="margin:4px 0 0;padding-left:22px">${list.map(c=>`<li>${esc(c.n)} <span class="dim">${c.ap} PA</span></li>`).join('')}</ol>`}
 function cardChip(c,cls){const el=mainEl(c);return `<span class="card ${cls||''}"><span class="ap">${c.ap} PA</span>${el!==null?`<span class="el" style="background:${EL_COL[el]}"></span>`:''}${esc(c.n)}</span>`}
 
 /* ---------- Mon personnage ---------- */
@@ -3595,7 +3689,7 @@ function memoStoreKey(){return 'labo-memo-'+LPROF}
 function memoLoad(){try{return JSON.parse(localStorage.getItem(memoStoreKey())||'[]',(k,v)=>v==='__INF__'?Infinity:v)||[]}catch(e){return []}}
 function memoSave(list){const js=x=>JSON.stringify(x,(k,v)=>v===Infinity?'__INF__':v);let l=list.slice(0,30);while(l.length){try{localStorage.setItem(memoStoreKey(),js(l));return}catch(e){l=l.slice(0,l.length-1)}}try{localStorage.removeItem(memoStoreKey())}catch(e){}}
 function dataSig(d){const m=d.meta||{};return fnv(JSON.stringify([m.level,m.prestige,m.breedId,m.forge&&m.forge.level,m.discordBonus,m.scrolls,(d.items||[]).map(i=>i.id+'/'+(i.f||0)),(d.worn||[]).map(i=>i.id+'/'+(i.f||0)),(d.cards||[]).map(c=>c.key),Object.keys(d.setBonus||{}).length]))}
-function partSig(o){const c=Object.assign({rev:"2026-10-10e"},o);delete c.onProgress;delete c.seed;delete c.monsters;delete c.sustain;delete c.noSteal;delete c._pv;return fnv(JSON.stringify(c))}
+function partSig(o){const c=Object.assign({rev:"2026-10-10h"},o);delete c.onProgress;delete c.seed;delete c.monsters;delete c.sustain;delete c.noSteal;delete c._pv;return fnv(JSON.stringify(c))}
 function packSig(kind,v){return fnv([kind,v,v==='asc-poly'?ascTargetFloor():'',kind==='opt'?$('#oDiff').value:$('#aDiff').value].join('|'))}
 function optsSig(o){const c=Object.assign({},o);delete c.onProgress;delete c.seed;delete c._pv;return fnv(JSON.stringify(c))}
 function goalSig(kind,o){return kind+'|'+o.objective+'|'+fnv(JSON.stringify(o.monsters))}
@@ -3664,7 +3758,7 @@ function renderOpt(res,opts,pack,mult,deckIdx){lastOpt=res;
     const carOf=el=>R.CARAC_OF_EL[el||0];const top=Math.max(1,...['force','intelligence','chance','agilite'].map(k=>Sb[k]||0));
     const off=st.deck.map(k=>cardsByKey[k]).filter(c=>{const els=[...new Set((c.eff||[]).filter(l=>l.k==='dmg'||l.k==='steal').map(l=>l.el||0))];return els.length===1&&(Sb[carOf(els[0])]||0)<top*0.4});
     const offNote=off.length?`<div class="alert" style="margin-top:6px">${off.length} sort${off.length>1?'s':''} hors de ton élément principal (${off.map(c=>esc(c.n)).join(', ')}) : leur caractéristique est faible, ils tapent peu. Le Labo les garde seulement s'ils servent quand même (PA, bonus, retrait de PA) ; sinon, choisis l'orientation « Mono-élément ».</div>`:'';
-    html+=`<h3>Deck · ${ins.length} échange${ins.length>1?'s':''}</h3><div class="cards">${st.deck.map(k=>cardChip(cardsByKey[k],ins.includes(k)?'':'')+(ins.includes(k)?'<span class="pill in">nouvelle</span>':'')).join('')}</div>${outs.length?`<div class="cards" style="margin-top:6px"><span class="lbl" style="align-self:center">À retirer</span>${outs.map(k=>cardChip(cardsByKey[k])).join('')}</div>`:''}${offNote}`;
+    html+=`<h3>Deck · ${ins.length} échange${ins.length>1?'s':''}</h3><div class="cards">${st.deck.map(k=>cardChip(cardsByKey[k],ins.includes(k)?'':'')+(ins.includes(k)?'<span class="pill in">nouvelle</span>':'')).join('')}</div>${outs.length?`<div class="cards" style="margin-top:6px"><span class="lbl" style="align-self:center">À retirer</span>${outs.map(k=>cardChip(cardsByKey[k])).join('')}</div>`:''}${offNote}${autoOrderHtml(st)}`;
   }
   html+=farmHtml(st)+choicesHtml(res)+archTable(res)+scenTable(b);
   const per=Object.entries(b.perCard).sort((p,q)=>q[1]-p[1]).slice(0,8);const mx=per.length?per[0][1]:1;
@@ -3716,10 +3810,10 @@ $('#simDiff').oninput=e=>$('#simDiffV').textContent=dv(e.target.value);
 $('#oDiff').oninput=e=>$('#oDiffV').textContent=dv(e.target.value);
 $('#simRun').onclick=runSim;$('#oRun').onclick=runOpt;
 $('#simCodeLoad').onclick=()=>{const msg=$('#simCodeMsg');try{const d=O.decodeCode($('#simCode').value);
-  if(d.kind==='E'){const byId={};for(const it of DATA.items.concat(DATA.worn))(byId[it.id]=byId[it.id]||[]).push(it);const g={},miss=[];
-    for(const x of d.items){const c=(byId[x.id]||[]);const it=c.find(i=>(i.f||0)===x.f)||c[0];if(it&&x.slot)g[x.slot]=Object.assign({},it,{f:x.f});else miss.push('#'+x.id)}
-    simOverride.gear=g;msg.textContent=`Équipement chargé : ${Object.keys(g).length} objets connus`+(miss.length?`, ${miss.length} inconnus de ton inventaire (ignorés) : ${miss.join(', ')}`:'')+'.'}
-  else{const keys=d.ids.map(i=>DATA.cards.find(c=>c.id===i)).filter(Boolean).map(c=>c.key);simOverride.deck=keys;msg.textContent=`Deck chargé : ${keys.length} cartes sur ${d.ids.length} présentes dans ta collection.`}
+  if(d.kind==='E'){const byId={};for(const it of DATA.items.concat(DATA.worn))(byId[it.id]=byId[it.id]||[]).push(it);const ext={};for(const it of ((DATA.bestiary&&DATA.bestiary.items)||[]).concat(vitrineData().items||[]))ext[it.id]=it;const g={},miss=[],notMine=[];
+    for(const x of d.items){const c=(byId[x.id]||[]);let it=c.find(i=>(i.f||0)===x.f)||c[0];if(!it&&ext[x.id]){it=Object.assign({},ext[x.id]);notMine.push(it.n)}if(it&&x.slot)g[x.slot]=Object.assign({},it,{f:x.f});else miss.push('#'+x.id)}
+    simOverride.gear=g;msg.textContent=`Équipement chargé : ${Object.keys(g).length} objets`+(notMine.length?` (dont ${notMine.length} que tu n'as pas : ${notMine.join(', ')})`:'')+(miss.length?`, ${miss.length} inconnus (ignorés) : ${miss.join(', ')}`:'')+'.'}
+  else{const keys=d.ids.map(i=>DATA.cards.find(c=>c.id===i)).filter(Boolean).map(c=>c.key);simOverride.deck=keys;const vc=Object.fromEntries((vitrineData().cards||[]).map(c=>[c.id,c]));const missing=d.ids.filter(i=>!DATA.cards.some(c=>c.id===i)).map(i=>vc[i]?vc[i].n:'#'+i);msg.textContent=`Deck chargé : ${keys.length} cartes sur ${d.ids.length} présentes dans ta collection`+(missing.length?` (absentes : ${missing.join(', ')})`:'')+'.'}
   runSim()}catch(e){msg.textContent='Code refusé : '+e.message}};
 $('#simCodeReset').onclick=()=>{simOverride={gear:null,deck:null};$('#simCodeMsg').textContent='Ton build actuel est rétabli.';runSim()};
 const OBJ_NOTES={equilibre:'Équilibre entre finir vite et perdre peu de PV, testé aussi sur ton adversaire le plus dur renforcé : un build qui farme vite sans casser sur un mauvais tirage.',vitesse:'Minimise le nombre de tours pour gagner.',survie:'Minimise les PV perdus, quitte à taper moins fort.',sagesse:'Maximise sagesse ÷ tours, avec au moins 95 % de victoires. Hypothèse : l\'XP gagnée suit la sagesse comme sur Dofus.',pp:'Maximise prospection ÷ tours, avec au moins 95 % de victoires. Prospection = 100 + PP des objets + Chance/10 (510 pour toi, comme affiché en jeu).',multi:'Deck limité aux cartes qui tapent dans 2 éléments ou plus (plus les cartes utilitaires).',ascension:'Survie face à des monstres renforcés : la difficulté passe à ×3, ajuste-la selon ton étage.'};
@@ -3960,7 +4054,7 @@ function renderAscResult(res,pack,mult,su){
   ${choicesHtml(res)}${archTable(res)}${scenTable(b)}
   <h3>Équipement · ${changes.length} changement${changes.length>1?'s':''}</h3><ul>${changes.map(c=>`<li>${esc(c)}</li>`).join('')||'<li class="muted">Garde ton équipement.</li>'}</ul>
   <h3>Points de caractéristiques</h3><p>${esc(lastAsc.points)} <span class="note">(après réinitialisation)</span></p>
-  <h3>Deck</h3><div class="cards">${st.deck.map(k=>cardsByKey[k]?cardChip(cardsByKey[k]):'').join('')}</div>
+  <h3>Deck</h3><div class="cards">${st.deck.map(k=>cardsByKey[k]?cardChip(cardsByKey[k]):'').join('')}</div>${autoOrderHtml(st)}
   <h3>Codes à importer</h3><div class="formula" style="white-space:normal;word-break:break-all">${gCode}<br>${dCode}</div>
   <div class="field"><label for="aName">Nom du build type</label><input type="text" id="aName" value="${esc(lastAsc.label)}" style="font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line2);border-radius:7px;padding:7px 9px;width:100%"></div>
   <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="aSave" type="button">Ajouter aux builds type</button><button class="btn ghost" type="button" data-copy="${gCode}">Copier l'équipement</button><button class="btn ghost" type="button" data-copy="${dCode}">Copier le deck</button></div><span class="toast muted" id="aMsg"></span>`;
@@ -4115,6 +4209,7 @@ function renderDofusFx(){const el=$('#dofusFx');if(!el)return;const S=profData('
 function companionPct(m){if(LPROF==='saison'||(m&&m.profile==='saison'))return 0;let v=null;try{const x=localStorage.getItem('labo-companion');if(x!==null&&x!=='')v=+x}catch(e){}if(v!=null&&isFinite(v))return v;const c=m&&m.companion;if(c&&isFinite(c.pct))return c.pct;if(c&&isFinite(c.level))return companionPctFor(c.level);return 0}
 // formule du jeu (page Compagnon) : bonus = 100 × ((niveau − 1) / 399)², arrondi à 0,1 %
 function companionPctFor(L){L=Math.min(400,Math.max(1,Math.floor(L||1)));return Math.round(100*((L-1)/399)**2*10)/10}
+function vitrineData(){const a=DATA.vitrines,b=(profData('principal')||{}).vitrines,c=(profData('saison')||{}).vitrines;return [a,b,c].filter(Boolean).sort((x,y)=>(y.t||0)-(x.t||0))[0]||{items:[],cards:[],builds:[]}}
 function profData(p){if(p===LPROF)return DATA;try{const s=dsGet(dataKey(p));if(s){const d=JSON.parse(s);if(d&&d.items)return mergeData(baseFor(p),d)}}catch(e){}return p==='principal'?SNAP:null}
 const SLOT_FR={chapeau:'Chapeau',cape:'Cape',amulette:'Amulette',anneau:'Anneau',ceinture:'Ceinture',bottes:'Bottes',arme:'Arme',bouclier:'Bouclier',familier:'Familier',dofus:'Dofus'};
 const SLOT_NEED={anneau:2,dofus:6};
@@ -4126,6 +4221,7 @@ function itemUniverse(){
   for(const it of (B.items||[]))add(Object.assign({f:0},it),null);
   if(S){for(const it of S.items||[])add(it,'saison','inventaire');for(const it of S.worn||[])add(it,'saison','équipé')}
   if(Pp){for(const it of Pp.items||[])add(it,'principal','inventaire');for(const it of Pp.worn||[])add(it,'principal','équipé')}
+  const VT=vitrineData();for(const it of (VT.items||[])){const k=it.id+':0';if(!U.has(k)&&![...U.keys()].some(x=>x.startsWith(it.id+':')))U.set(k,{it:Object.assign({f:0},it),own:{},where:{},vitrine:true});else{for(const [kk,u] of U)if(kk.startsWith(it.id+':'))u.vitrine=true}}
   const inCat=new Set((B.items||[]).map(i=>i.id));
   return {list:[...U.values()],drop,inCat,S,Pp,B};
 }
@@ -4142,14 +4238,14 @@ function computeTiers(forP,lam){
     for(const u of arr){const L=u.it.lvl||0;let best=1e-9;for(const w of arr){const l=w.it.lvl||0;if(l>=L-20&&l<=L&&w.v>best)best=w.v}u.r=Math.max(0,u.v)/best;u.tier=tierOf(u.r);u.rEnd=Math.max(0,u.vEnd)/bestEnd;u.tierEnd=tierOf(u.rEnd)}}
   return Object.assign(X,{P,D,forP,lam});
 }
-function obtainText(X,u){const d=X.drop[u.it.id];if(d)return d.r>0?`drop ${fmt(d.r,d.r<1?2:1)} % · ${esc(d.m.n)}`:`<span title="Objet bonus de victoire : la prospection ne change rien">bonus de victoire</span> · ${esc(d.m.n)}`;return X.inCat.has(u.it.id)?'bestiaire':'<span title="Pas dans les tables de butin du bestiaire : boss, Ascension, coffre, quête ou craft">hors bestiaire</span>'}
+function obtainText(X,u){if(u.vitrine&&!X.drop[u.it.id]&&!X.inCat.has(u.it.id))return '<span title="Vu dans les vitrines des joueurs : boss, Ascension, coffre, quête ou craft">hors bestiaire · vu en vitrine</span>';const d=X.drop[u.it.id];if(d)return d.r>0?`drop ${fmt(d.r,d.r<1?2:1)} % · ${esc(d.m.n)}`:`<span title="Objet bonus de victoire : la prospection ne change rien">bonus de victoire</span> · ${esc(d.m.n)}`;return X.inCat.has(u.it.id)?'bestiaire':'<span title="Pas dans les tables de butin du bestiaire : boss, Ascension, coffre, quête ou craft">hors bestiaire</span>'}
 function renderTierList(){
   const out=$('#tlOut');if(!out)return;const forP=$('#tlFor').value,lam=+$('#tlStyle').value;
   if(!TL||TL.forP!==forP||TL.lam!==lam||TL.dv!==DATA){TL=computeTiers(forP,lam);if(TL)TL.dv=DATA}
   if(!TL){out.innerHTML='<p class="note">Importe un export de ce perso pour avoir sa tier list (les éléments de son deck comptent).</p>';$('#tlSum').textContent='';return}
   const slot=$('#tlSlot').value,src=$('#tlSrc').value,mn=+$('#tlMin').value||1,mx=+$('#tlMax').value||200,q=($('#tlQ').value||'').trim().toLowerCase();
   let rows=TL.list.filter(u=>(!slot||u.it.s===slot)&&(u.it.lvl||0)>=mn&&(u.it.lvl||0)<=mx&&(!q||u.it.n.toLowerCase().includes(q)));
-  rows=rows.filter(u=>src==='all'||(src==='own'&&(u.own.saison||u.own.principal))||(src==='saison'&&u.own.saison)||(src==='principal'&&u.own.principal)||(src==='best'&&!u.own.saison&&!u.own.principal));
+  rows=rows.filter(u=>src==='all'||(src==='own'&&(u.own.saison||u.own.principal))||(src==='saison'&&u.own.saison)||(src==='principal'&&u.own.principal)||(src==='best'&&!u.own.saison&&!u.own.principal)||(src==='vit'&&u.vitrine));
   rows.sort((a,b)=>'SABCD'.indexOf(a.tier)-'SABCD'.indexOf(b.tier)||b.vEnd-a.vEnd);
   const cnt={};for(const u of rows)cnt[u.tier]=(cnt[u.tier]||0)+1;
   const el=TL.P.w.map((x,i)=>[x,['Neutre','Terre','Feu','Eau','Air'][i]]).filter(x=>x[0]>0.05).sort((a,b)=>b[0]-a[0]).map(x=>x[1]+' '+Math.round(x[0]*100)+' %').join(', ');
@@ -4266,7 +4362,14 @@ function renderPredict(){const out=$('#fPredict');if(!out)return;const B=DATA.be
     rows.sort((a,b)=>b.xph-a.xph);
     out.innerHTML=`<table><tr><th>Zone</th><th class="num">Monstres connus</th><th class="num">Tours</th><th class="num">Victoires</th><th class="num">XP/combat</th><th class="num">XP/h estimée</th><th>Déjà farmée</th></tr>${rows.slice(0,20).map(r=>`<tr><td><strong>${esc(r.o.z.n)}</strong><div class="note">${esc(r.o.z.area||'')} · niv. ${r.o.z.min}-${r.o.z.max}</div></td><td class="num">${r.o.known.length} / ${r.o.sp.length}</td><td class="num">${fmt(r.rounds,2)}</td><td class="num ${r.win<0.99?'down':''}">${fmt(r.win*100,0)} %</td><td class="num">${fmt(r.xp)}</td><td class="num"><strong>${fmt(r.xph)}</strong></td><td class="dim">${r.v?`oui · réel ${r.v.perH&&r.v.xp?fmt(r.v.perH*r.v.xp*r.v.winRate)+' XP/h':'—'}`:'non'}</td></tr>`).join('')}</table><p class="note">${rat.length>=2?`Estimations recalées sur tes ${rat.length} zones déjà farmées (×${fmt(cal,2)}). `:''}Groupes de ${n} monstres (ta moyenne), multiplicateur d'XP réel ×${fmt(xpMult,2)}, combat de ${fmt(base,1)} s + ${fmt(perR,1)} s par tour en plus. Une victoire sous 99 % = risque réel (mortel en Héroïque).</p>`};
   setTimeout(step,30)}
-function renderItemsTab(){try{renderDofusFx()}catch(e){}try{renderBank2()}catch(e){$('#bank2Out').textContent='Erreur : '+e.message}try{renderTierList()}catch(e){$('#tlOut').textContent='Erreur : '+e.message}}
+function renderVitrines(){const el=$('#vitOut');if(!el)return;const V=vitrineData();if(!V.builds||!V.builds.length){el.innerHTML='<p class="note">Pas encore de vitrines : mets à jour le script (v2.9) et clique « Envoyer au Labo ».</p>';return}
+  const items=Object.fromEntries((V.items||[]).map(i=>[i.id,i])),cards=Object.fromEntries((V.cards||[]).map(c=>[c.id,c]));const mine=new Set(DATA.cards.map(c=>c.id));
+  const cnt={};for(const b of V.builds)for(const id of b.items){const n=(items[id]||{}).n;if(n)cnt[n]=(cnt[n]||0)+1}const top=Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,12);
+  const cc={};for(const b of V.builds)for(const id of b.deck){const n=(cards[id]||{}).n;if(n)cc[n]=(cc[n]||0)+1}const topC=Object.entries(cc).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const avgDeck=V.builds.reduce((a,b)=>a+b.deck.length,0)/V.builds.length;
+  el.innerHTML=`<p class="note">${V.builds.length} vitrines lues le ${new Date(V.t).toLocaleDateString('fr-FR')} · decks de ${fmt(avgDeck,1)} sorts en moyenne.<br><strong>Objets les plus portés :</strong> ${top.map(([n,c])=>esc(n)+' ×'+c).join(', ')}<br><strong>Sorts les plus joués :</strong> ${topC.map(([n,c])=>esc(n)+' ×'+c).join(', ')}</p><table><tr><th>Joueur</th><th class="num">♥</th><th>Deck</th><th>Stuff</th><th></th></tr>${V.builds.map((b,i)=>`<tr><td><strong>${esc(b.head||'?')}</strong></td><td class="num">${b.likes||0}</td><td>${b.deck.map(id=>{const c=cards[id];return c?`<span class="${mine.has(id)?'':'dim'}" title="${esc((c.lines||[]).join(' · '))}">${esc(c.n)} <span class="dim">${c.ap}</span></span>`:'#'+id}).join(', ')}</td><td class="dim">${b.items.map(id=>esc((items[id]||{}).n||('#'+id))).join(', ')}</td><td><button class="btn ghost" data-vsim="${i}" type="button">Simuler</button></td></tr>`).join('')}</table><p class="note">Sorts grisés : absents de ta collection.</p>`;
+  el.querySelectorAll('[data-vsim]').forEach(bt=>bt.onclick=()=>{const b=V.builds[+bt.dataset.vsim];const e=b.codes.find(c=>c.startsWith('DM-E')),d=b.codes.find(c=>c.startsWith('DM-S'));showTab('sim');const msgs=[];for(const c of [e,d].filter(Boolean)){$('#simCode').value=c;$('#simCodeLoad').click();msgs.push($('#simCodeMsg').textContent)}$('#simCodeMsg').textContent=`Vitrine de ${b.head} : `+msgs.join(' ')})}
+function renderItemsTab(){try{renderVitrines()}catch(e){$('#vitOut').textContent='Erreur : '+e.message}try{renderDofusFx()}catch(e){}try{renderBank2()}catch(e){$('#bank2Out').textContent='Erreur : '+e.message}try{renderTierList()}catch(e){$('#tlOut').textContent='Erreur : '+e.message}}
 ['tlFor','tlSlot','tlSrc','tlMin','tlMax','tlStyle','tlQ','bkStyle','tlSet'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener(id==='tlQ'||id==='tlMin'||id==='tlMax'||id==='bkLvl'?'input':'change',()=>{if(id.startsWith('tl')){if(id==='tlSet')TL=null;$('#tlOut').dataset.n=150;renderTierList()}else renderBank2()})});
 function init(){prepare();renderPerso();try{renderCardUse();renderFreePts();renderBank()}catch(e){}renderAscPanel();renderBest();packOptions($('#simPack'));packOptions($('#oPack'));{const o=document.createElement('option');o.value='poly';o.textContent='Polyvalent · tes adversaires habituels (conseillé)';$('#oPack').insertBefore(o,$('#oPack').firstChild);$('#oPack').value='poly'}deckOptions($('#simDeck'));deckOptions($('#oStart'));runSim();setTimeout(()=>{markReady($('#oPack'),'opt');markReady($('#aPack'),'asc')},400);}
 setupData();init();
