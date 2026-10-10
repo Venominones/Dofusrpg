@@ -345,6 +345,11 @@ textarea{min-height:110px;font-family:var(--f-mono);font-size:.8rem}
       <div class="tablewrap" id="bank2Out"></div>
     </div>
     <div class="panel">
+      <h2 style="margin-top:0">Effets des Dofus</h2>
+      <p class="note" style="margin-top:0">Effets spéciaux (patch du 10 octobre), simulés dans l'Optimiseur, l'Ascension et le Simulateur quand le Dofus est porté. Le Kaliptus n'agit pas en combat : l'Optimiseur le met dans un emplacement libre. Les stats des Dofus s'affichent dans la tier list (Emplacement : Dofus).</p>
+      <div class="tablewrap" id="dofusFx"></div>
+    </div>
+    <div class="panel">
       <h2 style="margin-top:0">Tier list des objets</h2>
       <p class="note">Valeur d'un objet = ce qu'il ajoute à un perso de son niveau, en dégâts par tour et en PV effectifs (formules du simulateur : caractéristique + puissance, dommages fixes, critique, PA, vision spectrale du Crâ, résistances, esquive). Le tier compare l'objet aux meilleurs de son emplacement dans sa tranche de niveau (les 20 niveaux en dessous). <strong>S</strong> = parmi les meilleurs (≥ 90 % du meilleur), <strong>A</strong> ≥ 75 %, <strong>B</strong> ≥ 55 %, <strong>C</strong> ≥ 35 %, <strong>D</strong> en dessous. « Fin de jeu » = même calcul face à tous les objets jusqu'au niveau 200. Les éléments comptés sont ceux des cartes du deck actif du perso choisi.</p>
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:end;margin:8px 0">
@@ -397,7 +402,7 @@ Points : 5 par niveau · Force/Intel/Chance/Agi coûtent 1, 2, 3 puis 4 points p
         <li>Main de 5 cartes, jusqu'à 3 pioches en plus par tour, arme une fois par tour.</li>
         <li>Au plus 2 cartes de soin ou de bouclier par tour ; boucliers plafonnés à 25 % des PV max au total. Le vol de vie compte comme des dégâts.</li>
         <li>Chance de critique = critique de la carte + % Critique (seulement si la carte peut critiquer), 100 % au plus.</li>
-        <li>Vision spectrale = 0,4 % par PO (+18 % pour le Crâ), plafonnée à 50 %.</li>
+        <li>Vision spectrale = 0,4 % par PO (+26 % pour le Crâ depuis le patch du 10/10), plafonnée à 60 %.</li>
         <li>Mode Auto : boucliers d'abord, puis les cartes les plus efficaces (dégâts par PA), retraits de PA ensuite, bonus en dernier ; l'arme selon ton réglage « Arme en auto ».</li>
       </ul>
       <h3>Codes de partage</h3>
@@ -503,10 +508,10 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   const RES_PCT_CAP_PLAYER = 50;
   const HAND_SIZE = 5;
   const DRAWS_MAX = 3;
-  const CLASS_SPECTRAL = { 9: 18 }; // Crâ : Œil de lynx
+  const CLASS_SPECTRAL = { 9: 26 }; // Crâ : Œil de lynx (patch du 10/10 : 18 → 26 %, plafond 60 %)
   // Passifs de classe observés en combat : 8 = « Enchaînement » (+15 % sur les sorts de dégâts suivants du tour, cumulable)
   const CLASS_PASSIVE = { 8: { chainPct: 15 } };
-  const SPECTRAL_PER_PO = 0.4, SPECTRAL_MAX = 50;
+  const SPECTRAL_PER_PO = 0.4, SPECTRAL_MAX = 60;
   const POINTS_PER_LEVEL = 5;
   const CARAC_TIERS = [[0, 1], [100, 2], [200, 3], [300, 4]];
   const STAT_TIERS = { vitalite: [[0, 1]], sagesse: [[0, 3]], force: CARAC_TIERS, intelligence: CARAC_TIERS, chance: CARAC_TIERS, agilite: CARAC_TIERS };
@@ -570,6 +575,9 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   }
 
   // gear : [{item, f}] ; ctx : {prestige, discordPct, scrolls, alloc, level, breedId}
+  // Dofus à effet spécial (patch du 10/10) : repérés par leur nom
+  const DOFUS_FX = { emeraude: /meraude/i, pourpre: /pourpre/i, turquoise: /turquoise/i, ocre: /ocre/i, vulbis: /vulbis/i, ivoire: /ivoire/i, glaces: /glace/i, ebene: /b[eè]ne/i, kaliptus: /kaliptus/i, tachete: /tachet/i, dofawa: /dofawa/i };
+  function dofusFx(names) { const o = {}; for (const n of names) { if (!/dofus|dofawa|kaliptus/i.test(n)) continue; for (const [k, re] of Object.entries(DOFUS_FX)) if (re.test(n)) o[k] = true; } return o; }
   function computeStats(gear, ctx) {
     // Prestige : +25 % par Prestige ; Bouclier de forge : jusqu'à +150 % au niveau 200 (cumul supposé additif, à confirmer)
     const pMult = 1 + 0.25 * (ctx.prestige || 0) + (ctx.forgePct || 0) / 100;
@@ -618,6 +626,8 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     s._perfo = Math.max(0, Math.min(25, ((s.fuite || 0) + (s.tacle || 0)) * 0.05));  // % des dégâts qui traversent les boucliers ennemis
     s._ero = Math.max(0, Math.min(25, ((s.dommagesPoussee || 0) + (s.resPoussee || 0)) * 0.05)); // % des dégâts retirés aux PV max
     s._pp = 100 + (s.prospection || 0) + Math.floor((s.chance || 0) / 10);
+    s._dofus = dofusFx(gear.filter(g => g && g.item && (g.item.s === 'dofus' || /dofus/i.test(g.item.n || ''))).map(g => g.item.n || ''));
+    if (s._dofus.ebene) s._perfo = Math.min(32.5, s._perfo * 1.3);
     return s;
   }
 
@@ -632,6 +642,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     S._red = Math.min(50, (S.resPctDistance || 0) + (S.resPctMelee || 0));
     S._perfo = Math.max(0, Math.min(25, ((S.fuite || 0) + (S.tacle || 0)) * 0.05));
     S._ero = Math.max(0, Math.min(25, ((S.dommagesPoussee || 0) + (S.resPoussee || 0)) * 0.05));
+    S._dofus = dofusFx(o.dofus || []); if (S._dofus.ebene) S._perfo = Math.min(32.5, S._perfo * 1.3);
     return S;
   }
 
@@ -700,6 +711,8 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const wMode = opts.weaponMode || (WEAPON_LAST ? 'last' : WEAPON_MODE);
     const chainPct = opts.chainPct != null ? opts.chainPct : ((CLASS_PASSIVE[S._breed] || {}).chainPct || 0);
     const T = { buffP: 0, buffC: 0, dmgPct: 0, sustainLeft: 0, weaponUsed: false, inv: false, invS: false, half: false, cards: 0, lastEl: null, round: 0 };
+    const DF = S._dofus || {}; let vulb = 0, critTurn = false, pourpreUsed = !DF.pourpre, emeraudeUsed = !DF.emeraude;
+    const saved = () => { if (P.hp <= 0 && !emeraudeUsed) { emeraudeUsed = true; P.hp = Math.max(1, Math.round(maxHp * 0.2)); } return P.hp > 0; }; // Émeraude : survit une fois avec 20 % de PV
     // Mécaniques de boss : chaque boss encore debout applique les siennes (bestiaire + mécaniques apprises en combat)
     const alive = () => mons.filter(x => x.alive);
     const mk = (k) => { for (const m of mons) if (m.alive && m.mech && m.mech[k] != null && m.mech[k] !== false) return m.mech; return null; };
@@ -714,20 +727,20 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         if (mp < pp) { const nm = m.mech.swapHalf ? mp + (pp - mp) / 2 : pp, np = m.mech.swapHalf ? pp - (pp - mp) / 2 : mp; m.hp = Math.max(1, Math.round(nm * m.maxHp)); const nh = Math.max(1, Math.round(np * maxHp)); if (nh < P.hp) hpLost += P.hp - nh; P.hp = nh; }
       }
       // ----- tour du joueur -----
-      let ap = S._paTotal + P.apNext; P.apNext = 0;
-      while (hand.length < HAND_SIZE) { const c = draw(); if (!c) break; hand.push(c); }
+      let ap = S._paTotal + P.apNext + (critTurn ? 1 : 0); P.apNext = 0; critTurn = false; // Turquoise : +1 PA (au-delà du plafond) le tour après un critique
+      while (hand.length < HAND_SIZE + (round === 1 && DF.ocre ? 1 : 0)) { const c = draw(); if (!c) break; hand.push(c); }
       T.buffP = 0; T.buffC = 0; T.dmgPct = S.dmgPctSorts || 0; T.sustainLeft = SUSTAIN.perTurn; T.weaponUsed = false; T.cards = 0; let drawsLeft = DRAWS_MAX;
       const invFrom = opts.invertFrom || mv('invertFrom', 0), sealPa = opts.sealPa || mv('sealPa', 0), sealFrom = opts.sealFrom || mv('sealFrom', 1);
       const halfFrom = mv('healHalfFrom', 0);
       T.inv = invFrom > 0 && round >= invFrom; T.invS = T.inv && !!(opts.invertShields || mv('invertShields', false)); T.seal = (sealPa > 0 && round >= sealFrom) ? sealPa : 0;
       T.half = halfFrom > 0 && round >= halfFrom;
       // vol de PA
-      const stealEvery = mv('apStealEvery', 0);
-      if (stealEvery ? every(stealEvery, round) : (mv('apSteal', 0) && round >= mv('apStealFrom', 1))) ap = Math.max(0, ap - (mv('apSteal', 0) || 1));
+      const stealEvery = mv('apStealEvery', 0); let tachete = !!DF.tachete; // Tacheté : annule le premier effet de contrôle du tour
+      if (stealEvery ? every(stealEvery, round) : (mv('apSteal', 0) && round >= mv('apStealFrom', 1))) { if (tachete) tachete = false; else ap = Math.max(0, ap - (mv('apSteal', 0) || 1)); }
       // carte scellée pour le tour : la plus chère de la main
       const sealEvery = mv('sealEvery', 0);
       const sealOn = sealEvery ? every(sealEvery, round) : (mv('sealCard', false) && round >= mv('sealCardFrom', 1));
-      const sealedCard = sealOn && hand.length ? hand.reduce((a, c) => (c.ap > a.ap ? c : a), hand[0]) : null;
+      const sealedCard = sealOn && hand.length && !(tachete && !(tachete = false)) ? hand.reduce((a, c) => (c.ap > a.ap ? c : a), hand[0]) : null;
       // PA comptés : finir le tour avec exactement N PA
       const paM = mk('paTurn'), paNeed = paM && paM.paTurn === round ? paM.paLeft : null;
       // Fureur : au-delà de N cartes (hors arme) dans le tour, sa prochaine attaque est multipliée
@@ -766,7 +779,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         play(pick); if (pick.hasDmg && chainPct) T.dmgPct += chainPct; // l'arme compte aussi dans l'Enchaînement (observé)
         if (opts.trace) (trace[round] = trace[round] || []).push(pick.name + (pick.weapon ? ' (arme)' : ''));
         if (!pick.weapon) T.cards++;
-        if (P.hp <= 0) return result(false, round);
+        if (P.hp <= 0 && !saved()) return result(false, round);
         ap -= cost(pick); if (!pick.weapon) T.seal = 0;
         if (pick.weapon) T.weaponUsed = true; else { hand.splice(hand.indexOf(pick), 1); discard.push(pick); }
       }
@@ -789,18 +802,20 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         if (intent === 'guard') { m.shield = Math.round(m.atk * GUARD_PCT); continue; }
         const fury = intent === 'drain' ? 1 : (m.furyNext || 1); if (intent !== 'drain') m.furyNext = 0;
         // Fureur : observé en Ascension, le coup « déchaîné » vaut ~×fureur l'attaque de base (il remplace le bonus de l'intention)
-        const mult = (fury > 1 && intent !== 'drain' ? fury : (INTENT_MULT[intent] || 1)) * (1 + RAGE_STEP * m.rage) * (1 - Math.min(100, m.weaken) / 100);
+        const mult = (fury > 1 && intent !== 'drain' ? fury : (INTENT_MULT[intent] || 1)) * (1 + RAGE_STEP * m.rage) * (1 - Math.min(100, m.weaken) / 100) * (DF.glaces ? 0.9 : 1); // Glaces : frappe −10 %
         m.weaken = 0;
-        if (RND() * 100 < S._dodge) continue;
+        if (RND() * 100 < Math.min(DF.vulbis ? 75 : 100, S._dodge + vulb)) continue;
+        if (DF.vulbis) vulb += 2; // Vulbis : +2 % d'esquive par coup non esquivé
         const rf = S[RES_FIX[m.el]] || 0, rp = Math.min(RES_PCT_CAP_PLAYER, S[RES_PCT[m.el]] || 0);
         let dmg = Math.max(0, Math.floor((m.atk * mult * (1 - (S._red || 0) / 100) - rf) * (1 - rp / 100)));
         // coup critique du monstre (rare, observé ~6 %) : la Résistance Critiques retire sa valeur au coup critique reçu
         if (RND() < MON_CRIT_P) dmg = Math.max(0, Math.floor(dmg * MON_CRIT_MULT) - (S.resCritiques || 0));
         for (const s of P.shields) { const a = Math.min(s.value, dmg); s.value -= a; dmg -= a; if (!dmg) break; }
+        if (DF.ivoire) dmg = Math.min(dmg, Math.floor(maxHp * 0.35)); // Ivoire : aucun coup ordinaire au-delà de 35 % des PV max
         P.hp -= dmg; hpLost += dmg;
         if (intent === 'drain') m.hp = Math.min(m.cap, m.hp + dmg);
         if (S.renvoi > 0 && dmg > 0) { const r = Math.min(m.hp, S.renvoi, dmg); /* au plus les dégâts reçus */ m.hp -= r; dmgDone += r; if (m.hp <= 0) { m.hp = 0; down(m); } }
-        if (P.hp <= 0) return result(false, round);
+        if (P.hp <= 0 && !saved()) return result(false, round);
       }
     }
     return result(false, opts.maxRounds || 30);
@@ -935,6 +950,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       const rp = er(m.res[RES_PCT[line.el || 0]] || 0);
       let d = dmgLine(S, line, opt.crit, T.buffP, T.dmgPct, opt.spec, rp, opt.fixed !== false, opt.weapon);
       if (opt.sec) d = Math.floor(d * ZONE_SEC);
+      if (opt.x2) d *= 2;
       if (m.mech && m.mech.hardSkin && shieldTotal() <= 0) d = Math.floor(d * m.mech.hardSkin / 100);
       if (reflects(m)) {
         // « renvoie le coup » : le monstre ne prend rien et te renvoie les dégâts (tes boucliers absorbent)
@@ -950,6 +966,8 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     function play(c) {
       const critP = c.cc > 0 ? Math.min(100, c.cc + (S.critique || 0) + T.buffC) : 0;
       const crit = RND() * 100 < critP;
+      if (crit && DF.turquoise) critTurn = true;
+      const x2 = !pourpreUsed && c.hasDmg && !c.weapon; if (x2) pourpreUsed = true; // Pourpre : le premier sort de dégâts du combat ×2
       const critArg = crit ? ((c.crit && c.crit.length) ? true : 'boost') : false;
       const lines = crit && c.crit ? c.crit : c.eff;
       const spec = !c.weapon && c.hasDmg && RND() < specP;  // Vision spectrale : tout le sort est doublé (toutes cibles et lignes, vérifié dans le journal)
@@ -965,10 +983,10 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         if (chosen && l.chance && l !== chosen[0] && !(crit && c.crit)) continue;
         if (l.k === 'dmg' || l.k === 'steal') {
           const withFixed = c.weapon ? true : first; first = false;
-          if (l.zone) { if (!tgt || !tgt.alive) tgt = target(); for (const m of [tgt, ...mons.filter(x => x !== tgt)]) if (m && m.alive) { hit(m, l, c.name, { crit: critArg, spec, fixed: withFixed, weapon: c.weapon, sec: m !== tgt }); } }
+          if (l.zone) { if (!tgt || !tgt.alive) tgt = target(); for (const m of [tgt, ...mons.filter(x => x !== tgt)]) if (m && m.alive) { hit(m, l, c.name, { crit: critArg, spec, fixed: withFixed, weapon: c.weapon, sec: m !== tgt, x2 }); } }
           else {
             if (!tgt || !tgt.alive) tgt = target(); if (!tgt) break;
-            const r = hit(tgt, l, c.name, { crit: critArg, spec, fixed: withFixed, weapon: c.weapon });
+            const r = hit(tgt, l, c.name, { crit: critArg, spec, fixed: withFixed, weapon: c.weapon, x2 });
             if (l.k === 'steal') healP(Math.floor(r / 2));
           }
         } else if (l.k === 'dmgCasterHp') {
@@ -1077,7 +1095,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     if (mech.shockPct) w.push(`l'auto n'alterne pas les éléments (Onde de choc)`);
     return w;
   }
-  const api = { deriveStats, setAutoOrder: v => { AUTO_ORDER = v; }, setTuning: o => { if (o.crit != null) CRIT_MULT = o.crit; if (o.zoneSec != null) ZONE_SEC = o.zoneSec; if (o.weaponLast != null) WEAPON_LAST = o.weaponLast; if (o.weaponMode) WEAPON_MODE = o.weaponMode; }, CLASS_PASSIVE, forgePctFor, forgeDaysTo, forgeXpAt, diffForFloor, bestiaryEntries, mechFromEntries, mechText, autoWarnings, itemStats, weaponWithFusion, tierCost, allocCost, pointsTotal, computeStats, prepCard, weaponCard, simulateFight, runMany, STAT_TIERS, CARAC_OF_EL, EL_NAMES, RES_PCT, RES_FIX };
+  const api = { deriveStats, setAutoOrder: v => { AUTO_ORDER = v; }, setTuning: o => { if (o.crit != null) CRIT_MULT = o.crit; if (o.zoneSec != null) ZONE_SEC = o.zoneSec; if (o.weaponLast != null) WEAPON_LAST = o.weaponLast; if (o.weaponMode) WEAPON_MODE = o.weaponMode; }, CLASS_PASSIVE, dofusFx, forgePctFor, forgeDaysTo, forgeXpAt, diffForFloor, bestiaryEntries, mechFromEntries, mechText, autoWarnings, itemStats, weaponWithFusion, tierCost, allocCost, pointsTotal, computeStats, prepCard, weaponCard, simulateFight, runMany, STAT_TIERS, CARAC_OF_EL, EL_NAMES, RES_PCT, RES_FIX };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.RPG = api;
 })(typeof self !== 'undefined' ? self : this);
 </script>
@@ -1181,7 +1199,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const paT = Math.max(6, (S && S._paTotal) || 10);
     w.pa = Math.max(60, tot / paT); w.pm = 3;
     if (((S && S.critique) || 0) < 100) w.critique = Math.max(w.critique, tot * (CRIT_GAIN) / 100);
-    w.po = 2 + (S && S._breed === 9 && (S._spectral || 0) < 50 ? tot * 0.4 / 100 : 0); // Crâ : chaque PO = +0,4 % de vision spectrale
+    w.po = 2 + (S && S._breed === 9 && (S._spectral || 0) < 60 ? tot * 0.4 / 100 : 0); // Crâ : chaque PO = +0,4 % de vision spectrale
     return w;
   }
   function orientWeights(w, objective) {
@@ -1433,9 +1451,11 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       for (const [slot, type] of SLOTS) {
         const list = (pool[type] || []).filter(it => (it.lvl || 0) <= ctx.level && !(NS && it.w && it.w.lines.some(l => l.k === 'steal')));
         // objets dominés : un autre objet du même emplacement fait au moins aussi bien sur chaque stat (hors armes et panoplies) → inutile de les tester
-        const pruned = list.filter(it => it.w || it.setId || !list.some(o => o !== it && !o.w && dominates(o, it)));
+        const pruned = list.filter(it => it.w || it.setId || (it.s === 'dofus' && Object.keys(R.dofusFx([it.n || ''])).length) || !list.some(o => o !== it && !o.w && dominates(o, it)));
         pruned.sort((x, y) => itemHeur(y, wts) - itemHeur(x, wts));
         cands[slot] = pruned.slice(0, type === 'dofus' ? 12 : 10);
+        // Dofus à effet spécial : leurs stats seules ne disent rien, on les teste toujours en simulation
+        if (type === 'dofus') for (const it of list) if (Object.keys(R.dofusFx([it.n || ''])).some(k => k !== 'kaliptus' && k !== 'dofawa') && !cands[slot].includes(it)) cands[slot].push(it);
         if (cur.gear[slot] && !cands[slot].some(it => it.id === cur.gear[slot].id) && !(NS && slot === 'arme' && weaponSteals(cur.gear[slot]))) cands[slot].push(cur.gear[slot]);
       }
       // panoplies : on essaie exprès de porter ensemble les pièces possédées d'une même panoplie
@@ -1486,7 +1506,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     if (opts.optGear && opts.fillEmpty !== false) fillEmpty();
     function fillEmpty() {
       const pool = itemPool(data), filled = [];
-      const util = it => { const t = it.st || {}; const pp = (t.prospection || 0) + (t.chance || 0) / 10, sg = t.sagesse || 0;
+      const util = it => { const t = it.st || {}; const pp = (t.prospection || 0) + (t.chance || 0) / 10 + (/kaliptus/i.test(it.n || '') ? 100 : 0), sg = t.sagesse || 0; // Kaliptus : +20 % de chances d'un butin de plus sur les boss
         return obj === 'sagesse' ? sg * 2 + pp : pp * 2 + sg + 0.05 * (t.vitalite || 0) + 0.01 * Object.values(t).reduce((a, v) => a + Math.max(0, v), 0); };
       let base = evaluate(data, cur, ctx, mons, N, obj, FO).score;
       for (const [slot, type] of SLOTS) {
@@ -1498,7 +1518,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
           const g2 = Object.assign({}, cur.gear, { [slot]: it }); if (!gearValid(g2)) continue;
           const cand = Object.assign({}, cur, { gear: g2 }); ev++;
           const e = evaluate(data, cand, ctx, mons, N, obj, FO);
-          if (e.score >= base - 0.5) { cur = cand; base = Math.max(base, e.score); const t = it.st || {}; filled.push({ slot, id: it.id, n: it.n, why: (t.prospection || 0) + (t.chance || 0) / 10 >= (t.sagesse || 0) && ((t.prospection || 0) || (t.chance || 0)) ? 'prospection' : (t.sagesse || 0) ? 'sagesse' : 'vitalité' }); break; }
+          if (e.score >= base - 0.5) { cur = cand; base = Math.max(base, e.score); const t = it.st || {}; filled.push({ slot, id: it.id, n: it.n, why: /kaliptus/i.test(it.n || '') ? 'butin de boss' : (t.prospection || 0) + (t.chance || 0) / 10 >= (t.sagesse || 0) && ((t.prospection || 0) || (t.chance || 0)) ? 'prospection' : (t.sagesse || 0) ? 'sagesse' : 'vitalité' }); break; }
         }
       }
       if (filled.length) cur = Object.assign({}, cur, { _filled: filled });
@@ -1650,7 +1670,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     let cap = 12; for (const [p, c] of IV_CAPS) if (P.prestige >= p) cap = Math.max(cap, c);
     const PAt = Math.min(cap, (L >= 100 ? 7 : 6) + (S.pa || 0));
     const cc = Math.min(1, Math.max(0, (S.critique || 0) / 100));
-    const sp = Math.min(50, (P.breedId === 9 ? 18 : 0) + 0.4 * (S.po || 0)) / 100;
+    const sp = Math.min(60, (P.breedId === 9 ? 26 : 0) + 0.4 * (S.po || 0)) / 100;
     const pen = Math.min(50, (S.dmgPctDistance || 0) + (S.dmgPctMelee || 0)) * 0.8 / 100;
     const glob = (1 + sp) * (1 + (S.dmgPctSorts || 0) / 100) * (1 - 0.2 * (1 - pen)) / 0.8;
     const M = e => (1 + Math.max(0, (S[IV_CAR[e]] || 0) + (S.puissance || 0)) / 100) * (1 + 0.2 * cc);
@@ -1728,7 +1748,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
 <script type="text/plain" id="src-userscript">// ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.7.1
+// @version      2.7.2
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -1776,10 +1796,10 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   const RES_PCT_CAP_PLAYER = 50;
   const HAND_SIZE = 5;
   const DRAWS_MAX = 3;
-  const CLASS_SPECTRAL = { 9: 18 }; // Crâ : Œil de lynx
+  const CLASS_SPECTRAL = { 9: 26 }; // Crâ : Œil de lynx (patch du 10/10 : 18 → 26 %, plafond 60 %)
   // Passifs de classe observés en combat : 8 = « Enchaînement » (+15 % sur les sorts de dégâts suivants du tour, cumulable)
   const CLASS_PASSIVE = { 8: { chainPct: 15 } };
-  const SPECTRAL_PER_PO = 0.4, SPECTRAL_MAX = 50;
+  const SPECTRAL_PER_PO = 0.4, SPECTRAL_MAX = 60;
   const POINTS_PER_LEVEL = 5;
   const CARAC_TIERS = [[0, 1], [100, 2], [200, 3], [300, 4]];
   const STAT_TIERS = { vitalite: [[0, 1]], sagesse: [[0, 3]], force: CARAC_TIERS, intelligence: CARAC_TIERS, chance: CARAC_TIERS, agilite: CARAC_TIERS };
@@ -1843,6 +1863,9 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   }
 
   // gear : [{item, f}] ; ctx : {prestige, discordPct, scrolls, alloc, level, breedId}
+  // Dofus à effet spécial (patch du 10/10) : repérés par leur nom
+  const DOFUS_FX = { emeraude: /meraude/i, pourpre: /pourpre/i, turquoise: /turquoise/i, ocre: /ocre/i, vulbis: /vulbis/i, ivoire: /ivoire/i, glaces: /glace/i, ebene: /b[eè]ne/i, kaliptus: /kaliptus/i, tachete: /tachet/i, dofawa: /dofawa/i };
+  function dofusFx(names) { const o = {}; for (const n of names) { if (!/dofus|dofawa|kaliptus/i.test(n)) continue; for (const [k, re] of Object.entries(DOFUS_FX)) if (re.test(n)) o[k] = true; } return o; }
   function computeStats(gear, ctx) {
     // Prestige : +25 % par Prestige ; Bouclier de forge : jusqu'à +150 % au niveau 200 (cumul supposé additif, à confirmer)
     const pMult = 1 + 0.25 * (ctx.prestige || 0) + (ctx.forgePct || 0) / 100;
@@ -1891,6 +1914,8 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     s._perfo = Math.max(0, Math.min(25, ((s.fuite || 0) + (s.tacle || 0)) * 0.05));  // % des dégâts qui traversent les boucliers ennemis
     s._ero = Math.max(0, Math.min(25, ((s.dommagesPoussee || 0) + (s.resPoussee || 0)) * 0.05)); // % des dégâts retirés aux PV max
     s._pp = 100 + (s.prospection || 0) + Math.floor((s.chance || 0) / 10);
+    s._dofus = dofusFx(gear.filter(g => g && g.item && (g.item.s === 'dofus' || /dofus/i.test(g.item.n || ''))).map(g => g.item.n || ''));
+    if (s._dofus.ebene) s._perfo = Math.min(32.5, s._perfo * 1.3);
     return s;
   }
 
@@ -1905,6 +1930,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     S._red = Math.min(50, (S.resPctDistance || 0) + (S.resPctMelee || 0));
     S._perfo = Math.max(0, Math.min(25, ((S.fuite || 0) + (S.tacle || 0)) * 0.05));
     S._ero = Math.max(0, Math.min(25, ((S.dommagesPoussee || 0) + (S.resPoussee || 0)) * 0.05));
+    S._dofus = dofusFx(o.dofus || []); if (S._dofus.ebene) S._perfo = Math.min(32.5, S._perfo * 1.3);
     return S;
   }
 
@@ -1973,6 +1999,8 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const wMode = opts.weaponMode || (WEAPON_LAST ? 'last' : WEAPON_MODE);
     const chainPct = opts.chainPct != null ? opts.chainPct : ((CLASS_PASSIVE[S._breed] || {}).chainPct || 0);
     const T = { buffP: 0, buffC: 0, dmgPct: 0, sustainLeft: 0, weaponUsed: false, inv: false, invS: false, half: false, cards: 0, lastEl: null, round: 0 };
+    const DF = S._dofus || {}; let vulb = 0, critTurn = false, pourpreUsed = !DF.pourpre, emeraudeUsed = !DF.emeraude;
+    const saved = () => { if (P.hp <= 0 && !emeraudeUsed) { emeraudeUsed = true; P.hp = Math.max(1, Math.round(maxHp * 0.2)); } return P.hp > 0; }; // Émeraude : survit une fois avec 20 % de PV
     // Mécaniques de boss : chaque boss encore debout applique les siennes (bestiaire + mécaniques apprises en combat)
     const alive = () => mons.filter(x => x.alive);
     const mk = (k) => { for (const m of mons) if (m.alive && m.mech && m.mech[k] != null && m.mech[k] !== false) return m.mech; return null; };
@@ -1987,20 +2015,20 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         if (mp < pp) { const nm = m.mech.swapHalf ? mp + (pp - mp) / 2 : pp, np = m.mech.swapHalf ? pp - (pp - mp) / 2 : mp; m.hp = Math.max(1, Math.round(nm * m.maxHp)); const nh = Math.max(1, Math.round(np * maxHp)); if (nh < P.hp) hpLost += P.hp - nh; P.hp = nh; }
       }
       // ----- tour du joueur -----
-      let ap = S._paTotal + P.apNext; P.apNext = 0;
-      while (hand.length < HAND_SIZE) { const c = draw(); if (!c) break; hand.push(c); }
+      let ap = S._paTotal + P.apNext + (critTurn ? 1 : 0); P.apNext = 0; critTurn = false; // Turquoise : +1 PA (au-delà du plafond) le tour après un critique
+      while (hand.length < HAND_SIZE + (round === 1 && DF.ocre ? 1 : 0)) { const c = draw(); if (!c) break; hand.push(c); }
       T.buffP = 0; T.buffC = 0; T.dmgPct = S.dmgPctSorts || 0; T.sustainLeft = SUSTAIN.perTurn; T.weaponUsed = false; T.cards = 0; let drawsLeft = DRAWS_MAX;
       const invFrom = opts.invertFrom || mv('invertFrom', 0), sealPa = opts.sealPa || mv('sealPa', 0), sealFrom = opts.sealFrom || mv('sealFrom', 1);
       const halfFrom = mv('healHalfFrom', 0);
       T.inv = invFrom > 0 && round >= invFrom; T.invS = T.inv && !!(opts.invertShields || mv('invertShields', false)); T.seal = (sealPa > 0 && round >= sealFrom) ? sealPa : 0;
       T.half = halfFrom > 0 && round >= halfFrom;
       // vol de PA
-      const stealEvery = mv('apStealEvery', 0);
-      if (stealEvery ? every(stealEvery, round) : (mv('apSteal', 0) && round >= mv('apStealFrom', 1))) ap = Math.max(0, ap - (mv('apSteal', 0) || 1));
+      const stealEvery = mv('apStealEvery', 0); let tachete = !!DF.tachete; // Tacheté : annule le premier effet de contrôle du tour
+      if (stealEvery ? every(stealEvery, round) : (mv('apSteal', 0) && round >= mv('apStealFrom', 1))) { if (tachete) tachete = false; else ap = Math.max(0, ap - (mv('apSteal', 0) || 1)); }
       // carte scellée pour le tour : la plus chère de la main
       const sealEvery = mv('sealEvery', 0);
       const sealOn = sealEvery ? every(sealEvery, round) : (mv('sealCard', false) && round >= mv('sealCardFrom', 1));
-      const sealedCard = sealOn && hand.length ? hand.reduce((a, c) => (c.ap > a.ap ? c : a), hand[0]) : null;
+      const sealedCard = sealOn && hand.length && !(tachete && !(tachete = false)) ? hand.reduce((a, c) => (c.ap > a.ap ? c : a), hand[0]) : null;
       // PA comptés : finir le tour avec exactement N PA
       const paM = mk('paTurn'), paNeed = paM && paM.paTurn === round ? paM.paLeft : null;
       // Fureur : au-delà de N cartes (hors arme) dans le tour, sa prochaine attaque est multipliée
@@ -2039,7 +2067,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         play(pick); if (pick.hasDmg && chainPct) T.dmgPct += chainPct; // l'arme compte aussi dans l'Enchaînement (observé)
         if (opts.trace) (trace[round] = trace[round] || []).push(pick.name + (pick.weapon ? ' (arme)' : ''));
         if (!pick.weapon) T.cards++;
-        if (P.hp <= 0) return result(false, round);
+        if (P.hp <= 0 && !saved()) return result(false, round);
         ap -= cost(pick); if (!pick.weapon) T.seal = 0;
         if (pick.weapon) T.weaponUsed = true; else { hand.splice(hand.indexOf(pick), 1); discard.push(pick); }
       }
@@ -2062,18 +2090,20 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         if (intent === 'guard') { m.shield = Math.round(m.atk * GUARD_PCT); continue; }
         const fury = intent === 'drain' ? 1 : (m.furyNext || 1); if (intent !== 'drain') m.furyNext = 0;
         // Fureur : observé en Ascension, le coup « déchaîné » vaut ~×fureur l'attaque de base (il remplace le bonus de l'intention)
-        const mult = (fury > 1 && intent !== 'drain' ? fury : (INTENT_MULT[intent] || 1)) * (1 + RAGE_STEP * m.rage) * (1 - Math.min(100, m.weaken) / 100);
+        const mult = (fury > 1 && intent !== 'drain' ? fury : (INTENT_MULT[intent] || 1)) * (1 + RAGE_STEP * m.rage) * (1 - Math.min(100, m.weaken) / 100) * (DF.glaces ? 0.9 : 1); // Glaces : frappe −10 %
         m.weaken = 0;
-        if (RND() * 100 < S._dodge) continue;
+        if (RND() * 100 < Math.min(DF.vulbis ? 75 : 100, S._dodge + vulb)) continue;
+        if (DF.vulbis) vulb += 2; // Vulbis : +2 % d'esquive par coup non esquivé
         const rf = S[RES_FIX[m.el]] || 0, rp = Math.min(RES_PCT_CAP_PLAYER, S[RES_PCT[m.el]] || 0);
         let dmg = Math.max(0, Math.floor((m.atk * mult * (1 - (S._red || 0) / 100) - rf) * (1 - rp / 100)));
         // coup critique du monstre (rare, observé ~6 %) : la Résistance Critiques retire sa valeur au coup critique reçu
         if (RND() < MON_CRIT_P) dmg = Math.max(0, Math.floor(dmg * MON_CRIT_MULT) - (S.resCritiques || 0));
         for (const s of P.shields) { const a = Math.min(s.value, dmg); s.value -= a; dmg -= a; if (!dmg) break; }
+        if (DF.ivoire) dmg = Math.min(dmg, Math.floor(maxHp * 0.35)); // Ivoire : aucun coup ordinaire au-delà de 35 % des PV max
         P.hp -= dmg; hpLost += dmg;
         if (intent === 'drain') m.hp = Math.min(m.cap, m.hp + dmg);
         if (S.renvoi > 0 && dmg > 0) { const r = Math.min(m.hp, S.renvoi, dmg); /* au plus les dégâts reçus */ m.hp -= r; dmgDone += r; if (m.hp <= 0) { m.hp = 0; down(m); } }
-        if (P.hp <= 0) return result(false, round);
+        if (P.hp <= 0 && !saved()) return result(false, round);
       }
     }
     return result(false, opts.maxRounds || 30);
@@ -2208,6 +2238,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       const rp = er(m.res[RES_PCT[line.el || 0]] || 0);
       let d = dmgLine(S, line, opt.crit, T.buffP, T.dmgPct, opt.spec, rp, opt.fixed !== false, opt.weapon);
       if (opt.sec) d = Math.floor(d * ZONE_SEC);
+      if (opt.x2) d *= 2;
       if (m.mech && m.mech.hardSkin && shieldTotal() <= 0) d = Math.floor(d * m.mech.hardSkin / 100);
       if (reflects(m)) {
         // « renvoie le coup » : le monstre ne prend rien et te renvoie les dégâts (tes boucliers absorbent)
@@ -2223,6 +2254,8 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     function play(c) {
       const critP = c.cc > 0 ? Math.min(100, c.cc + (S.critique || 0) + T.buffC) : 0;
       const crit = RND() * 100 < critP;
+      if (crit && DF.turquoise) critTurn = true;
+      const x2 = !pourpreUsed && c.hasDmg && !c.weapon; if (x2) pourpreUsed = true; // Pourpre : le premier sort de dégâts du combat ×2
       const critArg = crit ? ((c.crit && c.crit.length) ? true : 'boost') : false;
       const lines = crit && c.crit ? c.crit : c.eff;
       const spec = !c.weapon && c.hasDmg && RND() < specP;  // Vision spectrale : tout le sort est doublé (toutes cibles et lignes, vérifié dans le journal)
@@ -2238,10 +2271,10 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         if (chosen && l.chance && l !== chosen[0] && !(crit && c.crit)) continue;
         if (l.k === 'dmg' || l.k === 'steal') {
           const withFixed = c.weapon ? true : first; first = false;
-          if (l.zone) { if (!tgt || !tgt.alive) tgt = target(); for (const m of [tgt, ...mons.filter(x => x !== tgt)]) if (m && m.alive) { hit(m, l, c.name, { crit: critArg, spec, fixed: withFixed, weapon: c.weapon, sec: m !== tgt }); } }
+          if (l.zone) { if (!tgt || !tgt.alive) tgt = target(); for (const m of [tgt, ...mons.filter(x => x !== tgt)]) if (m && m.alive) { hit(m, l, c.name, { crit: critArg, spec, fixed: withFixed, weapon: c.weapon, sec: m !== tgt, x2 }); } }
           else {
             if (!tgt || !tgt.alive) tgt = target(); if (!tgt) break;
-            const r = hit(tgt, l, c.name, { crit: critArg, spec, fixed: withFixed, weapon: c.weapon });
+            const r = hit(tgt, l, c.name, { crit: critArg, spec, fixed: withFixed, weapon: c.weapon, x2 });
             if (l.k === 'steal') healP(Math.floor(r / 2));
           }
         } else if (l.k === 'dmgCasterHp') {
@@ -2350,7 +2383,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     if (mech.shockPct) w.push(`l'auto n'alterne pas les éléments (Onde de choc)`);
     return w;
   }
-  const api = { deriveStats, setAutoOrder: v => { AUTO_ORDER = v; }, setTuning: o => { if (o.crit != null) CRIT_MULT = o.crit; if (o.zoneSec != null) ZONE_SEC = o.zoneSec; if (o.weaponLast != null) WEAPON_LAST = o.weaponLast; if (o.weaponMode) WEAPON_MODE = o.weaponMode; }, CLASS_PASSIVE, forgePctFor, forgeDaysTo, forgeXpAt, diffForFloor, bestiaryEntries, mechFromEntries, mechText, autoWarnings, itemStats, weaponWithFusion, tierCost, allocCost, pointsTotal, computeStats, prepCard, weaponCard, simulateFight, runMany, STAT_TIERS, CARAC_OF_EL, EL_NAMES, RES_PCT, RES_FIX };
+  const api = { deriveStats, setAutoOrder: v => { AUTO_ORDER = v; }, setTuning: o => { if (o.crit != null) CRIT_MULT = o.crit; if (o.zoneSec != null) ZONE_SEC = o.zoneSec; if (o.weaponLast != null) WEAPON_LAST = o.weaponLast; if (o.weaponMode) WEAPON_MODE = o.weaponMode; }, CLASS_PASSIVE, dofusFx, forgePctFor, forgeDaysTo, forgeXpAt, diffForFloor, bestiaryEntries, mechFromEntries, mechText, autoWarnings, itemStats, weaponWithFusion, tierCost, allocCost, pointsTotal, computeStats, prepCard, weaponCard, simulateFight, runMany, STAT_TIERS, CARAC_OF_EL, EL_NAMES, RES_PCT, RES_FIX };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.RPG = api;
 })(__labo);
   return __labo.RPG; })(); /*__ENGINE_END__*/
@@ -3548,7 +3581,7 @@ function memoStoreKey(){return 'labo-memo-'+LPROF}
 function memoLoad(){try{return JSON.parse(localStorage.getItem(memoStoreKey())||'[]',(k,v)=>v==='__INF__'?Infinity:v)||[]}catch(e){return []}}
 function memoSave(list){const js=x=>JSON.stringify(x,(k,v)=>v===Infinity?'__INF__':v);let l=list.slice(0,30);while(l.length){try{localStorage.setItem(memoStoreKey(),js(l));return}catch(e){l=l.slice(0,l.length-1)}}try{localStorage.removeItem(memoStoreKey())}catch(e){}}
 function dataSig(d){const m=d.meta||{};return fnv(JSON.stringify([m.level,m.prestige,m.breedId,m.forge&&m.forge.level,m.discordBonus,m.scrolls,(d.items||[]).map(i=>i.id+'/'+(i.f||0)),(d.worn||[]).map(i=>i.id+'/'+(i.f||0)),(d.cards||[]).map(c=>c.key),Object.keys(d.setBonus||{}).length]))}
-function partSig(o){const c=Object.assign({},o);delete c.onProgress;delete c.seed;delete c.monsters;delete c.sustain;delete c.noSteal;delete c._pv;return fnv(JSON.stringify(c))}
+function partSig(o){const c=Object.assign({rev:"2026-10-10b"},o);delete c.onProgress;delete c.seed;delete c.monsters;delete c.sustain;delete c.noSteal;delete c._pv;return fnv(JSON.stringify(c))}
 function packSig(kind,v){return fnv([kind,v,v==='asc-poly'?ascTargetFloor():'',kind==='opt'?$('#oDiff').value:$('#aDiff').value].join('|'))}
 function optsSig(o){const c=Object.assign({},o);delete c.onProgress;delete c.seed;delete c._pv;return fnv(JSON.stringify(c))}
 function goalSig(kind,o){return kind+'|'+o.objective+'|'+fnv(JSON.stringify(o.monsters))}
@@ -4045,6 +4078,13 @@ $('#dlClaude').onclick=()=>{try{const raw=dsGet(dataKey(LPROF));if(!raw){$('#imp
   $('#importMsg').textContent=`Fichier prêt (${Math.round(txt.length/1024)} Ko) : glisse-le dans la conversation avec Claude.`}catch(e){$('#importMsg').textContent='Préparation impossible : '+e.message+(location.hostname.includes('claude')?' (le téléchargement marche depuis ton Labo en ligne)':'')}};
 $('#dlBtn').onclick=()=>{try{const raw=dsGet(dataKey(LPROF));if(!raw){$('#importMsg').textContent='Rien à télécharger : importe d\'abord tes données.';return}const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([raw],{type:'application/json'}));a.download=LPROF==='saison'?'labo-rpgmasters-heroique.json':'labo-rpgmasters-donnees.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}catch(e){$('#importMsg').textContent='Téléchargement impossible : '+e.message}};
 
+
+const DOFUS_TXT={emeraude:['Émeraude','Survit une fois avec 20 % de PV.','oui'],pourpre:['Pourpre','Le premier sort de dégâts inflige ×2.','oui'],turquoise:['Turquoise','+1 PA au tour suivant après un critique, au-delà du plafond de PA (combat seulement).','oui'],ocre:['Ocre','Une carte de plus au début du combat.','oui'],vulbis:['Vulbis','Esquive qui monte de 2 % par coup non esquivé, 75 % au maximum.','oui'],ivoire:['Ivoire','Aucun coup ordinaire ne retire plus de 35 % des PV max.','oui'],glaces:['Glaces','Frappe de la cible −10 %, non cumulable.','oui'],ebene:['Ébène','Perforation ×1,3 (plafond 32,5 %).','oui'],kaliptus:['Kaliptus','Un boss a 20 % de chances de donner un objet de butin en plus.','hors combat (mis en emplacement libre)'],tachete:['Tacheté','Annule le premier effet de contrôle de chaque tour.','vol de PA et carte scellée'],dofawa:['Dofawa','Effet mystère (non dévoilé).','non']};
+const STAT_SHORT={vitalite:'Vita',sagesse:'Sagesse',force:'Force',intelligence:'Intel',chance:'Chance',agilite:'Agi',puissance:'Puissance',dommages:'Do',dommagesNeutre:'Do neutre',dommagesTerre:'Do terre',dommagesFeu:'Do feu',dommagesEau:'Do eau',dommagesAir:'Do air',critique:'% Crit',dommagesCritiques:'Do crit',pa:'PA',pm:'PM',po:'PO',invocations:'Invoc',prospection:'PP',soins:'Soins',resPctNeutre:'% Rés neutre',resPctTerre:'% Rés terre',resPctFeu:'% Rés feu',resPctEau:'% Rés eau',resPctAir:'% Rés air',resNeutre:'Rés neutre',resTerre:'Rés terre',resFeu:'Rés feu',resEau:'Rés eau',resAir:'Rés air',fuite:'Fuite',tacle:'Tacle',initiative:'Initiative',resCritiques:'Rés crit',dommagesPoussee:'Do poussée',resPoussee:'Rés poussée',retraitPA:'Retrait PA',retraitPM:'Retrait PM',esquivePA:'Esq PA',esquivePM:'Esq PM',renvoi:'Renvoi',dmgPctDistance:'% Do distance',dmgPctMelee:'% Do mêlée',resPctDistance:'% Rés distance',resPctMelee:'% Rés mêlée',dmgPctSorts:'% Do sorts',pods:'Pods'};
+function statsLine(it,max){const st=it.f?R.itemStats(it,it.f):(it.st||{});const parts=Object.entries(st).filter(([,v])=>v).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])).map(([k,v])=>(v>0?'+':'')+v+' '+(STAT_SHORT[k]||k));let w='';if(it.w&&it.w.lines){w=it.w.lines.filter(l=>l.k==='dmg'||l.k==='steal').map(l=>`${l.min}-${l.max} ${['neutre','terre','feu','eau','air'][l.el||0]}${l.k==='steal'?' (vol)':''}`).join(', ');if(w)w='Arme '+it.w.ap+' PA : '+w+' · '}return w+(max?parts.slice(0,max):parts).join(', ')+(max&&parts.length>max?'…':'')}
+function fxOf(it){const k=Object.keys(R.dofusFx([it.n||'']));return k.map(x=>DOFUS_TXT[x]).filter(Boolean)}
+function renderDofusFx(){const el=$('#dofusFx');if(!el)return;const S=profData('saison'),Pp=profData('principal');const has=(D,k)=>D&&(D.items||[]).concat(D.worn||[]).some(i=>R.dofusFx([i.n||''])[k]);
+  el.innerHTML=`<table><tr><th>Dofus</th><th>Effet</th><th>Simulé</th><th>Héroïque</th><th>Principal</th></tr>${Object.entries(DOFUS_TXT).map(([k,[n,t,m]])=>`<tr><td><strong>${n}</strong></td><td>${esc(t)}</td><td class="dim">${esc(m)}</td><td>${has(S,k)?'<span class="up">oui</span>':'—'}</td><td>${has(Pp,k)?'<span class="up">oui</span>':'—'}</td></tr>`).join('')}</table>`}
 /* ---------- Objets : tier list + Banque ---------- */
 function profData(p){if(p===LPROF)return DATA;try{const s=dsGet(dataKey(p));if(s){const d=JSON.parse(s);if(d&&d.items)return mergeData(baseFor(p),d)}}catch(e){}return p==='principal'?SNAP:null}
 const SLOT_FR={chapeau:'Chapeau',cape:'Cape',amulette:'Amulette',anneau:'Anneau',ceinture:'Ceinture',bottes:'Bottes',arme:'Arme',bouclier:'Bouclier',familier:'Familier',dofus:'Dofus'};
@@ -4087,7 +4127,7 @@ function renderTierList(){
   $('#tlSum').innerHTML=`${rows.length} objets · ${'SABCD'.split('').map(t=>`<span class="tier ${t}">${t}</span> ${cnt[t]||0}`).join(' · ')} · éléments comptés : ${el||'—'}`;
   const own=u=>[u.own.saison?`Héroïque (${u.where.saison})`:'',u.own.principal?`principal (${u.where.principal})`:''].filter(Boolean).join(' + ');
   const N=+(out.dataset.n||150);
-  out.innerHTML=rows.length?`<table><tr><th>Tier</th><th>Objet</th><th>Empl.</th><th class="num">Niv.</th><th class="num" title="Gain de puissance face à un perso de son niveau">Valeur</th><th class="num" title="Dégâts par tour / PV effectifs">Dégâts · Survie</th><th>Fin de jeu</th><th>Possédé</th><th>Obtention</th></tr>${rows.slice(0,N).map(u=>`<tr><td><span class="tier ${u.tier}">${u.tier}</span></td><td><strong>${esc(u.it.n)}</strong>${u.it.f?` <span class="dim">+${u.it.f}</span>`:''}${u.setPart?'<div class="note">panoplie comprise</div>':''}${u.it.s==='dofus'&&!u.setPart?'<div class="note" title="Effets spéciaux (déclenchements, conditions) non comptés : seules les stats le sont">stats seules</div>':''}</td><td>${SLOT_FR[u.it.s]||u.it.s}</td><td class="num">${u.it.lvl||''}</td><td class="num">${fmt(u.v,1)}</td><td class="num dim">+${fmt(Math.max(0,u.off),1)} % · +${fmt(Math.max(0,u.def),1)} %</td><td><span class="tier ${u.tierEnd}">${u.tierEnd}</span></td><td class="dim">${own(u)}</td><td class="dim">${obtainText(TL,u)}</td></tr>`).join('')}</table>${rows.length>N?`<p><button class="btn" id="tlMore">Afficher ${Math.min(150,rows.length-N)} de plus (${rows.length-N} restants)</button></p>`:''}`:'<p class="note">Aucun objet avec ces filtres.</p>';
+  out.innerHTML=rows.length?`<table><tr><th>Tier</th><th>Objet</th><th>Empl.</th><th class="num">Niv.</th><th class="num" title="Gain de puissance face à un perso de son niveau">Valeur</th><th class="num" title="Dégâts par tour / PV effectifs">Dégâts · Survie</th><th>Fin de jeu</th><th>Possédé</th><th>Obtention</th></tr>${rows.slice(0,N).map(u=>`<tr><td><span class="tier ${u.tier}">${u.tier}</span></td><td><strong>${esc(u.it.n)}</strong>${u.it.f?` <span class="dim">+${u.it.f}</span>`:''}<div class="note" title="${esc(statsLine(u.it))}">${esc(statsLine(u.it,6))}</div>${fxOf(u.it).map(f=>`<div class="note" style="color:var(--gold)">Effet : ${esc(f[1])}</div>`).join('')}${u.setPart?'<div class="note">panoplie comprise</div>':''}${u.it.s==='dofus'&&!u.setPart&&!fxOf(u.it).length?'<div class="note" title="Effet spécial inconnu : seules les stats sont comptées">stats seules</div>':''}${fxOf(u.it).length?'<div class="note">effet compté dans l\'Optimiseur, pas dans cette valeur</div>':''}</td><td>${SLOT_FR[u.it.s]||u.it.s}</td><td class="num">${u.it.lvl||''}</td><td class="num">${fmt(u.v,1)}</td><td class="num dim">+${fmt(Math.max(0,u.off),1)} % · +${fmt(Math.max(0,u.def),1)} %</td><td><span class="tier ${u.tierEnd}">${u.tierEnd}</span></td><td class="dim">${own(u)}</td><td class="dim">${obtainText(TL,u)}</td></tr>`).join('')}</table>${rows.length>N?`<p><button class="btn" id="tlMore">Afficher ${Math.min(150,rows.length-N)} de plus (${rows.length-N} restants)</button></p>`:''}`:'<p class="note">Aucun objet avec ces filtres.</p>';
   const m=$('#tlMore');if(m)m.onclick=()=>{out.dataset.n=N+150;renderTierList()};
 }
 function renderBank2(){
@@ -4111,7 +4151,7 @@ function renderBank2(){
   while(pick.length<slots+6&&left.length){let bi=-1,bs=-1;for(let i=0;i<left.length;i++){const u=left[i];const n=cnt[u.it.s]||0,need=SLOT_NEED[u.it.s]||1;const e=u.bank*(n<need?1:Math.pow(0.3,n-need+1));if(e>bs){bs=e;bi=i}}const u=left.splice(bi,1)[0];u.eff=bs;u.extra=(cnt[u.it.s]||0)>=(SLOT_NEED[u.it.s]||1);cnt[u.it.s]=(cnt[u.it.s]||0)+1;pick.push(u)}
   const pl=Pp.meta.level||0;
   $('#bank2Note').innerHTML=`<strong>${slots} emplacements</strong> (8 + 3 par Prestige ; ton Héroïque est Prestige ${S.meta.prestige||0}). Le contenu de la Banque passe dans l'inventaire de ton principal à la fin de la saison (lundi 8 h). Classement <strong>fin de jeu</strong> pour ton <strong>principal</strong> (éléments de son deck${Pp===SNAP?' ; données d\'exemple : importe son export':''}) : valeur de l'objet sur un perso niveau 200 (les objets sous le tier C à ce niveau sont écartés) × rareté (objet <em>hors bestiaire</em> = introuvable en farm ×1,5, drop &lt; 0,5 % ×1,3) ; un objet que ton principal a déjà compte pour presque rien, et au-delà de 2 anneaux / 6 Dofus / 1 objet par autre emplacement, les suivants passent derrière. `;
-  $('#bank2Out').innerHTML=`<table><tr><th>#</th><th>Objet</th><th>Empl.</th><th class="num">Niv.</th><th title="Comparé aux meilleurs objets connus de cet emplacement au niveau visé">Tier</th><th>Obtention</th><th>Pourquoi</th></tr>${pick.map((u,i)=>`<tr class="${i<slots?'changed':''}"><td class="num">${i+1}${i===slots-1?'<div class="note">dernier</div>':''}</td><td><strong>${esc(u.it.n)}</strong>${u.it.f?` <span class="dim">+${u.it.f}</span>`:''}<div class="note">${esc(u.where.saison||'')}</div></td><td>${SLOT_FR[u.it.s]||u.it.s}</td><td class="num">${u.it.lvl||''}</td><td><span class="tier ${tierOf(u.rH)}">${tierOf(u.rH)}</span></td><td class="dim">${obtainText(X,u)}</td><td class="dim">${[u.dup?'ton principal l\'a déjà':'',u.later?'au-dessus du niveau visé':'',u.extra?'emplacement déjà couvert':'',!X.inCat.has(u.it.id)?'introuvable en farm':'',u.setB?`panoplie (${sCnt[u.it.setId]} pièces)`:'',`valeur ${fmt(u.vb,1)}`].filter(Boolean).join(' · ')}</td></tr>`).join('')}</table><p class="note">Les ${slots} premiers (surlignés) tiennent dans ta Banque ; les suivants sont les remplaçants. Un objet équipé compte aussi : déséquipe-le pour le déposer.</p>`;
+  $('#bank2Out').innerHTML=`<table><tr><th>#</th><th>Objet</th><th>Empl.</th><th class="num">Niv.</th><th title="Comparé aux meilleurs objets connus de cet emplacement au niveau visé">Tier</th><th>Obtention</th><th>Pourquoi</th></tr>${pick.map((u,i)=>`<tr class="${i<slots?'changed':''}"><td class="num">${i+1}${i===slots-1?'<div class="note">dernier</div>':''}</td><td><strong>${esc(u.it.n)}</strong>${u.it.f?` <span class="dim">+${u.it.f}</span>`:''}<div class="note">${esc(u.where.saison||'')} · ${esc(statsLine(u.it,5))}</div>${fxOf(u.it).map(f=>`<div class="note" style="color:var(--gold)">Effet : ${esc(f[1])}</div>`).join('')}</td><td>${SLOT_FR[u.it.s]||u.it.s}</td><td class="num">${u.it.lvl||''}</td><td><span class="tier ${tierOf(u.rH)}">${tierOf(u.rH)}</span></td><td class="dim">${obtainText(X,u)}</td><td class="dim">${[u.dup?'ton principal l\'a déjà':'',u.later?'au-dessus du niveau visé':'',u.extra?'emplacement déjà couvert':'',!X.inCat.has(u.it.id)?'introuvable en farm':'',u.setB?`panoplie (${sCnt[u.it.setId]} pièces)`:'',`valeur ${fmt(u.vb,1)}`].filter(Boolean).join(' · ')}</td></tr>`).join('')}</table><p class="note">Les ${slots} premiers (surlignés) tiennent dans ta Banque ; les suivants sont les remplaçants. Un objet équipé compte aussi : déséquipe-le pour le déposer.</p>`;
 }
 
 /* ---------- Sauvegarde du Labo ---------- */
@@ -4150,7 +4190,7 @@ function healthCheck(force){const out=$('#healthOut');if(!out)return;const fs=(D
   const job=++healthJob;let i=0;const acc={n:0,obsR:0,simR:0,ape:0,obsW:0,simW:0,dmgN:0,obsD:0,simD:0};
   const step=()=>{if(job!==healthJob)return;const end=Math.min(fs.length,i+6);
     for(;i<end;i++){const f=fs[i],b=DATA.builds[f.bsig];const defs=f.mons.map(k=>mons[k]);if(defs.some(x=>!x))continue;
-      const S=R.deriveStats(b.stats,{maxHp:b.maxHp,basePa:b.basePa,breedId:DATA.meta.breedId});
+      const S=R.deriveStats(b.stats,{maxHp:b.maxHp,basePa:b.basePa,breedId:DATA.meta.breedId,dofus:(DATA.worn||[]).filter(w=>w.s==='dofus').map(w=>w.n)});
       const deck=(b.deck||[]).map(n=>byName[n]).filter(Boolean).map((c,j)=>R.prepCard(c,'c'+j));const wi=b.weapon&&items.find(x=>x.n===b.weapon&&x.w);
       const r=R.runMany({S,deck,weapon:wi?R.weaponCard(wi,wi.f||0):null,monsters:defs,level:DATA.meta.level,auto:f.auto!==false,weaponMode:W_MODE,seed:11+i},40);
       acc.n++;acc.obsW+=f.status==='won'?1:0;acc.simW+=r.winRate;
@@ -4185,7 +4225,7 @@ function renderPredict(){const out=$('#fPredict');if(!out)return;const B=DATA.be
   const zones=(B.zones||[]).filter(z=>z.max>=Math.min(L,200)-10&&z.min<=L&&byZ[z.id]).map(z=>{const sp=byZ[z.id];const known=sp.map(m=>byName[m.n]).filter(Boolean);return {z,sp,known}}).filter(o=>o.known.length>=Math.max(1,Math.ceil(o.sp.length/2)));
   if(!zones.length){out.textContent='Aucune zone de ton niveau dont tu connais déjà la moitié des monstres.';return}
   const b=DATA.builds[last.bsig];const cardsBy=Object.fromEntries(DATA.cards.map(c=>[c.n,c]));const items=(DATA.items||[]).concat(DATA.worn||[]);
-  const S=R.deriveStats(b.stats,{maxHp:b.maxHp,basePa:b.basePa,breedId:DATA.meta.breedId});const deck=(b.deck||[]).map(n=>cardsBy[n]).filter(Boolean).map((c,j)=>R.prepCard(c,'c'+j));const wi=b.weapon&&items.find(x=>x.n===b.weapon&&x.w);const weapon=wi?R.weaponCard(wi,wi.f||0):null;
+  const S=R.deriveStats(b.stats,{maxHp:b.maxHp,basePa:b.basePa,breedId:DATA.meta.breedId,dofus:(DATA.worn||[]).filter(w=>w.s==='dofus').map(w=>w.n)});const deck=(b.deck||[]).map(n=>cardsBy[n]).filter(Boolean).map((c,j)=>R.prepCard(c,'c'+j));const wi=b.weapon&&items.find(x=>x.n===b.weapon&&x.w);const weapon=wi?R.weaponCard(wi,wi.f||0):null;
   const job=++predJob;let i=0;const rows=[];const n=Math.max(1,Math.round(size));
   const step=()=>{if(job!==predJob)return;for(let e=Math.min(zones.length,i+2);i<e;i++){const o=zones[i];let rs=0,ws=0,xs=0;const K=24;
       for(let k=0;k<K;k++){const g=[];for(let j=0;j<n;j++)g.push(o.known[(k*7+j*3+i)%o.known.length]);const r=R.runMany({S,deck,weapon,monsters:g,level:L,auto:true,weaponMode:W_MODE,seed:101+k},4);rs+=isFinite(r.avgRounds)?r.avgRounds:30;ws+=r.winRate;xs+=g.reduce((a,m)=>a+(m.xp||0),0)*xpMult}
@@ -4196,7 +4236,7 @@ function renderPredict(){const out=$('#fPredict');if(!out)return;const B=DATA.be
     rows.sort((a,b)=>b.xph-a.xph);
     out.innerHTML=`<table><tr><th>Zone</th><th class="num">Monstres connus</th><th class="num">Tours</th><th class="num">Victoires</th><th class="num">XP/combat</th><th class="num">XP/h estimée</th><th>Déjà farmée</th></tr>${rows.slice(0,20).map(r=>`<tr><td><strong>${esc(r.o.z.n)}</strong><div class="note">${esc(r.o.z.area||'')} · niv. ${r.o.z.min}-${r.o.z.max}</div></td><td class="num">${r.o.known.length} / ${r.o.sp.length}</td><td class="num">${fmt(r.rounds,2)}</td><td class="num ${r.win<0.99?'down':''}">${fmt(r.win*100,0)} %</td><td class="num">${fmt(r.xp)}</td><td class="num"><strong>${fmt(r.xph)}</strong></td><td class="dim">${r.v?`oui · réel ${r.v.perH&&r.v.xp?fmt(r.v.perH*r.v.xp*r.v.winRate)+' XP/h':'—'}`:'non'}</td></tr>`).join('')}</table><p class="note">${rat.length>=2?`Estimations recalées sur tes ${rat.length} zones déjà farmées (×${fmt(cal,2)}). `:''}Groupes de ${n} monstres (ta moyenne), multiplicateur d'XP réel ×${fmt(xpMult,2)}, combat de ${fmt(base,1)} s + ${fmt(perR,1)} s par tour en plus. Une victoire sous 99 % = risque réel (mortel en Héroïque).</p>`};
   setTimeout(step,30)}
-function renderItemsTab(){try{renderBank2()}catch(e){$('#bank2Out').textContent='Erreur : '+e.message}try{renderTierList()}catch(e){$('#tlOut').textContent='Erreur : '+e.message}}
+function renderItemsTab(){try{renderDofusFx()}catch(e){}try{renderBank2()}catch(e){$('#bank2Out').textContent='Erreur : '+e.message}try{renderTierList()}catch(e){$('#tlOut').textContent='Erreur : '+e.message}}
 ['tlFor','tlSlot','tlSrc','tlMin','tlMax','tlStyle','tlQ','bkStyle','tlSet'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener(id==='tlQ'||id==='tlMin'||id==='tlMax'||id==='bkLvl'?'input':'change',()=>{if(id.startsWith('tl')){if(id==='tlSet')TL=null;$('#tlOut').dataset.n=150;renderTierList()}else renderBank2()})});
 function init(){prepare();renderPerso();try{renderCardUse();renderFreePts();renderBank()}catch(e){}renderAscPanel();renderBest();packOptions($('#simPack'));packOptions($('#oPack'));{const o=document.createElement('option');o.value='poly';o.textContent='Polyvalent · tes adversaires habituels (conseillé)';$('#oPack').insertBefore(o,$('#oPack').firstChild);$('#oPack').value='poly'}deckOptions($('#simDeck'));deckOptions($('#oStart'));runSim();setTimeout(()=>{markReady($('#oPack'),'opt');markReady($('#aPack'),'asc')},400);}
 setupData();init();
