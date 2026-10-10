@@ -1728,7 +1728,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
 <script type="text/plain" id="src-userscript">// ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.7.0
+// @version      2.7.1
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -2400,7 +2400,12 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       if (db.fights.length > MAX_FIGHTS) db.fights.splice(0, db.fights.length - MAX_FIGHTS);
       if (db.seen.length > 500) db.seen.splice(0, db.seen.length - 500);
       try { localStorage.setItem(keyFor(PROFILE), JSON.stringify(db)); }
-      catch (e) { db.bossSamples = {}; try { localStorage.setItem(keyFor(PROFILE), JSON.stringify(db)); } catch (e2) { console.warn('[Labo] stockage plein', e2); } }
+      catch (e) {
+        // stockage du site plein : on allège (échantillons de boss, puis les combats les plus anciens) plutôt que de ne plus rien enregistrer
+        db.bossSamples = {}; let ok = false;
+        for (let k = 0; k < 4 && !ok; k++) { try { localStorage.setItem(keyFor(PROFILE), JSON.stringify(db)); ok = true; } catch (e2) { db.fights.splice(0, Math.ceil(db.fights.length / 4)); db.storageTrim = (db.storageTrim || 0) + 1; } }
+        if (!ok) console.warn('[Labo] stockage plein');
+      }
     }, 400);
   }
 
@@ -3303,16 +3308,28 @@ function mergeData(base,d){const mons={};for(const m of (base.monsters||[]).conc
   const sl={};for(const x of (base.setsList||[]).concat(d.setsList||[]))sl[x.id]=x;
   const ds=Object.assign({},base.dofusSets||{},d.dofusSets||{});
   return Object.assign({},base,d,{builds:Object.assign({},base.builds||{},d.builds||{}),setBonus:sb,dofusSets:ds,setsList:Object.values(sl),floors:Object.values(fls),monsters:Object.values(mons),fights:(base.fights||[]).concat(d.fights||[]),playerStats:d.playerStats||base.playerStats})}
+
+/* ---------- Stockage des imports : IndexedDB (des centaines de Mo) au lieu du localStorage (≈ 5 Mo pour tout le site) ---------- */
+const DS={};let IDB=null;
+function idbOpen(){return new Promise(res=>{try{const r=indexedDB.open('labo-rpgmasters',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>res(null)}catch(e){res(null)}})}
+function idbPut(k,v){if(!IDB)return Promise.resolve(false);return new Promise(res=>{try{const t=IDB.transaction('kv','readwrite');v==null?t.objectStore('kv').delete(k):t.objectStore('kv').put(v,k);t.oncomplete=()=>res(true);t.onerror=()=>res(false)}catch(e){res(false)}})}
+function idbGetAll(){if(!IDB)return Promise.resolve({});return new Promise(res=>{try{const out={};const t=IDB.transaction('kv','readonly');const c=t.objectStore('kv').openCursor();c.onsuccess=()=>{const cur=c.result;if(cur){out[cur.key]=cur.value;cur.continue()}else res(out)};c.onerror=()=>res(out)}catch(e){res({})}})}
+function dsGet(k){if(k in DS)return DS[k];try{return localStorage.getItem(k)}catch(e){return null}}
+function dsSet(k,v){DS[k]=v;if(IDB){idbPut(k,v);try{localStorage.removeItem(k)}catch(e){}}else localStorage.setItem(k,v)}
+function dsDel(k){delete DS[k];idbPut(k,null);try{localStorage.removeItem(k)}catch(e){}}
+async function dsBoot(){IDB=await idbOpen();if(!IDB)return;Object.assign(DS,await idbGetAll());
+  // migration : les imports déjà dans le localStorage passent dans IndexedDB (et libèrent la place)
+  for(const k of ['labo-data','labo-data-saison']){let v=null;try{v=localStorage.getItem(k)}catch(e){}if(v&&!(k in DS)){DS[k]=v;if(await idbPut(k,v))try{localStorage.removeItem(k)}catch(e){}}else if(v&&(k in DS)){try{localStorage.removeItem(k)}catch(e){}}}}
 let LPROF='principal';try{LPROF=localStorage.getItem('labo-lprofile')==='saison'?'saison':'principal'}catch(e){}
 const dataKey=p=>p==='saison'?'labo-data-saison':'labo-data';
 function slotsKey(){return 'labo-slots-'+(typeof LPROF!=='undefined'?LPROF:'principal')}
 function deckSlots(){const v=+($('#oSlots')&&$('#oSlots').value)||0;return v>=5?v:DATA.meta.deckSize}
 function syncSlots(v){document.querySelectorAll('.slots').forEach(x=>x.value=v)}
 // Base de chaque perso : le principal part de l'instantané ; le perso de saison ne garde que les monstres connus et le bestiaire
-function baseFor(p){if(p!=='saison')return SNAP;let best=null;try{const m=JSON.parse(localStorage.getItem('labo-data')||'null');best=m&&m.bestiary}catch(e){}return Object.assign({},SNAP,{fights:[],floors:[],bestiary:best||SNAP.bestiary})}
+function baseFor(p){if(p!=='saison')return SNAP;let best=null;try{const m=JSON.parse(dsGet('labo-data')||'null');best=m&&m.bestiary}catch(e){}return Object.assign({},SNAP,{fights:[],floors:[],bestiary:best||SNAP.bestiary})}
 // Bestiaire : les mécaniques révélées au perso principal servent aussi au perso de saison
 function mergeBest(a,b){if(!a)return b;if(!b)return a;const prev=Object.fromEntries((a.mech||[]).map(c=>[c.id,c]));const mech=(b.mech||[]).map(c=>{const p=prev[c.id];return (c.m&&c.m.length)||!p?c:Object.assign({},c,{m:p.m,u:p.u})});return Object.assign({},a,b,{mech})}
-function loadProfile(){DATA=SNAP;try{const s=localStorage.getItem(dataKey(LPROF));if(s){const d=JSON.parse(s);if(d&&d.items&&d.cards){const b=baseFor(LPROF);DATA=mergeData(b,d);DATA.bestiary=mergeBest(b.bestiary,d.bestiary)}}}catch(e){}}
+function loadProfile(){DATA=SNAP;try{const s=dsGet(dataKey(LPROF));if(s){const d=JSON.parse(s);if(d&&d.items&&d.cards){const b=baseFor(LPROF);DATA=mergeData(b,d);DATA.bestiary=mergeBest(b.bestiary,d.bestiary)}}}catch(e){}}
 loadProfile();
 
 const fmt=(n,d=0)=>Number(n).toLocaleString('fr-FR',{minimumFractionDigits:d,maximumFractionDigits:d});
@@ -3364,7 +3381,7 @@ function cardChip(c,cls){const el=mainEl(c);return `<span class="card ${cls||''}
 /* ---------- Banque de fin de saison (perso Héroïque → perso principal) ---------- */
 // La Banque (8 emplacements + 3 par Prestige) survit à la mort et son contenu passe au perso principal à la fin de la saison.
 // Classement indicatif : valeur des stats de l'objet pour le style du perso principal, objets qu'il n'a pas déjà en priorité.
-function principalData(){try{const s=localStorage.getItem(dataKey('principal'));if(s){const d=JSON.parse(s);if(d&&d.items)return mergeData(SNAP,d)}}catch(e){}return SNAP}
+function principalData(){try{const s=dsGet(dataKey('principal'));if(s){const d=JSON.parse(s);if(d&&d.items)return mergeData(SNAP,d)}}catch(e){}return SNAP}
 function renderBank(){
   const wrap=$('#bankWrap');if(!wrap)return;wrap.hidden=LPROF!=='saison';if(LPROF!=='saison')return;
   $('#bankNote').innerHTML='Le conseil Banque a déménagé dans l\'onglet <strong>Objets</strong>, avec la tier list (valeur réelle des objets pour ton principal, rareté, objets introuvables en farm).';$('#bankOut').innerHTML='<button class="btn" onclick="showTab(\'items\')">Ouvrir l\'onglet Objets</button>';return;
@@ -3637,10 +3654,10 @@ function flash(t){let el=document.getElementById('laboFlash');if(!el){el=documen
 function looksExport(t){return typeof t==='string'&&t.length>200&&/^\s*\{/.test(t)&&t.includes('"meta"')&&t.includes('"cards"')}
 function importText(txt){
     try{const d=JSON.parse(txt);if(!d.items||!d.cards||!d.worn||!d.meta)throw new Error('champs manquants');
-      const pr=d.meta.profile==='saison'?'saison':d.meta.profile==='principal'?'principal':LPROF;LPROF=pr;try{const prev=JSON.parse(localStorage.getItem(dataKey(pr))||'null');if(prev&&prev.cards){const list=diffImports(prev,d);localStorage.setItem('labo-changes-'+pr,JSON.stringify({from:prev._importedAt||0,to:Date.now(),list}))}d._importedAt=Date.now()}catch(e){}try{localStorage.setItem('labo-lprofile',pr);localStorage.setItem(dataKey(pr),JSON.stringify(d))}catch(e){}
-      loadProfile();init();const okMsg=`Importé pour le perso ${LPROF==='saison'?'Héroïque':'principal'} : ${d.items.length} objets, ${d.cards.length} cartes, ${DATA.monsters.length} monstres connus, ${DATA.fights.length} combats.`;$('#importMsg').textContent=okMsg;flash(okMsg);$('#importBox').value=''}
+      const pr=d.meta.profile==='saison'?'saison':d.meta.profile==='principal'?'principal':LPROF;LPROF=pr;try{const prev=JSON.parse(dsGet(dataKey(pr))||'null');if(prev&&prev.cards){const list=diffImports(prev,d);localStorage.setItem('labo-changes-'+pr,JSON.stringify({from:prev._importedAt||0,to:Date.now(),list}))}d._importedAt=Date.now()}catch(e){}let saveErr=null;try{localStorage.setItem('labo-lprofile',pr)}catch(e){}try{dsSet(dataKey(pr),JSON.stringify(d))}catch(e){saveErr=e;DS[dataKey(pr)]=JSON.stringify(d)}
+      loadProfile();init();const okMsg=`Importé pour le perso ${LPROF==='saison'?'Héroïque':'principal'} : ${d.items.length} objets, ${d.cards.length} cartes, ${DATA.monsters.length} monstres connus, ${DATA.fights.length} combats.`+(saveErr?' Attention : le navigateur a refusé de l\'enregistrer (stockage plein), il sera perdu en fermant la page.':'');$('#importMsg').textContent=okMsg;flash(okMsg);$('#importBox').value=''}
     catch(e){$('#importMsg').textContent='Export illisible ('+e.message+'). Recopie la sortie complète du script.';flash('Export illisible : recopie la sortie complète du script.')}};
-  $('#resetBtn').onclick=()=>{try{localStorage.removeItem(dataKey(LPROF))}catch(e){};loadProfile();init();$('#importMsg').textContent='Instantané rétabli.'};
+  $('#resetBtn').onclick=()=>{try{dsDel(dataKey(LPROF))}catch(e){};loadProfile();init();$('#importMsg').textContent='Instantané rétabli.'};
 }
 
 /* ---------- Onglets & réglages ---------- */
@@ -4020,16 +4037,16 @@ function renderBest(){
 document.querySelectorAll('#bView button').forEach(b=>b.onclick=()=>{bView=b.dataset.v;document.querySelectorAll('#bView button').forEach(x=>x.setAttribute('aria-pressed',x===b?'true':'false'));$('#bFilters').dataset.v='';renderBest()});
 // Fichier allégé pour l'analyse : journal détaillé, tours, combats récents, builds, monstres croisés, deck et équipement (sans inventaire ni bestiaire complet)
 function saveFile(name,text){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'application/json'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
-$('#dlClaude').onclick=()=>{try{const raw=localStorage.getItem(dataKey(LPROF));if(!raw){$('#importMsg').textContent='Rien à préparer : envoie d\'abord tes données depuis le jeu.';return}const d=JSON.parse(raw);
+$('#dlClaude').onclick=()=>{try{const raw=dsGet(dataKey(LPROF));if(!raw){$('#importMsg').textContent='Rien à préparer : envoie d\'abord tes données depuis le jeu.';return}const d=JSON.parse(raw);
   const fights=(d.fights||[]).slice(-600);const seen=new Set();for(const f of fights)for(const k of f.mons||[])seen.add(k);for(const j of d.journal||[])for(const k of j.mons||[])seen.add(k);
   const deckKeys=new Set((d.meta&&d.meta.decks||[]).flat());const B=d.bestiary||{};
   const out={kind:'labo-analyse',v:1,t:Date.now(),meta:d.meta,worn:d.worn,cards:(d.cards||[]).filter(c=>deckKeys.has(c.key)),monsters:(d.monsters||[]).filter(m=>seen.has(m.name+'#'+m.grade)),fights,builds:d.builds,journal:d.journal,turnLogs:(d.turnLogs||[]).slice(-300),texts:d.texts,floors:d.floors,setBonus:d.setBonus,bestiary:{mech:B.mech,pp:B.pp,zones:B.zones}};
   const txt=JSON.stringify(out);const day=new Date().toISOString().slice(0,10);saveFile(`labo-analyse-${LPROF==='saison'?'heroique':'principal'}-${day}.json`,txt);
   $('#importMsg').textContent=`Fichier prêt (${Math.round(txt.length/1024)} Ko) : glisse-le dans la conversation avec Claude.`}catch(e){$('#importMsg').textContent='Préparation impossible : '+e.message+(location.hostname.includes('claude')?' (le téléchargement marche depuis ton Labo en ligne)':'')}};
-$('#dlBtn').onclick=()=>{try{const raw=localStorage.getItem(dataKey(LPROF));if(!raw){$('#importMsg').textContent='Rien à télécharger : importe d\'abord tes données.';return}const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([raw],{type:'application/json'}));a.download=LPROF==='saison'?'labo-rpgmasters-heroique.json':'labo-rpgmasters-donnees.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}catch(e){$('#importMsg').textContent='Téléchargement impossible : '+e.message}};
+$('#dlBtn').onclick=()=>{try{const raw=dsGet(dataKey(LPROF));if(!raw){$('#importMsg').textContent='Rien à télécharger : importe d\'abord tes données.';return}const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([raw],{type:'application/json'}));a.download=LPROF==='saison'?'labo-rpgmasters-heroique.json':'labo-rpgmasters-donnees.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}catch(e){$('#importMsg').textContent='Téléchargement impossible : '+e.message}};
 
 /* ---------- Objets : tier list + Banque ---------- */
-function profData(p){if(p===LPROF)return DATA;try{const s=localStorage.getItem(dataKey(p));if(s){const d=JSON.parse(s);if(d&&d.items)return mergeData(baseFor(p),d)}}catch(e){}return p==='principal'?SNAP:null}
+function profData(p){if(p===LPROF)return DATA;try{const s=dsGet(dataKey(p));if(s){const d=JSON.parse(s);if(d&&d.items)return mergeData(baseFor(p),d)}}catch(e){}return p==='principal'?SNAP:null}
 const SLOT_FR={chapeau:'Chapeau',cape:'Cape',amulette:'Amulette',anneau:'Anneau',ceinture:'Ceinture',bottes:'Bottes',arme:'Arme',bouclier:'Bouclier',familier:'Familier',dofus:'Dofus'};
 const SLOT_NEED={anneau:2,dofus:6};
 let TL=null;
@@ -4098,9 +4115,9 @@ function renderBank2(){
 }
 
 /* ---------- Sauvegarde du Labo ---------- */
-$('#bkDl').onclick=()=>{try{const data={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(/^labo/.test(k))data[k]=localStorage.getItem(k)}const txt=JSON.stringify({kind:'labo-sauvegarde-site',v:1,t:Date.now(),data});saveFile('labo-site-sauvegarde-'+new Date().toISOString().slice(0,10)+'.json',txt);$('#bkMsg').textContent='Sauvegarde téléchargée ('+Math.round(txt.length/1024)+' Ko).'}catch(e){$('#bkMsg').textContent='Impossible : '+e.message}};
+$('#bkDl').onclick=()=>{try{const data={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(/^labo/.test(k))data[k]=localStorage.getItem(k)}for(const [k,v] of Object.entries(DS))if(typeof v==='string')data[k]=v;const txt=JSON.stringify({kind:'labo-sauvegarde-site',v:1,t:Date.now(),data});saveFile('labo-site-sauvegarde-'+new Date().toISOString().slice(0,10)+'.json',txt);$('#bkMsg').textContent='Sauvegarde téléchargée ('+Math.round(txt.length/1024)+' Ko).'}catch(e){$('#bkMsg').textContent='Impossible : '+e.message}};
 $('#bkRest').onclick=()=>$('#bkFile').click();
-$('#bkFile').onchange=()=>{const f=$('#bkFile').files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const b=JSON.parse(String(rd.result));if(!b||!b.data)throw new Error('pas une sauvegarde');if(b.kind==='labo-sauvegarde')throw new Error('c\'est la sauvegarde du script (à restaurer dans le panneau du jeu)');let n=0;for(const [k,v] of Object.entries(b.data))if(/^labo/.test(k)&&typeof v==='string'){localStorage.setItem(k,v);n++}LPROF=localStorage.getItem('labo-lprofile')==='saison'?'saison':'principal';loadProfile();init();$('#bkMsg').textContent=n+' éléments restaurés.'}catch(e){$('#bkMsg').textContent='Fichier illisible : '+e.message}};rd.readAsText(f)};
+$('#bkFile').onchange=()=>{const f=$('#bkFile').files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const b=JSON.parse(String(rd.result));if(!b||!b.data)throw new Error('pas une sauvegarde');if(b.kind==='labo-sauvegarde')throw new Error('c\'est la sauvegarde du script (à restaurer dans le panneau du jeu)');let n=0;for(const [k,v] of Object.entries(b.data))if(/^labo/.test(k)&&typeof v==='string'){if(/^labo-data(-saison)?$/.test(k))dsSet(k,v);else localStorage.setItem(k,v);n++}LPROF=localStorage.getItem('labo-lprofile')==='saison'?'saison':'principal';loadProfile();init();$('#bkMsg').textContent=n+' éléments restaurés.'}catch(e){$('#bkMsg').textContent='Fichier illisible : '+e.message}};rd.readAsText(f)};
 
 /* ---------- Ce qui a changé entre deux imports ---------- */
 function diffImports(a,b){const out=[];if(!a||!b)return out;
@@ -4183,6 +4200,8 @@ function renderItemsTab(){try{renderBank2()}catch(e){$('#bank2Out').textContent=
 ['tlFor','tlSlot','tlSrc','tlMin','tlMax','tlStyle','tlQ','bkStyle','tlSet'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener(id==='tlQ'||id==='tlMin'||id==='tlMax'||id==='bkLvl'?'input':'change',()=>{if(id.startsWith('tl')){if(id==='tlSet')TL=null;$('#tlOut').dataset.n=150;renderTierList()}else renderBank2()})});
 function init(){prepare();renderPerso();try{renderCardUse();renderFreePts();renderBank()}catch(e){}renderAscPanel();renderBest();packOptions($('#simPack'));packOptions($('#oPack'));{const o=document.createElement('option');o.value='poly';o.textContent='Polyvalent · tes adversaires habituels (conseillé)';$('#oPack').insertBefore(o,$('#oPack').firstChild);$('#oPack').value='poly'}deckOptions($('#simDeck'));deckOptions($('#oStart'));runSim();setTimeout(()=>{markReady($('#oPack'),'opt');markReady($('#aPack'),'asc')},400);}
 setupData();init();
+// imports stockés dans IndexedDB : on recharge dès qu'ils sont lus
+dsBoot().then(()=>{if(DS['labo-data']||DS['labo-data-saison']){loadProfile();init();try{const t=localStorage.getItem('labo-tab');if(t&&document.getElementById(t))showTab(t)}catch(e){}}});
 try{const t=localStorage.getItem('labo-tab');if(t&&document.getElementById(t))showTab(t)}catch(e){}
 const h=location.hash.slice(1);if(h&&document.getElementById(h))showTab(h);
 })();
