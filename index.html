@@ -312,7 +312,7 @@ textarea{min-height:110px;font-family:var(--f-mono);font-size:.8rem}
     <div class="panel">
       <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center">
         <h2 style="margin:0">Bestiaire</h2>
-        <div class="seg" id="bView" style="min-width:300px"><button type="button" data-v="mech" aria-pressed="true">Mécaniques cachées</button><button type="button" data-v="mon" aria-pressed="false">Monstres</button><button type="button" data-v="item" aria-pressed="false">Objets</button></div>
+        <div class="seg" id="bView" style="min-width:300px"><button type="button" data-v="mech" aria-pressed="true">Mécaniques cachées</button><button type="button" data-v="mon" aria-pressed="false">Monstres</button><button type="button" data-v="item" aria-pressed="false">Objets</button><button type="button" data-v="extra" aria-pressed="false" title="Dofus, trophées, objets de boss ou d'Ascension : absents des tables de butin">Hors bestiaire</button></div>
       </div>
       <p class="note" id="bInfo"></p>
       <div class="bfilters" id="bFilters"></div>
@@ -4051,6 +4051,17 @@ function renderBest(){
   }
   const items=B.items||[],mons=B.monsters||[],zones=Object.fromEntries((B.zones||[]).map(z=>[z.id,z]));
   const itemById=Object.fromEntries(items.map(i=>[i.id,i]));
+  if(bView==='extra'){
+    // objets que le bestiaire n'affiche pas (aucun monstre ne les donne) : ceux que tes persos possèdent, plus les noms vus dans tes butins
+    if(f.dataset.v!=='extra'||!$('#bxQ')){f.dataset.v='extra';f.innerHTML=`<div class="field"><label for="bxQ">Objet</label><input type="text" id="bxQ" placeholder="ex. Dofus, Pry…"></div><div class="field"><label for="bxS">Emplacement</label><select id="bxS"><option value="">Tous</option>${Object.entries(SLOT_FR).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div>`;['bxQ','bxS'].forEach(id=>$('#'+id).addEventListener(id==='bxQ'?'input':'change',renderBest))}
+    const q=($('#bxQ').value||'').toLowerCase(),sl=$('#bxS').value;const inCat=new Set(items.map(i=>i.id));const byKey=new Map();
+    for(const [p,lab] of [['saison','Héroïque'],['principal','principal']]){const D=profData(p);if(!D||(p==='principal'&&D===SNAP&&LPROF!=='principal'&&false))continue;for(const [arr,w] of [[D.items||[],'inventaire'],[D.worn||[],'équipé']])for(const it of arr){if(!it||!it.st||inCat.has(it.id)||it.s==='parchemin')continue;const k=it.id+':'+(it.f||0);const o=byKey.get(k)||{it,own:[]};if(!o.own.includes(lab+' ('+w+')'))o.own.push(lab+' ('+w+')');byKey.set(k,o)}}
+    const names=new Set(items.map(i=>i.n).concat([...byKey.values()].map(o=>o.it.n)));const seen={};for(const fi of (DATA.fights||[]))for(const n of (fi.items||[])){const k=String(n).replace(/^\d+\s*×\s*/,'');if(!names.has(k))seen[k]=(seen[k]||0)+1}
+    const list=[...byKey.values()].filter(o=>(!q||o.it.n.toLowerCase().includes(q))&&(!sl||o.it.s===sl)).sort((a,b)=>(a.it.s==='dofus'?0:1)-(b.it.s==='dofus'?0:1)||(b.it.lvl||0)-(a.it.lvl||0));
+    const seenL=Object.entries(seen).filter(([n])=>!q||n.toLowerCase().includes(q)).sort((a,b)=>b[1]-a[1]);
+    o.innerHTML=`<p class="note">${list.length} objet${list.length>1?'s':''} possédé${list.length>1?'s':''} qu'aucun monstre du bestiaire ne donne (Dofus, trophées, objets de boss, d'Ascension ou de quête). Le Labo ne connaît que ceux que tes persos ont eus en main : ceux jamais obtenus restent invisibles.</p><table><tr><th>Objet</th><th>Empl.</th><th class="num">Niv.</th><th>Stats et effet</th><th>Possédé</th></tr>${list.map(({it,own})=>`<tr><td><strong>${esc(it.n)}</strong>${it.f?` <span class="dim">+${it.f}</span>`:''}</td><td>${SLOT_FR[it.s]||esc(it.s)}</td><td class="num">${it.lvl||''}</td><td class="dim">${esc(statsLine(it))}${fxOf(it).map(x=>`<div style="color:var(--gold)">Effet : ${esc(x[1])}</div>`).join('')}</td><td class="dim">${esc(own.join(', '))}</td></tr>`).join('')}</table>${seenL.length?`<h3>Vus dans tes butins, stats inconnues</h3><p class="note">Noms relevés dans les récompenses de combat, absents du bestiaire et de tes inventaires actuels.</p><p>${seenL.slice(0,80).map(([n,c])=>`${esc(n)} <span class="dim">×${c}</span>`).join(' · ')}</p>`:''}`;
+    return;
+  }
   if(bView==='mon'){
     if(f.dataset.v!=='mon'||!$('#bMin')){f.dataset.v='mon';f.innerHTML=`<div class="field"><label for="bQ">Monstre, famille ou zone</label><input type="text" id="bQ" placeholder="ex. Bouftou, Incarnam"></div><div class="field"><label for="bMin">Niveau min.</label><input type="number" id="bMin" min="1"></div><div class="field"><label for="bMax">Niveau max.</label><input type="number" id="bMax" min="1"></div><div class="field"><label for="bDrop">Lâche un objet</label><input type="text" id="bDrop" placeholder="Nom d'objet"></div>`;f.querySelectorAll('input').forEach(x=>x.oninput=renderBest)}
     const q=($('#bQ').value||'').toLowerCase(),mi=+$('#bMin').value||0,ma=+$('#bMax').value||999,dq=($('#bDrop').value||'').toLowerCase();
