@@ -248,11 +248,11 @@ textarea{min-height:110px;font-family:var(--f-mono);font-size:.8rem}
         <div class="field"><label for="oStart">Deck de départ</label><select id="oStart"></select></div>
         <div class="field"><label for="oSlots">Emplacements de deck</label><input type="number" id="oSlots" min="5" max="30" class="slots"><span class="note">Lu dans ton export. Corrige-le si tu viens de passer un Prestige.</span></div>
         <div class="field"><span class="lbl">Effort de recherche</span>
-          <div class="seg" id="oEffort"><button type="button" data-v="1" aria-pressed="false">Rapide</button><button type="button" data-v="2" aria-pressed="true">Tous éléments</button><button type="button" data-v="3" aria-pressed="false">Approfondi</button></div><span class="note">Rapide : ajuste ton build actuel (quelques secondes). Tous éléments : un build complet par élément (Terre, Feu, Eau, Air, multi) puis comparaison, 2 à 4 min. Approfondi : pareil avec deux passes stuff ↔ caracs ↔ sorts, 5 à 8 min.</span>
+          <div class="seg" id="oEffort"><button type="button" data-v="1" aria-pressed="false">Rapide</button><button type="button" data-v="2" aria-pressed="true">Tous éléments</button><button type="button" data-v="3" aria-pressed="false">Approfondi</button></div><span class="note">Rapide : ajuste ton build actuel (quelques secondes). Tous éléments : un build complet par élément (Terre, Feu, Eau, Air, multi) puis comparaison, environ 10 à 30 s (les éléments sont cherchés en parallèle sur les cœurs de ton processeur). Approfondi : pareil avec deux passes stuff ↔ caracs ↔ sorts et une confirmation, environ 30 s à 1 min 30.</span>
         </div>
         <button class="btn" id="oRun">Lancer l'optimisation</button>
         <div class="progress" aria-hidden="true"><div id="oBar"></div></div>
-        <div class="toast muted" id="oStatus">Prêt. Compte 10 à 60 secondes selon l'effort.</div><div class="note" id="oReady"></div>
+        <div class="toast muted" id="oStatus">Prêt. Compte de 2 s (Rapide) à environ 1 min (Approfondi).</div><div class="note" id="oReady"></div>
       </div>
       <div class="panel" id="optOut">
         <div class="kpis" id="oKpis"></div>
@@ -275,7 +275,7 @@ textarea{min-height:110px;font-family:var(--f-mono);font-size:.8rem}
         <div class="field"><label for="aSus">Soins et boucliers</label><select id="aSus"><option value="auto" selected>Automatique</option><option value="all">Tout autorisé</option><option value="shield">Boucliers + vol de vie (pas de carte de soin)</option><option value="none">Ni soin ni bouclier (vol de vie gardé)</option></select></div>
         <div class="field"><label for="aSlots">Emplacements de deck</label><input type="number" id="aSlots" min="5" max="30" class="slots"></div>
         <div class="field"><span class="lbl">Effort de recherche</span>
-          <div class="seg" id="aEffort"><button type="button" data-v="1" aria-pressed="false">Rapide</button><button type="button" data-v="2" aria-pressed="true">Tous éléments</button><button type="button" data-v="3" aria-pressed="false">Approfondi</button></div><span class="note">Rapide : ajuste ton build actuel (quelques secondes). Tous éléments : un build complet par élément (Terre, Feu, Eau, Air, multi) puis comparaison, 2 à 4 min. Approfondi : pareil avec deux passes stuff ↔ caracs ↔ sorts, 5 à 8 min.</span>
+          <div class="seg" id="aEffort"><button type="button" data-v="1" aria-pressed="false">Rapide</button><button type="button" data-v="2" aria-pressed="true">Tous éléments</button><button type="button" data-v="3" aria-pressed="false">Approfondi</button></div><span class="note">Rapide : ajuste ton build actuel (quelques secondes). Tous éléments : un build complet par élément (Terre, Feu, Eau, Air, multi) puis comparaison, environ 10 à 30 s (les éléments sont cherchés en parallèle sur les cœurs de ton processeur). Approfondi : pareil avec deux passes stuff ↔ caracs ↔ sorts et une confirmation, environ 30 s à 1 min 30.</span>
         </div>
         <button class="btn" id="aRun">Trouver un build qui passe</button>
         <div class="progress" aria-hidden="true"><div id="aBar"></div></div>
@@ -333,32 +333,42 @@ textarea{min-height:110px;font-family:var(--f-mono);font-size:.8rem}
   <section class="tab" id="form" hidden>
     <div class="panel prose">
       <h2>Comment le simulateur calcule</h2>
-      <p>Formules reconstituées à partir des combats réels enregistrés : 414 coups sur 414 retrouvés à l'unité pour les dégâts infligés.</p>
+      <p>Formules reconstituées à partir de tes combats réels (journal détaillé, coup par coup) et des info-bulles du jeu. Écart mesuré : environ 2 % par coup.</p>
       <h3>Dégâts infligés</h3>
-      <div class="formula">Dégâts = floor( [ Base × (1 + (Carac + Puissance) / 100) + Fixes ]
-               × (1 + %Dégâts aux sorts / 100)
-               × 2 si vision spectrale
-               × (1 − Rés.% de la cible / 100) )
+      <div class="formula">Dégâts = floor( [ Base × (1 + (Carac + Puissance) / 100) × 1,2 si critique + Fixes ]
+               × (1 + %Dégâts aux sorts / 100 + 15 % × sorts déjà joués dans le tour, Enchaînement)
+               × 2 si vision spectrale (tout le sort)
+               × (1 − Rés.% effective de la cible / 100) )
+         × 60 % sur chaque cible secondaire d'un sort de zone (100 % sur la cible principale)
 
 Carac : Neutre et Terre → Force · Feu → Intelligence · Eau → Chance · Air → Agilité
-Fixes : Dommages + Dommages de l'élément (+ Dommages critiques si coup critique)
-        sorts : sur la 1re ligne de dégâts seulement · arme : sur chaque ligne</div>
+Fixes : Dommages + Dommages de l'élément (+ Dommages critiques si critique), sur la 1re ligne du sort ; arme : chaque ligne
+Rés.% effective = Rés.% × (1 − Pénétration) si elle est positive (une faiblesse reste entière)
+Pénétration = 0,8 % par point de « % Dommages distance/mêlée », 50 points au plus (40 %)
+Perforation = (Fuite + Tacle) × 0,05 % des dégâts qui traversent les boucliers ennemis (25 % au plus)
+Érosion = (Dommages + Résistance Poussée) × 0,05 % des dégâts retirés aux PV max de la cible (25 % au plus, non soignables)</div>
       <h3>Dégâts reçus</h3>
-      <div class="formula">Reçus = floor( (Attaque × intention × (1 + 0,3 × rages) × (1 − 15 % × PA retirés) − Rés. fixe) × (1 − Rés.% / 100) )
+      <div class="formula">Reçus = floor( (Attaque × intention × (1 + 0,3 × rages) × (1 − 15 % × PA retirés) × (1 − Réduction) − Rés. fixe) × (1 − Rés.% / 100) )
 intention : attaque ×1 · lourde ×1,7 · drain ×0,8 (soigne le monstre) · garde = bouclier de 97 % de l'attaque
-Rés.% du joueur plafonnée à 50 % · esquive = 3 % + 1 % par PM</div>
+Réduction de dégâts = 1 % par point de « % Résistance distance/mêlée », 50 % au plus, avant les résistances
+Critique du monstre (rare, ~6 %) : ×1,2 puis − Résistance Critiques
+Esquive totale = 1 % par PM (3 de base compris), 50 % au plus · Rés.% plafonnée à 50 %
+Retrait de PA contre un monstre : réussit toujours (Retrait/Esquive PA ne jouent qu'en arène)</div>
       <h3>Caractéristiques</h3>
       <div class="formula">Stat d'un objet = arrondi( stat × (1 + bonus de fusion) )        fusion : 0, 10, 20, 25 … 45 %
-Total = arrondi( Σ arrondi(stat objet × (1 + 25 % × Prestige)) × 1,05 Discord ) + parchemins + points investis
-PA, PM, PO, Invocations et valeurs négatives ne sont pas multipliés
+Total = arrondi( Σ arrondi(stat objet × (1 + 25 % × Prestige + Bouclier de forge)) × 1,05 Discord ) + parchemins + points investis
+Bouclier de forge : +1,25 % au niv. 10, +12,1 % au niv. 100, +150 % au niv. 200 (×1,287 tous les 10 niveaux)
+PA, PM, PO, Invocations et valeurs négatives ne sont pas multipliés · Pénétration et Réduction : multiplicateur ×3 au plus
+PV max = 50 + 5 × niveau + Vitalité · PA de base 6 (7 dès le niveau 100) · Soins = valeur fixe ajoutée à chaque soin
+Prospection = 100 + Prospection + Chance / 10 · taux de butin affiché = taux de base × Prospection / 100 (90 % au plus)
 Points : 5 par niveau · Force/Intel/Chance/Agi coûtent 1, 2, 3 puis 4 points par palier de 100 · Vitalité 1 · Sagesse 3</div>
       <h3>Tour de jeu</h3>
       <ul>
         <li>Main de 5 cartes, jusqu'à 3 pioches en plus par tour, arme une fois par tour.</li>
-        <li>Au plus 2 cartes de soin ou de bouclier par tour ; boucliers plafonnés à 25 % des PV max au total.</li>
-        <li>Chance de critique = critique de la carte + % Critique (seulement si la carte peut critiquer).</li>
-        <li>Vision spectrale (Crâ) = 18 % + 0,4 % par PO, plafonnée à 50 %.</li>
-        <li>Les cartes sont jouées comme le fait le mode Auto : le meilleur rapport valeur/PA d'abord, cible la plus entamée.</li>
+        <li>Au plus 2 cartes de soin ou de bouclier par tour ; boucliers plafonnés à 25 % des PV max au total. Le vol de vie compte comme des dégâts.</li>
+        <li>Chance de critique = critique de la carte + % Critique (seulement si la carte peut critiquer), 100 % au plus.</li>
+        <li>Vision spectrale = 0,4 % par PO (+18 % pour le Crâ), plafonnée à 50 %.</li>
+        <li>Mode Auto : boucliers d'abord, puis les cartes les plus efficaces (dégâts par PA), retraits de PA ensuite, bonus en dernier ; l'arme selon ton réglage « Arme en auto ».</li>
       </ul>
       <h3>Codes de partage</h3>
       <div class="formula">DM-E-…  équipement : version 2, nombre d'objets, puis pour chaque objet (emplacement × 8 + fusion, identifiant)
@@ -367,10 +377,11 @@ Entiers codés en varint, octets écrits en base 32 (0-9 A-Z sans I L O U)
 Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31, 4 caractères</div>
       <h3>Limites connues</h3>
       <ul>
-        <li>Les effets décrits seulement en texte (états, poussée, téléportation, pioche spéciale) ne sont pas simulés : seules les lignes chiffrées des cartes comptent.</li>
-        <li>Un petit bonus de caractéristiques reste inexpliqué (environ 1,5 %, et +24 en Chance). Il est sans doute lié aux panoplies, pas encore modélisées.</li>
-        <li>Seuls les monstres déjà croisés sont connus. La difficulté permet d'extrapoler, sans les mécaniques propres aux boss.</li>
-        <li>Dans le groupe testé, la simulation donne 3,4 tours en moyenne contre 3,36 observés sur 75 combats réels.</li>
+        <li>Les effets décrits seulement en texte (états, poussée, téléportation, Poker de Bluff) ne sont pas simulés : seules les lignes chiffrées des cartes comptent (Bluff : valeur moyenne).</li>
+        <li>Le choix de cible du mode Auto n'est connu qu'en partie : la simulation vise le premier ennemi.</li>
+        <li>Critiques des monstres : fréquence observée sur peu de coups, multiplicateur supposé.</li>
+        <li>Seuls les monstres déjà croisés sont connus ; les mécaniques de boss viennent du bestiaire.</li>
+        <li>Onglet Simulateur, « Comparer avec mes vrais combats » : mesure l'écart entre la simulation et tes combats réels.</li>
       </ul>
     </div>
   </section>
@@ -432,6 +443,8 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   const RES_PCT = ['resPctNeutre', 'resPctTerre', 'resPctFeu', 'resPctEau', 'resPctAir'];
   const PRESTIGE_COMBAT = [{ pa: 1 }, { po: 2 }, { pm: 2 }, { pa: 1 }, { po: 3 }, { pm: 3 }, { pa: 1 }];
   // Sorts de zone : la cible principale prend 100 %, chaque autre cible 60 % (mesuré dans le journal, résistances retirées)
+  // critiques des monstres : fréquence observée dans le journal, multiplicateur supposé égal à celui du joueur
+  const MON_CRIT_P = 0.06, MON_CRIT_MULT = 1.2;
   let ZONE_SEC = 0.6, WEAPON_LAST = false, WEAPON_MODE = 'normal';
   let AUTO_ORDER = 'eff';
   const CAP3 = ['dmgPctDistance', 'dmgPctMelee', 'resPctDistance', 'resPctMelee'];
@@ -574,7 +587,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
 
   // ---------- Dégâts ----------
   function dmgLine(S, line, crit, buffPuiss, dmgPct, spectral, resPct, withFixed, isWeapon) {
-    const base = line.min + Math.random() * (line.max - line.min + 1);
+    const base = line.min + RND() * (line.max - line.min + 1);
     const b = Math.min(line.max, Math.floor(base));
     const carac = (S[CARAC_OF_EL[line.el || 0]] || 0) + (S.puissance || 0) + buffPuiss;
     let fixed = 0;
@@ -676,8 +689,8 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         const cost = c => c.ap + (T.seal && !c.weapon ? T.seal : 0);
         const room = paNeed != null && !opts.auto ? ap - paNeed : ap;
         const capped = !opts.auto && T.cards >= furyCap;
-        const opts2 = capped ? [] : hand.filter(c => c !== sealedCard).map(c => ({ c, v: valueOf(c) })).filter(o => cost(o.c) <= room && (opts.auto || o.v > 0));
-        if (!T.weaponUsed && opts.weapon && opts.weapon.ap <= room && !(opts.auto && wMode === 'never')) { const wv = valueOf(opts.weapon); if (opts.auto || wv > 0) opts2.push({ c: opts.weapon, v: wv }); }
+        const opts2 = capped ? [] : hand.filter(c => c !== sealedCard).map(c => ({ c, v: opts.auto ? 0 : valueOf(c) })) /* en auto, l'ordre vient de rank() : inutile d'estimer chaque carte deux fois */.filter(o => cost(o.c) <= room && (opts.auto || o.v > 0));
+        if (!T.weaponUsed && opts.weapon && opts.weapon.ap <= room && !(opts.auto && wMode === 'never')) { const wv = opts.auto ? 0 : valueOf(opts.weapon); if (opts.auto || wv > 0) opts2.push({ c: opts.weapon, v: wv }); }
         if (!opts2.length) {
           if (!capped && drawsLeft > 0 && hand.length < 8) { const c = draw(); drawsLeft--; if (c) { hand.push(c); continue; } }
           break;
@@ -692,7 +705,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
             : c.weapon && wMode === 'last' ? -1
             : c.hasDmg ? 1e9 + (AUTO_ORDER === 'hand' ? 1e6 - hand.indexOf(c) : AUTO_ORDER === 'eff' ? dmgCardValue(c, T.buffP, T.buffC, T.dmgPct) / Math.max(1, c.ap) : AUTO_ORDER === 'effmono' ? dmgCardValue(c, T.buffP, T.buffC, T.dmgPct, true) / Math.max(1, c.ap) : AUTO_ORDER === 'mono' ? dmgCardValue(c, T.buffP, T.buffC, T.dmgPct, true) : dmgCardValue(c, T.buffP, T.buffC, T.dmgPct))
             : (c.eff && c.eff.some(l => l.k === 'apGain' || l.k === 'apRemove')) ? 1e9 + (AUTO_ORDER === 'eff' ? 0 : maxD * 0.5) : 0;
-          opts2.sort((a, b) => rank(b.c) - rank(a.c));
+          const rk = new Map(opts2.map(o => [o, rank(o.c)])); opts2.sort((a, b) => rk.get(b) - rk.get(a)); // valeur calculée une fois par carte
         } else opts2.sort((a, b) => b.v / Math.max(1, cost(b.c)) - a.v / Math.max(1, cost(a.c)) || b.v - a.v);
         let pick = opts2[0].c;
         // À la main : rotation optimale du tour (ordre bonus → dégâts, PA gardés, arme au bon moment)
@@ -728,13 +741,15 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         // Fureur : observé en Ascension, le coup « déchaîné » vaut ~×fureur l'attaque de base (il remplace le bonus de l'intention)
         const mult = (fury > 1 && intent !== 'drain' ? fury : (INTENT_MULT[intent] || 1)) * (1 + RAGE_STEP * m.rage) * (1 - Math.min(100, m.weaken) / 100);
         m.weaken = 0;
-        if (Math.random() * 100 < S._dodge) continue;
+        if (RND() * 100 < S._dodge) continue;
         const rf = S[RES_FIX[m.el]] || 0, rp = Math.min(RES_PCT_CAP_PLAYER, S[RES_PCT[m.el]] || 0);
         let dmg = Math.max(0, Math.floor((m.atk * mult * (1 - (S._red || 0) / 100) - rf) * (1 - rp / 100)));
+        // coup critique du monstre (rare, observé ~6 %) : la Résistance Critiques retire sa valeur au coup critique reçu
+        if (RND() < MON_CRIT_P) dmg = Math.max(0, Math.floor(dmg * MON_CRIT_MULT) - (S.resCritiques || 0));
         for (const s of P.shields) { const a = Math.min(s.value, dmg); s.value -= a; dmg -= a; if (!dmg) break; }
         P.hp -= dmg; hpLost += dmg;
         if (intent === 'drain') m.hp = Math.min(m.cap, m.hp + dmg);
-        if (S.renvoi > 0 && dmg > 0) { const r = Math.min(m.hp, S.renvoi); m.hp -= r; dmgDone += r; if (m.hp <= 0) { m.hp = 0; down(m); } }
+        if (S.renvoi > 0 && dmg > 0) { const r = Math.min(m.hp, S.renvoi, dmg); /* au plus les dégâts reçus */ m.hp -= r; dmgDone += r; if (m.hp <= 0) { m.hp = 0; down(m); } }
         if (P.hp <= 0) return result(false, round);
       }
     }
@@ -768,8 +783,9 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       const critP = c.cc > 0 ? Math.min(1, (c.cc + (S.critique || 0) + crit) / 100) : 0;
       const lines = c.chanceLines.length ? [c.chanceLines[0]] : c.dmgLines;
       let v = 0, first = true;
+      if (!c._clMap) { c._clMap = new Map(); for (const l of lines) c._clMap.set(l, c.crit ? c.crit.filter(x => x.k === l.k)[c.dmgLines.indexOf(l) >= 0 ? c.dmgLines.filter(x => x.k === l.k).indexOf(l) : 0] || null : null); }
       lines.forEach((l, i) => {
-        const cl = c.crit ? c.crit.filter(x => x.k === l.k)[c.dmgLines.indexOf(l) >= 0 ? c.dmgLines.filter(x => x.k === l.k).indexOf(l) : 0] : null;
+        const cl = c._clMap.has(l) ? c._clMap.get(l) : null;
         const withFixed = c.weapon ? true : first; first = false;
         let lv = 0;
         if (l.zone && !mono) { for (const m of mons) if (m.alive) lv += Math.min(m.hp + m.shield, (m === t ? 1 : ZONE_SEC) * expLine(S, l, critP, puiss, dpct, c.weapon ? 0 : specP, er(m.res[RES_PCT[l.el || 0]] || 0), withFixed, c.weapon, cl)); }
@@ -883,17 +899,17 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     }
     function play(c) {
       const critP = c.cc > 0 ? Math.min(100, c.cc + (S.critique || 0) + T.buffC) : 0;
-      const crit = Math.random() * 100 < critP;
+      const crit = RND() * 100 < critP;
       const critArg = crit ? ((c.crit && c.crit.length) ? true : 'boost') : false;
       const lines = crit && c.crit ? c.crit : c.eff;
-      const spec = !c.weapon && c.hasDmg && Math.random() < specP;  // Vision spectrale : tout le sort est doublé (toutes cibles et lignes, vérifié dans le journal)
+      const spec = !c.weapon && c.hasDmg && RND() < specP;  // Vision spectrale : tout le sort est doublé (toutes cibles et lignes, vérifié dans le journal)
       if (c.hasDmg && !c.weapon) {
         const el = mainEl(c), sh = mv('shockPct', 0);
         if (sh && T.lastEl != null && el === T.lastEl) { let d = Math.floor(maxHp * sh / 100); for (const s2 of P.shields) { const a = Math.min(s2.value, d); s2.value -= a; d -= a; if (!d) break; } P.hp -= d; hpLost += d; }
         T.lastEl = el;
       }
       let first = true; let tgt = target();
-      const chosen = c.chanceLines.length ? [c.chanceLines[Math.floor(Math.random() * c.chanceLines.length)]] : null;
+      const chosen = c.chanceLines.length ? [c.chanceLines[Math.floor(RND() * c.chanceLines.length)]] : null;
       let sustainUsed = false;
       for (const l of lines) {
         if (chosen && l.chance && l !== chosen[0] && !(crit && c.crit)) continue;
@@ -934,12 +950,18 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     }
   }
 
-  function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+  // Tirages : aléatoires par défaut ; avec une graine, chaque combat i rejoue les mêmes tirages d'un build à l'autre
+  // (nombres aléatoires communs : les écarts mesurés entre deux builds viennent du build, pas de la chance)
+  let RND = Math.random;
+  function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(RND() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
   function runMany(opts, n) {
     let wins = 0, rounds = 0, hp = 0, dmg = 0, prog = 0, kills = 0; const per = {}; const hist = {};
+    const seeded = opts.seed != null;
     for (let i = 0; i < n; i++) {
-      const r = simulateFight(opts);
+      if (seeded) RND = mulberry32(opts.seed * 1000003 + i);
+      let r; try { r = simulateFight(opts); } finally { if (seeded) RND = Math.random; }
       if (r.win) { wins++; rounds += r.rounds; hist[r.rounds] = (hist[r.rounds] || 0) + 1; }
       hp += r.hpLost; dmg += r.dmgDone; prog += r.progress || 0; kills += r.kills || 0;
       for (const k in r.perCard) per[k] = (per[k] || 0) + r.perCard[k];
@@ -1099,6 +1121,11 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     if (o.el !== undefined) { for (let e = 1; e <= 4; e++) if (e !== o.el) { const car = R.CARAC_OF_EL[e]; if (car !== R.CARAC_OF_EL[o.el]) w[car] = (w[car] || 0) * 0.2; } }
     return w;
   }
+  function dominates(a, b) {
+    const sa = R.itemStats(a, a.f || 0), sb = R.itemStats(b, b.f || 0); let strict = false;
+    for (const k of new Set(Object.keys(sa).concat(Object.keys(sb)))) { const x = sa[k] || 0, y = sb[k] || 0; if (x < y) return false; if (x > y) strict = true; }
+    return strict;
+  }
   function itemHeur(it, weights) {
     const st = R.itemStats(it, it.f || 0); let v = 0;
     for (const k in st) v += (weights[k] || 0) * st[k];
@@ -1212,7 +1239,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     let ev = 0;
     const total = R.pointsTotal(ctx.level);
     const tick = (phase, done, of, best) => opts.onProgress && opts.onProgress({ phase, done, of, best, evals: ev });
-    const FO = { invertFrom: opts.invertFrom || 0, invertShields: !!opts.invertShields, auto: !!opts.auto, weaponMode: opts.weaponMode, plan: (opts.effort || 2) >= 3 }; const SU = opts.sustain || 'all', NS = !!opts.noSteal;
+    const FO = { invertFrom: opts.invertFrom || 0, invertShields: !!opts.invertShields, auto: !!opts.auto, weaponMode: opts.weaponMode, plan: (opts.effort || 2) >= 3, seed: 1 }; const SU = opts.sustain || 'all', NS = !!opts.noSteal;
     const s0 = opts.start0 || opts.start; const start0 = { gear: Object.assign({}, s0.gear), deck: s0.deck.slice() };
     const changes = st => SLOTS.filter(([s]) => (st.gear[s] && st.gear[s].id) !== (start0.gear[s] && start0.gear[s].id)).length + st.deck.filter(k => !start0.deck.includes(k)).length;
     // Ascension : à efficacité égale, on préfère le build qui change le moins de choses
@@ -1335,15 +1362,20 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       const cands = {};
       for (const [slot, type] of SLOTS) {
         const list = (pool[type] || []).filter(it => (it.lvl || 0) <= ctx.level && !(NS && it.w && it.w.lines.some(l => l.k === 'steal')));
-        list.sort((x, y) => itemHeur(y, wts) - itemHeur(x, wts));
-        cands[slot] = list.slice(0, type === 'dofus' ? 12 : 10);
+        // objets dominés : un autre objet du même emplacement fait au moins aussi bien sur chaque stat (hors armes et panoplies) → inutile de les tester
+        const pruned = list.filter(it => it.w || it.setId || !list.some(o => o !== it && !o.w && dominates(o, it)));
+        pruned.sort((x, y) => itemHeur(y, wts) - itemHeur(x, wts));
+        cands[slot] = pruned.slice(0, type === 'dofus' ? 12 : 10);
         if (cur.gear[slot] && !cands[slot].some(it => it.id === cur.gear[slot].id) && !(NS && slot === 'arme' && weaponSteals(cur.gear[slot]))) cands[slot].push(cur.gear[slot]);
       }
       // panoplies : on essaie exprès de porter ensemble les pièces possédées d'une même panoplie
       const bySet = {};
       for (const [slot, type] of SLOTS) for (const it of (pool[type] || [])) if (it.setId && (it.lvl || 0) <= ctx.level) (bySet[it.setId] = bySet[it.setId] || new Map()).set(it.id + ':' + (it.f || 0), it);
+      // panoplies trop faibles (ex. bas niveau) : on ne les essaie que si leurs pièces valent au moins 60 % de ce qu'elles remplaceraient
+      const curHeur = it => it ? itemHeur(it, wts) : 0;
       for (const items of Object.values(bySet)) {
         const list = [...items.values()]; if (list.length < 2) continue;
+        { const h = list.reduce((a, it) => a + itemHeur(it, wts), 0); const ref = list.reduce((a, it) => { const sl = SLOTS.find(([, ty]) => ty === it.s); return a + curHeur(sl && cur.gear[sl[0]]); }, 0); if (ref > 0 && h < 0.6 * ref) continue; }
         const g2 = Object.assign({}, cur.gear); const usedSlots = new Set();
         for (const it of list.sort((a, b) => (b.f || 0) - (a.f || 0))) {
           const slot = SLOTS.find(([sl, ty]) => ty === it.s && !usedSlots.has(sl) && !(it.s === 'arme' && NS && weaponSteals(it)));
@@ -1404,9 +1436,9 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const alloc = sd.alloc && R.allocCost(sd.alloc) <= R.pointsTotal(opts.ctx.level) ? sd.alloc : opts.start.alloc;
     return kept ? { gear, alloc, deck } : null;
   }
-  function optimizeDeep(data, opts) {
+  // Liste des recherches (une par archétype d'élément) ; partagée entre le calcul en une fois et le calcul réparti sur plusieurs cœurs
+  function deepRuns(data, opts) {
     data._cardsByKey = data._cardsByKey || Object.fromEntries(data.cards.map(c => [c.key, c]));
-    if ((opts.effort || 2) <= 1 || !opts.optDeck) return optimize(data, opts);
     const o = ORIENT[opts.objective] || {};
     const owned = data.cards.filter(c => c.eff && c.eff.length && sustainAllowed(c, opts.sustain, opts.noSteal));
     const count = a => owned.filter(c => { const e = cardEls(c); return e.length && (e.length >= 3 || e.every(x => a.els.includes(x))); }).length;
@@ -1418,36 +1450,53 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     // Reprise : le dernier build trouvé (mémorisé par le Labo) sert de point de départ supplémentaire, s'il est encore possible
     const seed = sanitizeSeed(data, opts);
     if (seed) runs.unshift({ id: 'memo', label: 'Reprise du dernier build trouvé', arch: null, start: seed });
+    return runs;
+  }
+  const FINAL_FO = opts => ({ invertFrom: opts.invertFrom || 0, invertShields: !!opts.invertShields, auto: !!opts.auto, weaponMode: opts.weaponMode, plan: true, seed: 7919 }); // autre graine que la recherche : pas de build « chanceux »
+  // Une partie des recherches (ids), avec confirmation (Approfondi) et vérification sur 2 500 combats de ses meilleurs résultats
+  function deepPart(data, opts, ids, keep) {
+    data._cardsByKey = data._cardsByKey || Object.fromEntries(data.cards.map(c => [c.key, c]));
+    const all = deepRuns(data, opts); const runs = ids ? all.filter(r => ids.includes(r.id)) : all;
     const passes = opts.effort >= 3 ? 2 : 1;
     let evals = 0, results = [];
     runs.forEach((run, i) => {
-      const r = optimize(data, Object.assign({}, opts, run.start ? { start: run.start, start0: opts.start } : {}, { arch: run.arch, passes, NF: 600,onProgress: p => opts.onProgress && opts.onProgress(Object.assign({}, p, { phase: `${run.label} (${i + 1}/${runs.length}) · ${p.phase}`, done: i + Math.min(1, (p.done || 0) / Math.max(1, p.of || 1)), of: runs.length, evals: evals + (p.evals || 0) })) }));
+      const r = optimize(data, Object.assign({}, opts, run.start ? { start: run.start, start0: opts.start } : {}, { arch: run.arch, passes, NF: opts.NFdeep || 600, onProgress: p => opts.onProgress && opts.onProgress(Object.assign({}, p, { phase: `${run.label} (${i + 1}/${runs.length}) · ${p.phase}`, done: i + Math.min(1, (p.done || 0) / Math.max(1, p.of || 1)), of: runs.length + 1 })) }));
       evals += r.evals || 0;
-      if (r.saturated) { results = [Object.assign({ id: run.id, label: run.label }, r)]; return; }
       results.push(Object.assign({ id: run.id, label: run.label }, r));
     });
-    if (results.length === 1 && results[0].saturated) return Object.assign(results[0], { evals });
-    // Approfondi : on relance les deux meilleurs archétypes depuis leur build trouvé pour confirmer (ou améliorer) le résultat
+    if (results.some(r => r.saturated)) return { results: results.filter(r => r.saturated).slice(0, 1), evals, saturated: true };
+    results.sort((a, b) => b.final.score - a.final.score);
     if (opts.effort >= 3) {
-      results.sort((a, b) => b.final.score - a.final.score);
       for (const r of results.slice(0, 2)) {
         const run = runs.find(x => x.id === r.id);
-        const r2 = optimize(data, Object.assign({}, opts, { arch: run.arch, passes: 1, NF: 600, start: { gear: r.state.gear, alloc: r.state.alloc, deck: r.state.deck }, onProgress: p => opts.onProgress && opts.onProgress(Object.assign({}, p, { phase: `Confirmation · ${run.label} · ${p.phase}`, done: runs.length, of: runs.length, evals: evals + (p.evals || 0) })) }));
+        const r2 = optimize(data, Object.assign({}, opts, { arch: run.arch, passes: 1, NF: 600, start: { gear: r.state.gear, alloc: r.state.alloc, deck: r.state.deck }, onProgress: p => opts.onProgress && opts.onProgress(Object.assign({}, p, { phase: `Confirmation · ${run.label} · ${p.phase}`, done: runs.length, of: runs.length + 1 })) }));
         evals += r2.evals || 0;
         r.confirmed = r2.final.score <= r.final.score + 5;
         if (r2.final.score > r.final.score) { r.state = r2.state; r.final = r2.final; }
       }
     }
-    // vérification finale des 3 meilleurs sur 2 500 combats chacun, mêmes adversaires
-    results.sort((a, b) => b.final.score - a.final.score);
-    const FO = { invertFrom: opts.invertFrom || 0, invertShields: !!opts.invertShields, auto: !!opts.auto, weaponMode: opts.weaponMode, plan: true };
-    for (const r of results.slice(0, 3)) r.final = evaluate(data, r.state, opts.ctx, opts.monsters, 2500, opts.objective, FO);
-    results.sort((a, b) => b.final.score - a.final.score);
+    const FO = FINAL_FO(opts);
+    for (const r of results.slice(0, keep || 3)) r.final = evaluate(data, r.state, opts.ctx, opts.monsters, 2500, opts.objective, FO);
+    return { results, evals };
+  }
+  function deepStart(data, opts) { data._cardsByKey = data._cardsByKey || Object.fromEntries(data.cards.map(c => [c.key, c])); return evaluate(data, { gear: opts.start.gear, alloc: opts.start.alloc, deck: opts.start.deck }, opts.ctx, opts.monsters, 2500, opts.objective, FINAL_FO(opts)); }
+  // Assemble les résultats (d'un ou plusieurs cœurs) au format habituel
+  function deepMerge(parts, start, opts) {
+    let evals = 0; let results = [];
+    for (const p of parts) { evals += p.evals || 0; results = results.concat(p.results); }
+    const sat = parts.find(p => p.saturated); if (sat) return Object.assign(sat.results[0], { evals });
+    results.sort((a, b) => (b.final.r.n >= 2000) - (a.final.r.n >= 2000) || b.final.score - a.final.score);
     const best = results[0];
-    const start = evaluate(data, { gear: opts.start.gear, alloc: opts.start.alloc, deck: opts.start.deck }, opts.ctx, opts.monsters, 2500, opts.objective, FO);
     opts.onProgress && opts.onProgress({ phase: 'Terminé', done: 1, of: 1, evals });
     return { state: best.state, start, final: best.final, evals, archetype: best.label,
       archs: results.map(r => ({ id: r.id, label: r.label, state: r.state, confirmed: r.confirmed, score: r.final.score, winRate: r.final.r.winRate, avgRounds: r.final.r.avgRounds, avgHpLost: r.final.r.avgHpLost, maxHp: r.final.S._maxHp, verified: r.final.r.n >= 2000 })) };
+  }
+  function optimizeDeep(data, opts) {
+    data._cardsByKey = data._cardsByKey || Object.fromEntries(data.cards.map(c => [c.key, c]));
+    if ((opts.effort || 2) <= 1 || !opts.optDeck) return optimize(data, opts);
+    const part = deepPart(data, opts, null, 4);
+    if (part.saturated) return deepMerge([part], null, opts);
+    return deepMerge([part], deepStart(data, opts), opts);
   }
 
   // ---------- Codes de partage du jeu (DM-E équipement, DM-S deck) ----------
@@ -1475,7 +1524,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     throw new Error('type de code inconnu : ' + m[1]);
   }
 
-  const api = { optimizeDeep, ARCHS, weaponSteals, encodeGear, encodeDeck, decodeCode, sustainAllowed, SLOTS, ORIENT, optimize, evaluate, buildState, itemPool, allocTemplates, score, cardAllowed };
+  const api = { optimizeDeep, deepRuns, deepPart, deepStart, deepMerge, ARCHS, weaponSteals, encodeGear, encodeDeck, decodeCode, sustainAllowed, SLOTS, ORIENT, optimize, evaluate, buildState, itemPool, allocTemplates, score, cardAllowed };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.OPT = api;
 })(typeof self !== 'undefined' ? self : this);
 </script>
@@ -1518,7 +1567,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
 <script type="text/plain" id="src-userscript">// ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.5.0
+// @version      2.5.2
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @run-at       document-start
@@ -1554,6 +1603,8 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   const RES_PCT = ['resPctNeutre', 'resPctTerre', 'resPctFeu', 'resPctEau', 'resPctAir'];
   const PRESTIGE_COMBAT = [{ pa: 1 }, { po: 2 }, { pm: 2 }, { pa: 1 }, { po: 3 }, { pm: 3 }, { pa: 1 }];
   // Sorts de zone : la cible principale prend 100 %, chaque autre cible 60 % (mesuré dans le journal, résistances retirées)
+  // critiques des monstres : fréquence observée dans le journal, multiplicateur supposé égal à celui du joueur
+  const MON_CRIT_P = 0.06, MON_CRIT_MULT = 1.2;
   let ZONE_SEC = 0.6, WEAPON_LAST = false, WEAPON_MODE = 'normal';
   let AUTO_ORDER = 'eff';
   const CAP3 = ['dmgPctDistance', 'dmgPctMelee', 'resPctDistance', 'resPctMelee'];
@@ -1696,7 +1747,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
 
   // ---------- Dégâts ----------
   function dmgLine(S, line, crit, buffPuiss, dmgPct, spectral, resPct, withFixed, isWeapon) {
-    const base = line.min + Math.random() * (line.max - line.min + 1);
+    const base = line.min + RND() * (line.max - line.min + 1);
     const b = Math.min(line.max, Math.floor(base));
     const carac = (S[CARAC_OF_EL[line.el || 0]] || 0) + (S.puissance || 0) + buffPuiss;
     let fixed = 0;
@@ -1798,8 +1849,8 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         const cost = c => c.ap + (T.seal && !c.weapon ? T.seal : 0);
         const room = paNeed != null && !opts.auto ? ap - paNeed : ap;
         const capped = !opts.auto && T.cards >= furyCap;
-        const opts2 = capped ? [] : hand.filter(c => c !== sealedCard).map(c => ({ c, v: valueOf(c) })).filter(o => cost(o.c) <= room && (opts.auto || o.v > 0));
-        if (!T.weaponUsed && opts.weapon && opts.weapon.ap <= room && !(opts.auto && wMode === 'never')) { const wv = valueOf(opts.weapon); if (opts.auto || wv > 0) opts2.push({ c: opts.weapon, v: wv }); }
+        const opts2 = capped ? [] : hand.filter(c => c !== sealedCard).map(c => ({ c, v: opts.auto ? 0 : valueOf(c) })) /* en auto, l'ordre vient de rank() : inutile d'estimer chaque carte deux fois */.filter(o => cost(o.c) <= room && (opts.auto || o.v > 0));
+        if (!T.weaponUsed && opts.weapon && opts.weapon.ap <= room && !(opts.auto && wMode === 'never')) { const wv = opts.auto ? 0 : valueOf(opts.weapon); if (opts.auto || wv > 0) opts2.push({ c: opts.weapon, v: wv }); }
         if (!opts2.length) {
           if (!capped && drawsLeft > 0 && hand.length < 8) { const c = draw(); drawsLeft--; if (c) { hand.push(c); continue; } }
           break;
@@ -1814,7 +1865,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
             : c.weapon && wMode === 'last' ? -1
             : c.hasDmg ? 1e9 + (AUTO_ORDER === 'hand' ? 1e6 - hand.indexOf(c) : AUTO_ORDER === 'eff' ? dmgCardValue(c, T.buffP, T.buffC, T.dmgPct) / Math.max(1, c.ap) : AUTO_ORDER === 'effmono' ? dmgCardValue(c, T.buffP, T.buffC, T.dmgPct, true) / Math.max(1, c.ap) : AUTO_ORDER === 'mono' ? dmgCardValue(c, T.buffP, T.buffC, T.dmgPct, true) : dmgCardValue(c, T.buffP, T.buffC, T.dmgPct))
             : (c.eff && c.eff.some(l => l.k === 'apGain' || l.k === 'apRemove')) ? 1e9 + (AUTO_ORDER === 'eff' ? 0 : maxD * 0.5) : 0;
-          opts2.sort((a, b) => rank(b.c) - rank(a.c));
+          const rk = new Map(opts2.map(o => [o, rank(o.c)])); opts2.sort((a, b) => rk.get(b) - rk.get(a)); // valeur calculée une fois par carte
         } else opts2.sort((a, b) => b.v / Math.max(1, cost(b.c)) - a.v / Math.max(1, cost(a.c)) || b.v - a.v);
         let pick = opts2[0].c;
         // À la main : rotation optimale du tour (ordre bonus → dégâts, PA gardés, arme au bon moment)
@@ -1850,13 +1901,15 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         // Fureur : observé en Ascension, le coup « déchaîné » vaut ~×fureur l'attaque de base (il remplace le bonus de l'intention)
         const mult = (fury > 1 && intent !== 'drain' ? fury : (INTENT_MULT[intent] || 1)) * (1 + RAGE_STEP * m.rage) * (1 - Math.min(100, m.weaken) / 100);
         m.weaken = 0;
-        if (Math.random() * 100 < S._dodge) continue;
+        if (RND() * 100 < S._dodge) continue;
         const rf = S[RES_FIX[m.el]] || 0, rp = Math.min(RES_PCT_CAP_PLAYER, S[RES_PCT[m.el]] || 0);
         let dmg = Math.max(0, Math.floor((m.atk * mult * (1 - (S._red || 0) / 100) - rf) * (1 - rp / 100)));
+        // coup critique du monstre (rare, observé ~6 %) : la Résistance Critiques retire sa valeur au coup critique reçu
+        if (RND() < MON_CRIT_P) dmg = Math.max(0, Math.floor(dmg * MON_CRIT_MULT) - (S.resCritiques || 0));
         for (const s of P.shields) { const a = Math.min(s.value, dmg); s.value -= a; dmg -= a; if (!dmg) break; }
         P.hp -= dmg; hpLost += dmg;
         if (intent === 'drain') m.hp = Math.min(m.cap, m.hp + dmg);
-        if (S.renvoi > 0 && dmg > 0) { const r = Math.min(m.hp, S.renvoi); m.hp -= r; dmgDone += r; if (m.hp <= 0) { m.hp = 0; down(m); } }
+        if (S.renvoi > 0 && dmg > 0) { const r = Math.min(m.hp, S.renvoi, dmg); /* au plus les dégâts reçus */ m.hp -= r; dmgDone += r; if (m.hp <= 0) { m.hp = 0; down(m); } }
         if (P.hp <= 0) return result(false, round);
       }
     }
@@ -1890,8 +1943,9 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       const critP = c.cc > 0 ? Math.min(1, (c.cc + (S.critique || 0) + crit) / 100) : 0;
       const lines = c.chanceLines.length ? [c.chanceLines[0]] : c.dmgLines;
       let v = 0, first = true;
+      if (!c._clMap) { c._clMap = new Map(); for (const l of lines) c._clMap.set(l, c.crit ? c.crit.filter(x => x.k === l.k)[c.dmgLines.indexOf(l) >= 0 ? c.dmgLines.filter(x => x.k === l.k).indexOf(l) : 0] || null : null); }
       lines.forEach((l, i) => {
-        const cl = c.crit ? c.crit.filter(x => x.k === l.k)[c.dmgLines.indexOf(l) >= 0 ? c.dmgLines.filter(x => x.k === l.k).indexOf(l) : 0] : null;
+        const cl = c._clMap.has(l) ? c._clMap.get(l) : null;
         const withFixed = c.weapon ? true : first; first = false;
         let lv = 0;
         if (l.zone && !mono) { for (const m of mons) if (m.alive) lv += Math.min(m.hp + m.shield, (m === t ? 1 : ZONE_SEC) * expLine(S, l, critP, puiss, dpct, c.weapon ? 0 : specP, er(m.res[RES_PCT[l.el || 0]] || 0), withFixed, c.weapon, cl)); }
@@ -2005,17 +2059,17 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     }
     function play(c) {
       const critP = c.cc > 0 ? Math.min(100, c.cc + (S.critique || 0) + T.buffC) : 0;
-      const crit = Math.random() * 100 < critP;
+      const crit = RND() * 100 < critP;
       const critArg = crit ? ((c.crit && c.crit.length) ? true : 'boost') : false;
       const lines = crit && c.crit ? c.crit : c.eff;
-      const spec = !c.weapon && c.hasDmg && Math.random() < specP;  // Vision spectrale : tout le sort est doublé (toutes cibles et lignes, vérifié dans le journal)
+      const spec = !c.weapon && c.hasDmg && RND() < specP;  // Vision spectrale : tout le sort est doublé (toutes cibles et lignes, vérifié dans le journal)
       if (c.hasDmg && !c.weapon) {
         const el = mainEl(c), sh = mv('shockPct', 0);
         if (sh && T.lastEl != null && el === T.lastEl) { let d = Math.floor(maxHp * sh / 100); for (const s2 of P.shields) { const a = Math.min(s2.value, d); s2.value -= a; d -= a; if (!d) break; } P.hp -= d; hpLost += d; }
         T.lastEl = el;
       }
       let first = true; let tgt = target();
-      const chosen = c.chanceLines.length ? [c.chanceLines[Math.floor(Math.random() * c.chanceLines.length)]] : null;
+      const chosen = c.chanceLines.length ? [c.chanceLines[Math.floor(RND() * c.chanceLines.length)]] : null;
       let sustainUsed = false;
       for (const l of lines) {
         if (chosen && l.chance && l !== chosen[0] && !(crit && c.crit)) continue;
@@ -2056,12 +2110,18 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     }
   }
 
-  function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+  // Tirages : aléatoires par défaut ; avec une graine, chaque combat i rejoue les mêmes tirages d'un build à l'autre
+  // (nombres aléatoires communs : les écarts mesurés entre deux builds viennent du build, pas de la chance)
+  let RND = Math.random;
+  function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(RND() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
   function runMany(opts, n) {
     let wins = 0, rounds = 0, hp = 0, dmg = 0, prog = 0, kills = 0; const per = {}; const hist = {};
+    const seeded = opts.seed != null;
     for (let i = 0; i < n; i++) {
-      const r = simulateFight(opts);
+      if (seeded) RND = mulberry32(opts.seed * 1000003 + i);
+      let r; try { r = simulateFight(opts); } finally { if (seeded) RND = Math.random; }
       if (r.win) { wins++; rounds += r.rounds; hist[r.rounds] = (hist[r.rounds] || 0) + 1; }
       hp += r.hpLost; dmg += r.dmgDone; prog += r.progress || 0; kills += r.kills || 0;
       for (const k in r.perCard) per[k] = (per[k] || 0) + r.perCard[k];
@@ -3128,8 +3188,33 @@ function runSim(){
 
 /* ---------- Optimiseur ---------- */
 let worker=null;
+/* Calcul réparti : les archétypes (Terre, Feu, Eau, Air, multi, libre) sont cherchés en parallèle sur plusieurs cœurs, puis assemblés */
+let pworkers=[];
+function deepParallel(data,opts,statusEl,barEl,onDone,onErr){
+  try{
+    if(typeof Worker==='undefined'||(opts.effort||2)<=1||!opts.optDeck)return false;
+    const runs=O.deepRuns(Object.assign({},data),opts).map(r=>r.id);
+    const cores=Math.max(1,Math.min((navigator.hardwareConcurrency||2)-1,6));const W=Math.min(cores,runs.length);
+    if(W<2)return false;
+    pworkers.forEach(w=>{try{w.terminate()}catch(e){}});if(worker){try{worker.terminate()}catch(e){}worker=null}
+    const groups=Array.from({length:W},()=>[]);runs.forEach((id,i)=>groups[i%W].push(id));
+    const jobs=groups.map(ids=>({mode:'part',ids})).concat([{mode:'start'}]);
+    const prog=jobs.map(()=>0);let evals=jobs.map(()=>0);const parts=[];let start=null,left=jobs.length,failed=false;
+    const slim=Object.assign({},data);delete slim._cardsByKey;
+    statusEl.textContent=`Calcul réparti sur ${W} cœurs…`;
+    pworkers=jobs.map((job,k)=>{const w=makeWorker();
+      w.onmessage=e=>{const m=e.data;
+        if(m.type==='progress'){const p=m.p;prog[k]=p.phase==='Terminé'?1:Math.min(0.99,(p.done||0)/Math.max(1,p.of||1));evals[k]=p.evals||evals[k];const f=prog.slice(0,W).reduce((a,b)=>a+b,0)/W;barEl.style.width=Math.max(2,Math.round(f*100))+'%';statusEl.textContent=`Calcul réparti sur ${W} cœurs · ${evals.reduce((a,b)=>a+b,0)} essais`;return}
+        if(m.type==='part')parts.push(m.res);if(m.type==='start')start=m.res;
+        try{w.terminate()}catch(e){}
+        if(--left===0&&!failed){try{const res=O.deepMerge(parts,start,opts);res.cores=W;onDone(res)}catch(err){onErr(err.message)}}};
+      w.onerror=ev=>{if(failed)return;failed=true;pworkers.forEach(x=>{try{x.terminate()}catch(e){}});onErr((ev&&ev.message)||'erreur du calcul réparti')};
+      w.postMessage(Object.assign({data:slim,opts},job));return w});
+    return true;
+  }catch(e){try{console.warn('calcul réparti indisponible :',e&&e.message)}catch(_){}return false}
+}
 function makeWorker(){
-  const src=engineSrc+'\n'+optSrc+`\nself.onmessage=function(e){const a=e.data;a.data._cardsByKey=null;const res=OPT.optimizeDeep(a.data,Object.assign({},a.opts,{onProgress:function(p){self.postMessage({type:'progress',p:{phase:p.phase,done:p.done,of:p.of,evals:p.evals,score:p.best&&p.best.score,rounds:p.best&&p.best.r.avgRounds}})}}));self.postMessage({type:'done',res:{state:res.state,start:{r:res.start.r,score:res.start.score,S:res.start.S},final:{r:res.final.r,score:res.final.score,S:res.final.S},evals:res.evals,archs:res.archs,archetype:res.archetype,saturated:res.saturated}})};`;
+  const src=engineSrc+'\n'+optSrc+`\nself.onmessage=function(e){const a=e.data;a.data._cardsByKey=null;if(a.mode){const prog=function(p){self.postMessage({type:'progress',p:{phase:p.phase,done:p.done,of:p.of,evals:p.evals}})};const o=Object.assign({},a.opts,{onProgress:prog});if(a.mode==='start'){const r=OPT.deepStart(a.data,o);self.postMessage({type:'start',res:{r:r.r,score:r.score,S:r.S}});return}const part=OPT.deepPart(a.data,o,a.ids,2);self.postMessage({type:'part',res:{evals:part.evals,saturated:part.saturated,results:part.results.map(function(r){return {id:r.id,label:r.label,state:r.state,confirmed:r.confirmed,saturated:r.saturated,start:r.start&&{r:r.start.r,score:r.start.score,S:r.start.S},final:{r:r.final.r,score:r.final.score,S:r.final.S},evals:r.evals}})}});return}const res=OPT.optimizeDeep(a.data,Object.assign({},a.opts,{onProgress:function(p){self.postMessage({type:'progress',p:{phase:p.phase,done:p.done,of:p.of,evals:p.evals,score:p.best&&p.best.score,rounds:p.best&&p.best.r.avgRounds}})}}));self.postMessage({type:'done',res:{state:res.state,start:{r:res.start.r,score:res.start.score,S:res.start.S},final:{r:res.final.r,score:res.final.score,S:res.final.S},evals:res.evals,archs:res.archs,archetype:res.archetype,saturated:res.saturated}})};`;
   return new Worker(URL.createObjectURL(new Blob([src],{type:'text/javascript'})));
 }
 function segVal(id){const b=document.querySelector(`#${id} [aria-pressed="true"]`);return b?b.dataset.v:null}
@@ -3168,6 +3253,7 @@ function runOpt(force){
   const btn=$('#oRun');btn.disabled=true;$('#oBar').style.width='2%';$('#oStatus').textContent='Démarrage…';
   const phases=['Points de caractéristiques','Équipement','Deck'];
   const runHere=()=>{$('#oStatus').textContent='Calcul en cours dans la page (elle peut se figer quelques secondes)…';setTimeout(()=>{try{const slim=optData();const res=O.optimizeDeep(slim,opts);btn.disabled=false;$('#oBar').style.width='100%';$('#oStatus').textContent=`Terminé en ${res.evals} essais. Résultats vérifiés sur 2 500 combats.`;renderOpt1(res,opts,pack,mult,deckIdx)}catch(err){btn.disabled=false;$('#oStatus').textContent='Le calcul a échoué : '+err.message}},50)};
+  if(deepParallel(optData(),opts,$('#oStatus'),$('#oBar'),res=>{btn.disabled=false;$('#oBar').style.width='100%';$('#oStatus').textContent=`Terminé en ${res.evals} essais, réparti sur ${res.cores} cœurs. Résultats vérifiés sur 2 500 combats.`;renderOpt1(res,opts,pack,mult,deckIdx)},err=>{btn.disabled=false;$('#oStatus').textContent='Le calcul a échoué : '+err}))return;
   let w;try{if(worker)worker.terminate();w=worker=makeWorker();}catch(e){runHere();return}
   w.onmessage=e=>{const m=e.data;
     if(m.type==='progress'){const p=m.p;const pi=Math.max(0,phases.indexOf(p.phase));const frac=p.phase==='Terminé'?1:/\(\d+\/\d+\)/.test(p.phase)?Math.min(1,p.done/Math.max(1,p.of)):(pi+Math.min(1,p.done/Math.max(1,p.of)))/3;$('#oBar').style.width=Math.round(frac*100)+'%';$('#oStatus').textContent=`${p.phase} · ${p.evals} essais`}
@@ -3475,6 +3561,7 @@ function runAsc(force){
   const phases=['Points de caractéristiques','Équipement','Deck'];
   const done=res=>{memoPut('asc',MEM.key,opts,res);btn.disabled=false;$('#aBar').style.width='100%';$('#aStatus').textContent=`Terminé en ${res.evals} essais, vérifié sur 2 500 combats.`;renderAscResult(res,pack,mult,su)};
   const here=()=>setTimeout(()=>{try{done(O.optimizeDeep(Object.assign({},DATA),opts))}catch(e){btn.disabled=false;$('#aStatus').textContent='Le calcul a échoué : '+e.message}},50);
+  if(deepParallel(DATA,opts,$('#aStatus'),$('#aBar'),res=>{done(res);$('#aStatus').textContent=`Terminé en ${res.evals} essais, réparti sur ${res.cores} cœurs, vérifié sur 2 500 combats.`},err=>{btn.disabled=false;$('#aStatus').textContent='Le calcul a échoué : '+err}))return;
   let w;try{if(worker)worker.terminate();w=worker=makeWorker()}catch(e){here();return}
   let got=false;
   w.onmessage=e=>{got=true;const m=e.data;if(m.type==='progress'){const p=m.p;const pi=Math.max(0,phases.indexOf(p.phase));$('#aBar').style.width=Math.round((p.phase==='Terminé'?1:/\(\d+\/\d+\)/.test(p.phase)?Math.min(1,p.done/Math.max(1,p.of)):(pi+Math.min(1,p.done/Math.max(1,p.of)))/3)*100)+'%';$('#aStatus').textContent=`${p.phase} · ${p.evals} essais`}if(m.type==='done')done(m.res)};
