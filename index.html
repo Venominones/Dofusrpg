@@ -1186,7 +1186,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   }
 
   // Poids des stats pour pré-filtrer les objets (dérivés du deck)
-  const CRIT_GAIN = 0.2;
+  const CRIT_GAIN = 0.2; const MIN_DECK = 7; // minimum imposé par le jeu (page Deck)
   function statWeights(deck, weapon, S, defensive) {
     const w = { puissance: 0, dommages: 0, critique: 0, vitalite: defensive ? 0.6 : 0.25, dommagesCritiques: 0 };
     for (const c of deck.concat(weapon ? [weapon] : [])) {
@@ -1353,7 +1353,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const E = (st, n) => { ev++; const e = evaluate(data, st, ctx, mons, n || N, obj, FO); e.score -= (String(obj).startsWith('ascension') ? 3 : 1.5) * changes(st); return e; };
     const start = evaluate(data, cur, ctx, mons, NF, obj, FO);
     // Cible trop facile : tout est déjà gagné en un tour sans dégâts, les différences ne seraient que du bruit de simulation
-    if ((['survie', 'vitesse', 'equilibre', 'mono', 'multi'].includes(obj) || String(obj).startsWith('ascension')) && start.r.winRate >= 0.999 && start.r.avgRounds <= 1.25 && start.r.avgHpLost / start.S._maxHp < 0.03) {
+    if ((['survie', 'vitesse', 'equilibre', 'mono', 'multi'].includes(obj) || String(obj).startsWith('ascension')) && opts.saturateCheck && start.r.winRate >= 0.999 && start.r.avgRounds <= 1.05 && start.r.avgHpLost / start.S._maxHp < 0.03 && !opts.noSaturate) { // désactivé : on optimise toujours, même contre un adversaire facile
       return { start, final: start, state: cur, evals: ev, saturated: true };
     }
     if (NS && weaponSteals(cur.gear.arme)) {
@@ -1385,11 +1385,11 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         if (it % 3 === 0) tick('Deck', it, iters, best);
       }
     }
-    // Deck plus court : retirer une carte peut aider (on pioche plus souvent ses meilleurs sorts) ; les meilleurs decks du jeu ont 4 à 7 sorts
+    // Deck plus court : retirer une carte peut aider (on pioche plus souvent ses meilleurs sorts) ; le jeu impose au moins 7 cartes
     function pruneDeck() {
       if (!opts.optDeck) return;
       for (let round = 0; round < 12; round++) {
-        if (cur.deck.length <= (opts.minDeck || 4)) return;
+        if (cur.deck.length <= (opts.minDeck || MIN_DECK)) return;
         let bi = -1, be = best;
         for (let i = 0; i < cur.deck.length; i++) { const d2 = cur.deck.slice(0, i).concat(cur.deck.slice(i + 1)); const e = E(Object.assign({}, cur, { deck: d2 })); if (e.score > be.score + 0.5) { be = e; bi = i; } }
         if (bi < 0) return;
@@ -1804,7 +1804,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
 <script type="text/plain" id="src-userscript">// ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.9.2
+// @version      2.9.4
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -3689,7 +3689,7 @@ function memoStoreKey(){return 'labo-memo-'+LPROF}
 function memoLoad(){try{return JSON.parse(localStorage.getItem(memoStoreKey())||'[]',(k,v)=>v==='__INF__'?Infinity:v)||[]}catch(e){return []}}
 function memoSave(list){const js=x=>JSON.stringify(x,(k,v)=>v===Infinity?'__INF__':v);let l=list.slice(0,30);while(l.length){try{localStorage.setItem(memoStoreKey(),js(l));return}catch(e){l=l.slice(0,l.length-1)}}try{localStorage.removeItem(memoStoreKey())}catch(e){}}
 function dataSig(d){const m=d.meta||{};return fnv(JSON.stringify([m.level,m.prestige,m.breedId,m.forge&&m.forge.level,m.discordBonus,m.scrolls,(d.items||[]).map(i=>i.id+'/'+(i.f||0)),(d.worn||[]).map(i=>i.id+'/'+(i.f||0)),(d.cards||[]).map(c=>c.key),Object.keys(d.setBonus||{}).length]))}
-function partSig(o){const c=Object.assign({rev:"2026-10-10h"},o);delete c.onProgress;delete c.seed;delete c.monsters;delete c.sustain;delete c.noSteal;delete c._pv;return fnv(JSON.stringify(c))}
+function partSig(o){const c=Object.assign({rev:"2026-10-11b"},o);delete c.onProgress;delete c.seed;delete c.monsters;delete c.sustain;delete c.noSteal;delete c._pv;return fnv(JSON.stringify(c))}
 function packSig(kind,v){return fnv([kind,v,v==='asc-poly'?ascTargetFloor():'',kind==='opt'?$('#oDiff').value:$('#aDiff').value].join('|'))}
 function optsSig(o){const c=Object.assign({},o);delete c.onProgress;delete c.seed;delete c._pv;return fnv(JSON.stringify(c))}
 function goalSig(kind,o){return kind+'|'+o.objective+'|'+fnv(JSON.stringify(o.monsters))}
@@ -3710,6 +3710,7 @@ function runOpt(force){
   if(!opts.optGear&&!opts.optAlloc&&!opts.optDeck){$('#oStatus').textContent='Coche au moins une chose à optimiser.';return}
   const MEM=memoFind('opt',opts,optData());
   if(MEM.hit&&force!==true){$('#oBar').style.width='100%';try{renderOpt(MEM.hit.res,opts,pack,mult,deckIdx);memoNote($('#oStatus'),MEM.hit.t,()=>runOpt(true));return}catch(e){}}
+  if(window.__forceSat){opts.noSaturate=true;window.__forceSat=false}
   if(MEM.seed)opts.seed=MEM.seed;
   const renderOpt0=renderOpt;const renderOpt1=(res,...a)=>{memoPut('opt',MEM.key,opts,res);renderOpt0(res,...a)};
   const btn=$('#oRun');btn.disabled=true;$('#oBar').style.width='2%';$('#oStatus').textContent='Démarrage…';
@@ -3737,7 +3738,7 @@ function renderOpt(res,opts,pack,mult,deckIdx){lastOpt=res;
     ['PV max',fmt(Sb._maxHp),`avant ${fmt(Sa._maxHp)} · ${delta(Sa._maxHp,Sb._maxHp,false,0)}`]
   ].concat(opts.objective==='sagesse'?[['Sagesse',fmt(Sb.sagesse||0),`avant ${fmt(Sa.sagesse||0)}`],['Rythme d\'XP',fmt((1+(Sb.sagesse||0)/100)/b.avgRounds/((1+(Sa.sagesse||0)/100)/a.avgRounds)*100-100,0)+' %','vs build actuel (sagesse ÷ tours)']]:opts.objective==='pp'?[['Prospection',fmt(Sb._pp),`avant ${fmt(Sa._pp)} · 100 + PP objets + Chance/10`],['Butin par tour',fmt(Sb._pp/b.avgRounds/(Sa._pp/a.avgRounds)*100-100,0)+' %','vs build actuel (PP ÷ tours)']]:[]).map(([x,y,z])=>`<div class="kpi"><span class="lbl">${x}</span><span class="v">${y}</span><span class="d muted">${z}</span></div>`).join('');
   const st=res.state;let html='';const lines=[];
-  if(res.saturated){$('#oDetails').innerHTML=`<div class="alert"><strong>Adversaire trop facile pour comparer des builds.</strong><span>Ton build actuel gagne déjà ${fmt(a.winRate*100,1)} % des combats en ${fmt(a.avgRounds,2)} tour, sans presque perdre de PV : n'importe quel stuff ou deck ferait pareil, et le Labo ne propose donc aucun changement. Choisis un adversaire plus dur (un boss, un étage, un groupe plus fort) ou monte la difficulté.</span></div>`;lastSummary='';return}
+  if(res.saturated){$('#oDetails').innerHTML=`<div class="alert"><strong>Adversaire trop facile pour comparer des builds.</strong><span>Ton build actuel gagne déjà ${fmt(a.winRate*100,1)} % des combats en ${fmt(a.avgRounds,2)} tour, sans presque perdre de PV : n'importe quel stuff ou deck ferait pareil, et le Labo ne propose donc aucun changement. Choisis un adversaire plus dur (un boss, un étage, un groupe plus fort) ou monte la difficulté.</span><button class="btn" type="button" id="oForce" style="margin-top:6px;justify-self:start">Optimiser quand même</button></div>`;lastSummary='';$('#oForce').onclick=()=>{window.__forceSat=true;runOpt(true)};return}
   lines.push(`Labo RpgMasters — ${pack.label} ×${mult} — ${(O.ORIENT[opts.objective]||{}).label||opts.objective}`);
   lines.push(`Tours ${fmt(a.avgRounds,2)} → ${fmt(b.avgRounds,2)} · victoires ${fmt(a.winRate*100,1)} % → ${fmt(b.winRate*100,1)} %`);
   if(opts.optGear){
@@ -4024,6 +4025,7 @@ function runAsc(force){
   const B=ascOptsFor($('#aPack').value);if(!B)return;const {pack,mult,su,opts}=B;opts._pv=$('#aPack').value;
   const MEM=memoFind('asc',opts,DATA);
   if(MEM.hit&&force!==true){$('#aBar').style.width='100%';try{renderAscResult(MEM.hit.res,pack,mult,su);memoNote($('#aStatus'),MEM.hit.t,()=>runAsc(true));return}catch(e){}}
+  if(window.__forceSatA){opts.noSaturate=true;window.__forceSatA=false}
   if(MEM.seed)opts.seed=MEM.seed;
   const btn=$('#aRun');btn.disabled=true;$('#aBar').style.width='2%';$('#aStatus').textContent='Démarrage…';
   const phases=['Points de caractéristiques','Équipement','Deck'];
@@ -4040,7 +4042,7 @@ let lastAsc=null;
 function archTable(res){if(!res||!res.archs||res.archs.length<2)return '';return `<h3>Comparaison des éléments</h3><p class="note">Un build complet a été cherché pour chaque élément ; le meilleur est retenu : <strong>${esc(res.archetype)}</strong>.</p><div class="tablewrap"><table><tr><th>Archétype</th><th class="num">Victoires</th><th class="num">Tours</th><th class="num">PV perdus</th><th class="num">Score</th></tr>${res.archs.map((a,i)=>`<tr class="${i===0?'changed':''}"><td>${i===0?'<strong>'+esc(a.label)+'</strong>':esc(a.label)}</td><td class="num">${fmt(a.winRate*100,0)} %</td><td class="num">${isFinite(a.avgRounds)?fmt(a.avgRounds,2):'—'}</td><td class="num">${fmt(a.avgHpLost)}</td><td class="num">${fmt(a.score,0)}</td></tr>`).join('')}</table></div>`}
 function scenTable(r){if(!r||!r.scenarios)return '';return `<h3>Détail par adversaire</h3><div class="tablewrap"><table><tr><th>Adversaire</th><th class="num">Victoires</th><th class="num">Tours</th><th class="num">PV perdus</th></tr>${r.scenarios.map(x=>`<tr><td>${esc(x.label)}</td><td class="num ${x.winRate>=0.9?'up':x.winRate<0.6?'down':''}"><strong>${fmt(x.winRate*100,0)} %</strong></td><td class="num">${isFinite(x.avgRounds)?fmt(x.avgRounds,1):'—'}</td><td class="num">${fmt(x.avgHpLost)}</td></tr>`).join('')}</table></div><p class="note">Pire cas : ${fmt(r.minWin*100,0)} % de victoires.</p>`}
 function renderAscResult(res,pack,mult,su){
-  if(res.saturated){$('#aResult').innerHTML=`<div class="alert"><strong>Adversaire trop facile pour comparer des builds.</strong><span>Ton build actuel gagne déjà ${fmt(res.start.r.winRate*100,0)} % en ${fmt(res.start.r.avgRounds,1)} tour sans perdre de PV : rien à améliorer à ce niveau. Monte « Étage de référence » ou le renfort pour tester un étage plus dur.</span></div>`;return}
+  if(res.saturated){$('#aResult').innerHTML=`<div class="alert"><strong>Adversaire trop facile pour comparer des builds.</strong><span>Ton build actuel gagne déjà ${fmt(res.start.r.winRate*100,0)} % en ${fmt(res.start.r.avgRounds,1)} tour sans perdre de PV : rien à améliorer à ce niveau. Monte « Étage de référence » ou le renfort pour tester un étage plus dur.</span><button class="btn" type="button" id="aForce" style="margin-top:6px;justify-self:start">Optimiser quand même</button></div>`;$('#aForce').onclick=()=>{window.__forceSatA=true;runAsc(true)};return}
   const b=res.final.r,a=res.start.r;const st=res.state;
   const gCode=O.encodeGear(st.gear),dCode=O.encodeDeck(st.deck,DATA.meta.breedId);
   const unsim=!pack.poly&&pack.defs.some(d=>mechLines(d).some(l=>/non simulé/.test(l)));
