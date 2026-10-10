@@ -102,6 +102,7 @@ tr.changed td{background:var(--gold-soft)}
 .mechl b{color:var(--ink)}
 .dim{color:var(--muted)}
 .pill{display:inline-block;font-size:.75rem;font-weight:700;padding:1px 8px;border-radius:999px;border:1px solid var(--line2);color:var(--muted)}
+.tier{display:inline-block;min-width:1.6em;text-align:center;font-weight:700;border-radius:5px;padding:1px 5px;font-family:var(--f-display)} .tier.S{background:var(--gold);color:var(--panel)} .tier.A{background:var(--good);color:var(--panel)} .tier.B{background:var(--eau);color:var(--panel)} .tier.C{border:1px solid var(--line2);color:var(--muted)} .tier.D{color:var(--muted)}
 .pill.in{color:var(--good);border-color:var(--good)} .pill.out{color:var(--bad);border-color:var(--bad)}
 .el{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
 .cards{display:flex;flex-wrap:wrap;gap:6px}
@@ -143,6 +144,7 @@ textarea{min-height:110px;font-family:var(--f-mono);font-size:.8rem}
     <button role="tab" id="t-asc" aria-selected="false" data-tab="asc">Ascension</button>
     <button role="tab" id="t-best" aria-selected="false" data-tab="best">Bestiaire</button>
     <button role="tab" id="t-farm" aria-selected="false" data-tab="farm">Farm</button>
+    <button role="tab" id="t-items" aria-selected="false" data-tab="items">Objets</button>
     <button role="tab" id="t-form" aria-selected="false" data-tab="form">Formules</button>
     <button role="tab" id="t-data" aria-selected="false" data-tab="data">Mes données</button>
   </nav>
@@ -324,10 +326,38 @@ textarea{min-height:110px;font-family:var(--f-mono);font-size:.8rem}
       <div class="kpis" id="fKpis"></div>
       <h3>Tes zones</h3>
       <div class="tablewrap" id="fZones"></div>
+      <h3>Zones à essayer</h3>
+      <p class="note" style="margin-top:0">Zones de ton niveau que tu n'as pas (ou peu) farmées, estimées avec ton build actuel : groupes tirés parmi leurs monstres déjà croisés (leurs vraies stats), XP des monstres × ton multiplicateur réel, durée d'un combat d'après ton historique. Une zone dont des monstres n'ont jamais été vus est signalée : l'estimation y est partielle.</p>
+      <div id="fPredict" class="tablewrap note">—</div>
       <h3>Trouver un objet</h3>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input id="fItem" list="fItemList" placeholder="Nom d'un objet (ex. Coiffe…)" style="min-width:260px;flex:1"><datalist id="fItemList"></datalist></div>
       <div id="fMiss" style="margin-top:8px"></div>
       <div id="fItemOut" style="margin-top:8px"></div>
+    </div>
+  </section>
+  <section class="tab" id="items" hidden>
+    <div class="panel" id="bank2Wrap">
+      <h2 style="margin-top:0">Banque de fin de saison</h2>
+      <p class="note" id="bank2Note"></p>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:end;margin:8px 0">
+        <div class="field" style="margin:0"><label for="bkStyle">Style</label><select id="bkStyle"><option value="0.3">Farm (dégâts d'abord)</option><option value="0.6" selected>Équilibré</option><option value="1.2">Survie (Ascension, boss)</option></select></div>
+      </div>
+      <div class="tablewrap" id="bank2Out"></div>
+    </div>
+    <div class="panel">
+      <h2 style="margin-top:0">Tier list des objets</h2>
+      <p class="note">Valeur d'un objet = ce qu'il ajoute à un perso de son niveau, en dégâts par tour et en PV effectifs (formules du simulateur : caractéristique + puissance, dommages fixes, critique, PA, vision spectrale du Crâ, résistances, esquive). Le tier compare l'objet aux meilleurs de son emplacement dans sa tranche de niveau (les 20 niveaux en dessous). <strong>S</strong> = parmi les meilleurs (≥ 90 % du meilleur), <strong>A</strong> ≥ 75 %, <strong>B</strong> ≥ 55 %, <strong>C</strong> ≥ 35 %, <strong>D</strong> en dessous. « Fin de jeu » = même calcul face à tous les objets jusqu'au niveau 200. Les éléments comptés sont ceux des cartes du deck actif du perso choisi.</p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:end;margin:8px 0">
+        <div class="field" style="margin:0"><label for="tlFor">Pour le perso</label><select id="tlFor"><option value="principal">Principal</option><option value="saison">Héroïque (saison)</option></select></div>
+        <div class="field" style="margin:0"><label for="tlSlot">Emplacement</label><select id="tlSlot"><option value="">Tous</option><option>chapeau</option><option>cape</option><option>amulette</option><option>anneau</option><option>ceinture</option><option>bottes</option><option>arme</option><option>bouclier</option><option>familier</option><option>dofus</option></select></div>
+        <div class="field" style="margin:0"><label for="tlSrc">Objets</label><select id="tlSrc"><option value="all">Tous (possédés + bestiaire)</option><option value="own">Possédés (un des deux persos)</option><option value="saison">Possédés par l'Héroïque</option><option value="principal">Possédés par le principal</option><option value="best">Bestiaire, pas encore obtenus</option></select></div>
+        <div class="field" style="margin:0"><label>Niveaux</label><span style="display:flex;gap:4px;align-items:center"><input type="number" id="tlMin" min="1" max="200" value="1" style="width:4.6em"> à <input type="number" id="tlMax" min="1" max="200" value="200" style="width:4.6em"></span></div>
+        <div class="field" style="margin:0"><label for="tlStyle">Style</label><select id="tlStyle"><option value="0.3">Farm</option><option value="0.6" selected>Équilibré</option><option value="1.2">Survie</option></select></div>
+        <label class="chk" style="margin:0 0 6px"><input type="checkbox" id="tlSet" checked>Bonus de panoplie (part par pièce, panoplie complète)</label>
+        <div class="field" style="margin:0;flex:1;min-width:160px"><label for="tlQ">Recherche</label><input id="tlQ" placeholder="Nom d'objet…"></div>
+      </div>
+      <div id="tlSum" class="note"></div>
+      <div class="tablewrap" id="tlOut"></div>
     </div>
   </section>
   <section class="tab" id="form" hidden>
@@ -425,6 +455,24 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         </div>
         <div class="toast" id="importMsg"></div>
       </div>
+    </div>
+    <div class="grid2" style="margin-top:14px;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))">
+      <div class="panel">
+        <h3 style="margin-top:0">Santé du simulateur</h3>
+        <p class="note" style="margin-top:0">Rejoue tes derniers combats réels dans le simulateur et compare (tours, victoires, PV perdus). Si l'écart dépasse 5 %, le jeu a probablement changé (patch, nouvelle mécanique) : les conseils du Labo sont alors à prendre avec prudence. Recalculé à chaque import.</p>
+        <div id="healthOut" class="note">—</div>
+        <button class="btn ghost" id="healthRun" type="button" style="margin-top:6px">Relancer la vérification</button>
+      </div>
+      <div class="panel">
+        <h3 style="margin-top:0">Ce qui a changé dans le jeu</h3>
+        <p class="note" style="margin-top:0">Différences entre tes deux derniers imports de ce perso : cartes, mécaniques des monstres du bestiaire, stats des objets.</p>
+        <div id="changesOut" class="note">—</div>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:14px">
+      <h3 style="margin-top:0">Sauvegarde du Labo</h3>
+      <p class="note" style="margin-top:0">Tes imports restent dans ce navigateur, même ordinateur éteint : pas besoin de tout renvoyer en te reconnectant. Ils ne disparaissent que si tu vides les données de navigation, en navigation privée, ou sur un autre navigateur ou PC. Ce fichier remet tout (les deux persos, builds mémorisés, réglages) en un clic. Pense aussi au bouton « Sauvegarde » du panneau dans le jeu, qui garde ton historique de combats.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="btn" id="bkDl" type="button">Télécharger la sauvegarde du Labo</button><button class="btn ghost" id="bkRest" type="button">Restaurer un fichier</button><input type="file" id="bkFile" accept=".json,application/json" hidden><span id="bkMsg" class="note"></span></div>
     </div>
   </section>
 </div>
@@ -1417,6 +1465,28 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     // Passes supplémentaires : équipement, caracs et sorts se répondent (nouveau deck → nouveaux objets utiles → …)
     for (let p = 1; p < (opts.passes || 1); p++) { tick('Passe ' + (p + 1), p, opts.passes, best); gearStage(); if (opts.optDeck) { deckPass(budget.deckIter); if (opts.optAlloc) doAlloc(); } }
 
+    // --- 4. Emplacements restés vides : plus rien n'y améliore le combat, mais un objet utile hors combat vaut mieux que rien
+    //     (prospection pour le butin, sagesse pour l'XP, puis vitalité), à condition de ne rien perdre en combat.
+    if (opts.optGear && opts.fillEmpty !== false) fillEmpty();
+    function fillEmpty() {
+      const pool = itemPool(data), filled = [];
+      const util = it => { const t = it.st || {}; const pp = (t.prospection || 0) + (t.chance || 0) / 10, sg = t.sagesse || 0;
+        return obj === 'sagesse' ? sg * 2 + pp : pp * 2 + sg + 0.05 * (t.vitalite || 0) + 0.01 * Object.values(t).reduce((a, v) => a + Math.max(0, v), 0); };
+      let base = evaluate(data, cur, ctx, mons, N, obj, FO).score;
+      for (const [slot, type] of SLOTS) {
+        if (cur.gear[slot]) continue;
+        const usedIds = new Set(SLOTS.map(([sl]) => cur.gear[sl] && cur.gear[sl].id).filter(Boolean));
+        const list = (pool[type] || []).filter(it => (it.lvl || 0) <= ctx.level && util(it) > 0 && !(type === 'dofus' && usedIds.has(it.id)) && !(NS && it.w && weaponSteals(it)))
+          .sort((x, y) => util(y) - util(x)).slice(0, 6);
+        for (const it of list) {
+          const g2 = Object.assign({}, cur.gear, { [slot]: it }); if (!gearValid(g2)) continue;
+          const cand = Object.assign({}, cur, { gear: g2 }); ev++;
+          const e = evaluate(data, cand, ctx, mons, N, obj, FO);
+          if (e.score >= base - 0.5) { cur = cand; base = Math.max(base, e.score); const t = it.st || {}; filled.push({ slot, id: it.id, n: it.n, why: (t.prospection || 0) + (t.chance || 0) / 10 >= (t.sagesse || 0) && ((t.prospection || 0) || (t.chance || 0)) ? 'prospection' : (t.sagesse || 0) ? 'sagesse' : 'vitalité' }); break; }
+        }
+      }
+      if (filled.length) cur = Object.assign({}, cur, { _filled: filled });
+    }
     const fin = evaluate(data, cur, ctx, mons, NF, obj, FO);
     tick('Terminé', 1, 1, fin);
     return { state: cur, start, final: fin, evals: ev };
@@ -1530,7 +1600,76 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     throw new Error('type de code inconnu : ' + m[1]);
   }
 
-  const api = { optimizeDeep, deepRuns, deepPart, deepStart, deepMerge, ARCHS, weaponSteals, normSus, encodeGear, encodeDeck, decodeCode, sustainAllowed, SLOTS, ORIENT, optimize, evaluate, buildState, itemPool, allocTemplates, score, cardAllowed };
+
+  // ---------- Valeur d'un objet (tier list, Banque) ----------
+  // Modèle tiré des formules du moteur : dégâts par tour (Off) et PV effectifs (Def) d'un perso de référence
+  // du niveau de l'objet, puis gain relatif quand on lui ajoute l'objet. Valeur = 100·[ln(Off'/Off) + λ·ln(Def'/Def)].
+  const IV_CAR = ['force', 'force', 'intelligence', 'chance', 'agilite'], IV_DOM = ['dommagesNeutre', 'dommagesTerre', 'dommagesFeu', 'dommagesEau', 'dommagesAir'];
+  const IV_RES = ['resPctNeutre', 'resPctTerre', 'resPctFeu', 'resPctEau', 'resPctAir'], IV_RFX = ['resNeutre', 'resTerre', 'resFeu', 'resEau', 'resAir'];
+  const IV_PREST = [{ pa: 1 }, { po: 2 }, { pm: 2 }, { pa: 1 }, { po: 3 }, { pm: 3 }, { pa: 1 }], IV_CAPS = [[2, 13], [5, 14], [8, 15]];
+  // Profil d'un perso : répartition élémentaire de ses dégâts (deck actif), dégâts de base par PA, coût moyen d'une carte
+  function valueProfile(cards, deck, meta) {
+    const byKey = {}; for (const c of cards || []) byKey[c.key] = c;
+    const w = [0, 0, 0, 0, 0]; let base = 0, ap = 0, n = 0;
+    for (const k of deck || []) {
+      const c = byKey[k]; if (!c) continue;
+      const ls = (c.eff || []).filter(l => l.k === 'dmg' || l.k === 'steal' || l.k === 'bomb'); if (!ls.length) continue;
+      for (const l of ls) { const b = ((l.min || 0) + (l.max || 0)) / 2; w[l.el || 0] += b; base += b; }
+      ap += c.ap || 0; n++;
+    }
+    const tw = w.reduce((a, b) => a + b, 0);
+    if (!tw) { const car = (meta && meta.rows || []).reduce((o, r) => (o[r.key] = r.base || 0, o), {}); IV_CAR.forEach((k, i) => { if (i) w[i] = car[k] || 0; }); }
+    const t2 = w.reduce((a, b) => a + b, 0) || 1;
+    return { w: w.map(x => x / t2), bap: ap ? base / ap : 15, avgAP: n ? ap / n : 3, breedId: meta && meta.breedId, prestige: (meta && meta.prestige) || 0, discord: 1 + ((meta && meta.discordBonus) || 0) / 100 };
+  }
+  function valueRef(L, P) {
+    const f = Math.max(0.05, L / 200), pm = (1 + 0.25 * P.prestige) * P.discord;
+    const S = { puissance: 280 * f * pm, dommages: 20 * f * pm, critique: 30 * f * pm + 5, dommagesCritiques: 50 * f * pm, vitalite: 3000 * f * pm, pa: Math.round(3 * f), pm: Math.round(1 * f), po: Math.round(2 * f) };
+    IV_CAR.forEach(k => { S[k] = 250 * f * pm + 300 * f; }); IV_DOM.forEach(k => { S[k] = 60 * f * pm; });
+    IV_RES.forEach(k => { S[k] = 18 * f * pm; }); IV_RFX.forEach(k => { S[k] = 10 * f * pm; });
+    for (let i = 0; i < Math.min(P.prestige, IV_PREST.length); i++) for (const k in IV_PREST[i]) S[k] += IV_PREST[i][k];
+    return { S, L, pm };
+  }
+  function valueOff(S, L, P, weapon, pm) {
+    let cap = 12; for (const [p, c] of IV_CAPS) if (P.prestige >= p) cap = Math.max(cap, c);
+    const PAt = Math.min(cap, (L >= 100 ? 7 : 6) + (S.pa || 0));
+    const cc = Math.min(1, Math.max(0, (S.critique || 0) / 100));
+    const sp = Math.min(50, (P.breedId === 9 ? 18 : 0) + 0.4 * (S.po || 0)) / 100;
+    const pen = Math.min(50, (S.dmgPctDistance || 0) + (S.dmgPctMelee || 0)) * 0.8 / 100;
+    const glob = (1 + sp) * (1 + (S.dmgPctSorts || 0) / 100) * (1 - 0.2 * (1 - pen)) / 0.8;
+    const M = e => (1 + Math.max(0, (S[IV_CAR[e]] || 0) + (S.puissance || 0)) / 100) * (1 + 0.2 * cc);
+    const F = e => (S.dommages || 0) + (S[IV_DOM[e]] || 0) + cc * (S.dommagesCritiques || 0);
+    let perPA = 0; for (let e = 0; e < 5; e++) if (P.w[e]) perPA += P.w[e] * (P.bap * M(e) + F(e) / P.avgAP);
+    let off = PAt * perPA * glob;
+    if (weapon && weapon.lines) {
+      let wt = 0; for (const l of weapon.lines) if (l.k === 'dmg' || l.k === 'steal') { const e = l.el || 0; wt += (((l.min || 0) + (l.max || 0)) / 2) * M(e) * (1 + 0.2 * Math.min(1, (weapon.cc || 0) / 100)) + F(e); }
+      wt *= glob * (weapon.perTurn || 1);
+      off += Math.max(0, wt - (weapon.ap || 0) * (weapon.perTurn || 1) * off / PAt);
+    }
+    return off;
+  }
+  function valueDef(S, L) {
+    const hp = 50 + 5 * L + (S.vitalite || 0), A = Math.max(60, 4 * L);
+    const res = IV_RES.reduce((a, k) => a + Math.min(50, Math.max(-50, S[k] || 0)), 0) / 500;
+    const fix = IV_RFX.reduce((a, k) => a + (S[k] || 0), 0) / 5;
+    const dodge = Math.min(50, Math.max(0, 3 + (S.pm || 0))) / 100, red = Math.min(50, (S.resPctDistance || 0) + (S.resPctMelee || 0)) / 100;
+    const hit = Math.max(A * 0.05, A * (1 - red) - fix) * (1 - res) * (1 - dodge);
+    return hp / hit;
+  }
+  const IV_UNSC = ['pa', 'pm', 'po', 'invocations'], IV_CAP3 = ['dmgPctDistance', 'dmgPctMelee', 'resPctDistance', 'resPctMelee'];
+  // it : objet (st, w, lvl) ; P : profil ; o.level : niveau du perso de référence (défaut : niveau de l'objet) ; o.lambda : poids de la survie
+  function itemValue(it, P, o) {
+    o = o || {};
+    const L = Math.max(1, Math.min(200, o.level || it.lvl || 1)), lam = o.lambda == null ? 0.6 : o.lambda;
+    const R0 = valueRef(L, P), S0 = R0.S, S1 = Object.assign({}, S0), parts = {};
+    const st = it.f ? R.itemStats(it, it.f) : (it.st || {}), wpn = it.w && it.f ? R.weaponWithFusion(it.w, it.f) : it.w;
+    for (const [k, v] of Object.entries(st)) { const x = IV_UNSC.includes(k) ? v : IV_CAP3.includes(k) ? (v > 0 ? v * Math.min(3, R0.pm) : 0) : v * R0.pm; S1[k] = (S1[k] || 0) + x; }
+    const o0 = valueOff(S0, L, P, null), d0 = valueDef(S0, L);
+    const o1 = valueOff(S1, L, P, wpn || null), d1 = valueDef(S1, L);
+    const off = 100 * Math.log(o1 / o0), def = 100 * Math.log(d1 / d0);
+    return { v: off + lam * def, off, def };
+  }
+  const api = { valueProfile, itemValue, optimizeDeep, deepRuns, deepPart, deepStart, deepMerge, ARCHS, weaponSteals, normSus, encodeGear, encodeDeck, decodeCode, sustainAllowed, SLOTS, ORIENT, optimize, evaluate, buildState, itemPool, allocTemplates, score, cardAllowed };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.OPT = api;
 })(typeof self !== 'undefined' ? self : this);
 </script>
@@ -1573,7 +1712,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
 <script type="text/plain" id="src-userscript">// ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.6.1
+// @version      2.7.0
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -3012,6 +3151,18 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         <div id="labo-msg" style="margin-top:4px;color:#a89a85;min-height:1em"></div>`;
       return;
     }
+    if (view === 'backup') {
+      const at = backupAt();
+      panel.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px"><strong style="color:#e0b04f">Sauvegarde</strong><button data-a="back" style="${btn()}">Retour</button></div>
+        <div style="color:#a89a85">Ton historique (combats, monstres, étages, builds) est gardé par ton navigateur : il survit à l'extinction de l'ordi. Il disparaît seulement si tu vides les données du site / l'historique, en navigation privée, ou sur un autre navigateur ou PC. Ce fichier permet de tout remettre en un clic.</div>
+        <div style="margin-top:4px">Dernière sauvegarde : <strong>${at ? new Date(at).toLocaleString('fr-FR') : 'jamais'}</strong></div>
+        <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"><button data-a="bkdl" style="${btn(true)}">Télécharger la sauvegarde</button><button data-a="bkrest" style="${btn()}">Restaurer un fichier</button></div>
+        <input type="file" id="labo-bkfile" accept=".json,application/json" style="display:none">
+        <div id="labo-msg" style="margin-top:4px;color:#a89a85;min-height:1em"></div>`;
+      const fi = panel.querySelector('#labo-bkfile');
+      fi.onchange = () => { const f = fi.files && fi.files[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => { try { const n = restoreBackup(String(rd.result)); panel.querySelector('#labo-msg').textContent = n + ' éléments restaurés. Recharge la page du jeu.'; } catch (e) { panel.querySelector('#labo-msg').textContent = 'Fichier illisible : ' + e.message; } }; rd.readAsText(f); };
+      return;
+    }
     if (view === 'builds') {
       const n = loadBuilds().builds.length;
       panel.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px"><strong style="color:#e0b04f">Builds conseillés · ${n}</strong><button data-a="back" style="${btn()}">Retour</button></div>
@@ -3033,8 +3184,30 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       </div>
       <div style="margin-top:4px;color:#a89a85">Dernier combat enregistré : ${lastAgo()}</div>${typeof document !== 'undefined' && document.hidden ? '' : (() => { const r = db.fights.slice(-30); const h = r.filter(f => f.hid).length; return h >= 5 ? `<div style="color:#e0b04f">${h} des 30 derniers combats ont eu lieu onglet caché : le navigateur ralentit alors le jeu (et l'Auto AFK).</div>` : ''; })()}
       <div style="margin-top:2px;color:#a89a85">Total : ${all.fights} combats · ${all.monsters} monstres · ${all.bosses} boss</div>
-      <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"><button data-a="export" style="${btn(true)}">Exporter pour le Labo</button><button data-a="send" style="${btn(true)}" title="Ouvre ton Labo en ligne et y importe tes données directement">Envoyer au Labo ↗</button><button data-a="seturl" style="${btn()}" title="Adresse de ton Labo en ligne">⚙</button><button data-a="compare" style="${btn()}" title="Teste chaque objet de ton inventaire à la place de ton équipement">Comparer</button><button data-a="builds" style="${btn()}">Builds</button><button data-a="reset" style="${btn()}">Vider</button></div>
+      <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"><button data-a="export" style="${btn(true)}">Exporter pour le Labo</button><button data-a="send" style="${btn(true)}" title="Ouvre ton Labo en ligne et y importe tes données directement">Envoyer au Labo ↗</button><button data-a="seturl" style="${btn()}" title="Adresse de ton Labo en ligne">⚙</button><button data-a="compare" style="${btn()}" title="Teste chaque objet de ton inventaire à la place de ton équipement">Comparer</button><button data-a="builds" style="${btn()}">Builds</button><button data-a="backup" style="${btn()}" title="Copie de sécurité de tout ton historique dans un fichier">Sauvegarde</button><button data-a="reset" style="${btn()}">Vider</button></div>${backupNag(all.fights)}
       <div id="labo-msg" style="margin-top:4px;color:#a89a85;min-height:1em"></div>`;
+  }
+  // ---------- Sauvegarde complète (toutes les données labo-* de ce site) ----------
+  function backupAt() { try { return +localStorage.getItem('labo-backup-at') || 0; } catch (e) { return 0; } }
+  function backupNag(nFights) {
+    const at = backupAt(), days = at ? (Date.now() - at) / 864e5 : Infinity;
+    if (nFights < 200 || days < 7) return '';
+    return `<div style="margin-top:4px;color:#e0b04f">${at ? 'Dernière sauvegarde il y a ' + Math.floor(days) + ' j' : 'Aucune sauvegarde de ton historique'} : <span data-a="backup" style="text-decoration:underline;cursor:pointer">en faire une</span></div>`;
+  }
+  function makeBackup() {
+    save();
+    const data = {}; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (/^labo/.test(k) && k !== 'labo-backup-at') data[k] = localStorage.getItem(k); }
+    return JSON.stringify({ kind: 'labo-sauvegarde', v: 1, t: Date.now(), origin: location.origin, data });
+  }
+  function restoreBackup(txt) {
+    const b = JSON.parse(txt); if (!b || b.kind !== 'labo-sauvegarde' || !b.data) throw new Error('ce n’est pas une sauvegarde du Labo');
+    let n = 0; for (const [k, v] of Object.entries(b.data)) if (/^labo/.test(k) && typeof v === 'string') { localStorage.setItem(k, v); n++; }
+    try { const d = JSON.parse(localStorage.getItem(keyFor(PROFILE)) || 'null'); if (d && d.fights) Object.assign(db, d); } catch (e) {}
+    return n;
+  }
+  function downloadText(name, txt) {
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type: 'application/json' })); a.download = name;
+    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
   }
   function btn(primary) { return `cursor:pointer;font:600 12px system-ui,sans-serif;border-radius:6px;padding:3px 8px;border:1px solid ${primary ? '#e0b04f' : '#4a3f30'};background:${primary ? '#e0b04f' : 'transparent'};color:${primary ? '#15120d' : '#efe6d6'}`; }
   function laboUrl() { try { return localStorage.getItem('labo-url') || ''; } catch (e) { return ''; } }
@@ -3044,6 +3217,9 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const msg = () => panel.querySelector('#labo-msg');
     if (a === 'min' || a === 'max') { minimized = a === 'min'; try { localStorage.setItem('labo-min', minimized ? '1' : '0'); } catch (e) {} render(); return; }
     if (a === 'builds') { view = 'builds'; render(); return; }
+    if (a === 'backup') { view = 'backup'; render(); return; }
+    if (a === 'bkdl') { try { const txt = makeBackup(); downloadText('labo-sauvegarde-' + new Date().toISOString().slice(0, 10) + '.json', txt); localStorage.setItem('labo-backup-at', String(Date.now())); render(); panel.querySelector('#labo-msg').textContent = 'Sauvegarde téléchargée (' + Math.round(txt.length / 1024) + ' Ko). Garde le fichier.'; } catch (e) { msg().textContent = 'Sauvegarde impossible : ' + e.message; } return; }
+    if (a === 'bkrest') { const fi = panel.querySelector('#labo-bkfile'); if (fi) fi.click(); return; }
     if (a === 'compare') { view = 'compare'; render(); return; }
     if (a === 'cmprun') { runCompare(); return; }
     if (a === 'seturl') { view = 'labourl'; render(); return; }
@@ -3175,6 +3351,7 @@ function cardChip(c,cls){const el=mainEl(c);return `<span class="card ${cls||''}
 function principalData(){try{const s=localStorage.getItem(dataKey('principal'));if(s){const d=JSON.parse(s);if(d&&d.items)return mergeData(SNAP,d)}}catch(e){}return SNAP}
 function renderBank(){
   const wrap=$('#bankWrap');if(!wrap)return;wrap.hidden=LPROF!=='saison';if(LPROF!=='saison')return;
+  $('#bankNote').innerHTML='Le conseil Banque a déménagé dans l\'onglet <strong>Objets</strong>, avec la tier list (valeur réelle des objets pour ton principal, rareté, objets introuvables en farm).';$('#bankOut').innerHTML='<button class="btn" onclick="showTab(\'items\')">Ouvrir l\'onglet Objets</button>';return;
   const P=principalData();const slots=8+3*(DATA.meta.prestige||0);
   // style du principal : ses caractéristiques dominantes (équipement porté + points investis)
   const car={force:0,intelligence:0,chance:0,agilite:0};for(const w of P.worn||[])for(const k in car)car[k]+=(w.st&&w.st[k])||0;for(const r of (P.meta&&P.meta.rows)||[])if(r.key in car)car[r.key]+=r.base||0;
@@ -3392,7 +3569,7 @@ function renderOpt(res,opts,pack,mult,deckIdx){lastOpt=res;
   if(opts.optGear){
     let rows='',n=0;
     for(const [s] of O.SLOTS){const x=curGear[s],y=st.gear[s];const ch=(x&&x.id)!==(y&&y.id)||(x&&x.f)!==(y&&y.f);if(ch){n++;lines.push(`${SLOT_LABEL[s]} : ${x?x.n:'vide'} → ${y?y.n+(y.f?' '+tierLabel(y.f):''):'vide'}`)}
-      rows+=`<tr class="${ch?'changed':''}"><td class="muted">${SLOT_LABEL[s]}</td><td>${x?esc(x.n):'—'}</td><td>${ch?'→ <strong>'+(y?esc(y.n):'vide')+'</strong>'+(y&&y.missing?' <span class="pill out">à obtenir</span>':''):'<span class="muted">garder</span>'}</td><td class="mono">${y?tierLabel(y.f):''}</td></tr>`}
+      rows+=`<tr class="${ch?'changed':''}"><td class="muted">${SLOT_LABEL[s]}</td><td>${x?esc(x.n):'—'}</td><td>${ch?'→ <strong>'+(y?esc(y.n):'vide')+'</strong>'+(y&&y.missing?' <span class="pill out">à obtenir</span>':'')+((st._filled||[]).some(f=>f.slot===s)?` <span class="pill" title="Rien n'apporte plus en combat dans cet emplacement : rempli pour le bonus hors combat, sans rien perdre en combat">bonus ${(st._filled.find(f=>f.slot===s)).why}</span>`:''):'<span class="muted">garder</span>'}</td><td class="mono">${y?tierLabel(y.f):''}</td></tr>`}
     html+=`<h3>Équipement · ${n} changement${n>1?'s':''}</h3><div class="tablewrap"><table><tr><th>Emplacement</th><th>Actuel</th><th>Proposé</th><th>Fusion</th></tr>${rows}</table></div>`;
   }
   if(opts.optAlloc){
@@ -3444,14 +3621,14 @@ function flash(t){let el=document.getElementById('laboFlash');if(!el){el=documen
 function looksExport(t){return typeof t==='string'&&t.length>200&&/^\s*\{/.test(t)&&t.includes('"meta"')&&t.includes('"cards"')}
 function importText(txt){
     try{const d=JSON.parse(txt);if(!d.items||!d.cards||!d.worn||!d.meta)throw new Error('champs manquants');
-      const pr=d.meta.profile==='saison'?'saison':d.meta.profile==='principal'?'principal':LPROF;LPROF=pr;try{localStorage.setItem('labo-lprofile',pr);localStorage.setItem(dataKey(pr),JSON.stringify(d))}catch(e){}
+      const pr=d.meta.profile==='saison'?'saison':d.meta.profile==='principal'?'principal':LPROF;LPROF=pr;try{const prev=JSON.parse(localStorage.getItem(dataKey(pr))||'null');if(prev&&prev.cards){const list=diffImports(prev,d);localStorage.setItem('labo-changes-'+pr,JSON.stringify({from:prev._importedAt||0,to:Date.now(),list}))}d._importedAt=Date.now()}catch(e){}try{localStorage.setItem('labo-lprofile',pr);localStorage.setItem(dataKey(pr),JSON.stringify(d))}catch(e){}
       loadProfile();init();const okMsg=`Importé pour le perso ${LPROF==='saison'?'Héroïque':'principal'} : ${d.items.length} objets, ${d.cards.length} cartes, ${DATA.monsters.length} monstres connus, ${DATA.fights.length} combats.`;$('#importMsg').textContent=okMsg;flash(okMsg);$('#importBox').value=''}
     catch(e){$('#importMsg').textContent='Export illisible ('+e.message+'). Recopie la sortie complète du script.';flash('Export illisible : recopie la sortie complète du script.')}};
   $('#resetBtn').onclick=()=>{try{localStorage.removeItem(dataKey(LPROF))}catch(e){};loadProfile();init();$('#importMsg').textContent='Instantané rétabli.'};
 }
 
 /* ---------- Onglets & réglages ---------- */
-function showTab(id){document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===id?'true':'false'));document.querySelectorAll('section.tab').forEach(s=>s.hidden=s.id!==id);try{localStorage.setItem('labo-tab',id)}catch(e){}if(id==='farm')try{renderFarm()}catch(e){$('#fZones').textContent='Erreur : '+e.message}}
+function showTab(id){document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===id?'true':'false'));document.querySelectorAll('section.tab').forEach(s=>s.hidden=s.id!==id);try{localStorage.setItem('labo-tab',id)}catch(e){}if(id==='farm'){try{renderFarm()}catch(e){$('#fZones').textContent='Erreur : '+e.message}try{renderPredict()}catch(e){$('#fPredict').textContent='Erreur : '+e.message}}if(id==='data'){try{renderChanges()}catch(e){}try{healthCheck(false)}catch(e){$('#healthOut').textContent='Erreur : '+e.message}}if(id==='items'){TL=null;if(LPROF==='saison')$('#tlFor').value='principal';renderItemsTab()}}
 document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
 document.querySelectorAll('.seg:not(#playMode):not(#bView):not(#profMode)').forEach(g=>g.querySelectorAll('button').forEach(b=>b.onclick=()=>{g.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b?'true':'false'))}));
 const dv=v=>'×'+Number(v).toLocaleString('fr-FR',{minimumFractionDigits:1,maximumFractionDigits:2});
@@ -3834,6 +4011,160 @@ $('#dlClaude').onclick=()=>{try{const raw=localStorage.getItem(dataKey(LPROF));i
   const txt=JSON.stringify(out);const day=new Date().toISOString().slice(0,10);saveFile(`labo-analyse-${LPROF==='saison'?'heroique':'principal'}-${day}.json`,txt);
   $('#importMsg').textContent=`Fichier prêt (${Math.round(txt.length/1024)} Ko) : glisse-le dans la conversation avec Claude.`}catch(e){$('#importMsg').textContent='Préparation impossible : '+e.message+(location.hostname.includes('claude')?' (le téléchargement marche depuis ton Labo en ligne)':'')}};
 $('#dlBtn').onclick=()=>{try{const raw=localStorage.getItem(dataKey(LPROF));if(!raw){$('#importMsg').textContent='Rien à télécharger : importe d\'abord tes données.';return}const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([raw],{type:'application/json'}));a.download=LPROF==='saison'?'labo-rpgmasters-heroique.json':'labo-rpgmasters-donnees.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}catch(e){$('#importMsg').textContent='Téléchargement impossible : '+e.message}};
+
+/* ---------- Objets : tier list + Banque ---------- */
+function profData(p){if(p===LPROF)return DATA;try{const s=localStorage.getItem(dataKey(p));if(s){const d=JSON.parse(s);if(d&&d.items)return mergeData(baseFor(p),d)}}catch(e){}return p==='principal'?SNAP:null}
+const SLOT_FR={chapeau:'Chapeau',cape:'Cape',amulette:'Amulette',anneau:'Anneau',ceinture:'Ceinture',bottes:'Bottes',arme:'Arme',bouclier:'Bouclier',familier:'Familier',dofus:'Dofus'};
+const SLOT_NEED={anneau:2,dofus:6};
+let TL=null;
+function itemUniverse(){
+  const S=profData('saison'),Pp=profData('principal');const B=DATA.bestiary||(Pp&&Pp.bestiary)||{};
+  const drop={};for(const m of (B.monsters||[]))for(const d of (m.d||[])){const r=d[1]||0;if(!drop[d[0]]||r>drop[d[0]].r||(r===drop[d[0]].r&&m.isBoss))drop[d[0]]={r,m}}
+  const U=new Map();const add=(it,src,where)=>{if(!it||!it.st||!it.s||it.s==='parchemin')return;const k=it.id+':'+(it.f||0);let u=U.get(k);if(!u){u={it,own:{},where:{}};U.set(k,u)}if(src){u.own[src]=(u.own[src]||0)+(it.q||1);u.where[src]=where}};
+  for(const it of (B.items||[]))add(Object.assign({f:0},it),null);
+  if(S){for(const it of S.items||[])add(it,'saison','inventaire');for(const it of S.worn||[])add(it,'saison','équipé')}
+  if(Pp){for(const it of Pp.items||[])add(it,'principal','inventaire');for(const it of Pp.worn||[])add(it,'principal','équipé')}
+  const inCat=new Set((B.items||[]).map(i=>i.id));
+  return {list:[...U.values()],drop,inCat,S,Pp,B};
+}
+// part du bonus de panoplie complète attribuée à chaque pièce (stats du palier max ÷ nombre de pièces)
+function withSetShare(it,ST){const t=it.setId&&ST[it.setId];if(!t)return it;const ks=Object.keys(t).map(Number).filter(k=>k>=2);if(!ks.length)return it;const k=Math.max(...ks),st=Object.assign({},it.st);for(const [s,v] of Object.entries(t[k]||{}))st[s]=(st[s]||0)+v/k;return Object.assign({},it,{st})}
+function tierOf(r){return r>=0.9?'S':r>=0.75?'A':r>=0.55?'B':r>=0.35?'C':'D'}
+function computeTiers(forP,lam){
+  const X=itemUniverse();const D=forP==='saison'?X.S:X.Pp;if(!D)return null;
+  const P=O.valueProfile(D.cards,D.meta.decks[D.meta.active],D.meta);
+  const ST=setTiersById(),useSet=!$('#tlSet')||$('#tlSet').checked;
+  for(const u of X.list){const it=useSet?withSetShare(u.it,ST):u.it;u.setPart=it!==u.it;const a=O.itemValue(it,P,{lambda:lam});u.v=a.v;u.off=a.off;u.def=a.def;const e=O.itemValue(it,P,{lambda:lam,level:200});u.vEnd=e.v}
+  const bySlot={};for(const u of X.list)(bySlot[u.it.s]=bySlot[u.it.s]||[]).push(u);
+  for(const arr of Object.values(bySlot)){arr.sort((a,b)=>(a.it.lvl||0)-(b.it.lvl||0));const bestEnd=Math.max(1e-9,...arr.map(u=>u.vEnd));
+    for(const u of arr){const L=u.it.lvl||0;let best=1e-9;for(const w of arr){const l=w.it.lvl||0;if(l>=L-20&&l<=L&&w.v>best)best=w.v}u.r=Math.max(0,u.v)/best;u.tier=tierOf(u.r);u.rEnd=Math.max(0,u.vEnd)/bestEnd;u.tierEnd=tierOf(u.rEnd)}}
+  return Object.assign(X,{P,D,forP,lam});
+}
+function obtainText(X,u){const d=X.drop[u.it.id];if(d)return d.r>0?`drop ${fmt(d.r,d.r<1?2:1)} % · ${esc(d.m.n)}`:`<span title="Objet bonus de victoire : la prospection ne change rien">bonus de victoire</span> · ${esc(d.m.n)}`;return X.inCat.has(u.it.id)?'bestiaire':'<span title="Pas dans les tables de butin du bestiaire : boss, Ascension, coffre, quête ou craft">hors bestiaire</span>'}
+function renderTierList(){
+  const out=$('#tlOut');if(!out)return;const forP=$('#tlFor').value,lam=+$('#tlStyle').value;
+  if(!TL||TL.forP!==forP||TL.lam!==lam||TL.dv!==DATA){TL=computeTiers(forP,lam);if(TL)TL.dv=DATA}
+  if(!TL){out.innerHTML='<p class="note">Importe un export de ce perso pour avoir sa tier list (les éléments de son deck comptent).</p>';$('#tlSum').textContent='';return}
+  const slot=$('#tlSlot').value,src=$('#tlSrc').value,mn=+$('#tlMin').value||1,mx=+$('#tlMax').value||200,q=($('#tlQ').value||'').trim().toLowerCase();
+  let rows=TL.list.filter(u=>(!slot||u.it.s===slot)&&(u.it.lvl||0)>=mn&&(u.it.lvl||0)<=mx&&(!q||u.it.n.toLowerCase().includes(q)));
+  rows=rows.filter(u=>src==='all'||(src==='own'&&(u.own.saison||u.own.principal))||(src==='saison'&&u.own.saison)||(src==='principal'&&u.own.principal)||(src==='best'&&!u.own.saison&&!u.own.principal));
+  rows.sort((a,b)=>'SABCD'.indexOf(a.tier)-'SABCD'.indexOf(b.tier)||b.vEnd-a.vEnd);
+  const cnt={};for(const u of rows)cnt[u.tier]=(cnt[u.tier]||0)+1;
+  const el=TL.P.w.map((x,i)=>[x,['Neutre','Terre','Feu','Eau','Air'][i]]).filter(x=>x[0]>0.05).sort((a,b)=>b[0]-a[0]).map(x=>x[1]+' '+Math.round(x[0]*100)+' %').join(', ');
+  $('#tlSum').innerHTML=`${rows.length} objets · ${'SABCD'.split('').map(t=>`<span class="tier ${t}">${t}</span> ${cnt[t]||0}`).join(' · ')} · éléments comptés : ${el||'—'}`;
+  const own=u=>[u.own.saison?`Héroïque (${u.where.saison})`:'',u.own.principal?`principal (${u.where.principal})`:''].filter(Boolean).join(' + ');
+  const N=+(out.dataset.n||150);
+  out.innerHTML=rows.length?`<table><tr><th>Tier</th><th>Objet</th><th>Empl.</th><th class="num">Niv.</th><th class="num" title="Gain de puissance face à un perso de son niveau">Valeur</th><th class="num" title="Dégâts par tour / PV effectifs">Dégâts · Survie</th><th>Fin de jeu</th><th>Possédé</th><th>Obtention</th></tr>${rows.slice(0,N).map(u=>`<tr><td><span class="tier ${u.tier}">${u.tier}</span></td><td><strong>${esc(u.it.n)}</strong>${u.it.f?` <span class="dim">+${u.it.f}</span>`:''}${u.setPart?'<div class="note">panoplie comprise</div>':''}${u.it.s==='dofus'&&!u.setPart?'<div class="note" title="Effets spéciaux (déclenchements, conditions) non comptés : seules les stats le sont">stats seules</div>':''}</td><td>${SLOT_FR[u.it.s]||u.it.s}</td><td class="num">${u.it.lvl||''}</td><td class="num">${fmt(u.v,1)}</td><td class="num dim">+${fmt(Math.max(0,u.off),1)} % · +${fmt(Math.max(0,u.def),1)} %</td><td><span class="tier ${u.tierEnd}">${u.tierEnd}</span></td><td class="dim">${own(u)}</td><td class="dim">${obtainText(TL,u)}</td></tr>`).join('')}</table>${rows.length>N?`<p><button class="btn" id="tlMore">Afficher ${Math.min(150,rows.length-N)} de plus (${rows.length-N} restants)</button></p>`:''}`:'<p class="note">Aucun objet avec ces filtres.</p>';
+  const m=$('#tlMore');if(m)m.onclick=()=>{out.dataset.n=N+150;renderTierList()};
+}
+function renderBank2(){
+  const wrap=$('#bank2Wrap');if(!wrap)return;const S=profData('saison'),Pp=profData('principal');
+  if(!S){wrap.hidden=false;$('#bank2Note').innerHTML='Importe un export de ton perso Héroïque (saison) pour savoir quoi mettre en Banque.';$('#bank2Out').innerHTML='';return}
+  const H=200,lam=+$('#bkStyle').value;
+  const X=itemUniverse();const P=O.valueProfile(Pp.cards,Pp.meta.decks[Pp.meta.active],Pp.meta);
+  const slots=8+3*(S.meta.prestige||0);
+  const pOwn=new Set((Pp.items||[]).concat(Pp.worn||[]).map(i=>i.id));
+  // valeur fin de jeu au niveau visé, pour comparer aux meilleurs objets connus du même emplacement
+  const bestAt={};for(const u of X.list){if((u.it.lvl||0)>H)continue;const v=O.itemValue(u.it,P,{lambda:lam,level:H}).v;u.vH=v;if(!bestAt[u.it.s]||v>bestAt[u.it.s])bestAt[u.it.s]=v}
+  const cand=X.list.filter(u=>u.own.saison);for(const u of cand)u.rH0=bestAt[u.it.s]?Math.max(0,u.vH!=null?u.vH:0)/bestAt[u.it.s]:0;
+  // optique fin de jeu uniquement : on écarte tout ce qui ne tiendrait pas au moins le tier C face aux meilleurs objets niveau 200 de son emplacement
+  const cand2=cand.filter(u=>u.rH0>=0.35);cand.length=0;cand.push(...cand2);
+  const ST=setTiersById(),sCnt={};for(const u of cand)if(u.it.setId)sCnt[u.it.setId]=(sCnt[u.it.setId]||0)+1;
+  for(const u of cand){const it2=sCnt[u.it.setId]>=2?withSetShare(u.it,ST):u.it;u.setB=it2!==u.it;const v=O.itemValue(it2,P,{lambda:lam,level:H}).v;u.vb=Math.max(0,v);
+    const d=X.drop[u.it.id];u.scar=!X.inCat.has(u.it.id)?1.5:d?(d.r===0?1.1:d.r<0.5?1.3:d.r<2?1.15:1):1.2;u.dup=pOwn.has(u.it.id);u.later=(u.it.lvl||0)>H;
+    u.bank=u.vb*u.scar*(u.dup?0.1:1)*(u.later?0.4:1);u.rH=bestAt[u.it.s]?u.vb/bestAt[u.it.s]:0}
+  // remplissage glouton : un objet de plus dans un emplacement déjà couvert vaut moins (2 anneaux, 6 Dofus, 1 pour le reste)
+  const pick=[],cnt={},left=cand.slice();
+  while(pick.length<slots+6&&left.length){let bi=-1,bs=-1;for(let i=0;i<left.length;i++){const u=left[i];const n=cnt[u.it.s]||0,need=SLOT_NEED[u.it.s]||1;const e=u.bank*(n<need?1:Math.pow(0.3,n-need+1));if(e>bs){bs=e;bi=i}}const u=left.splice(bi,1)[0];u.eff=bs;u.extra=(cnt[u.it.s]||0)>=(SLOT_NEED[u.it.s]||1);cnt[u.it.s]=(cnt[u.it.s]||0)+1;pick.push(u)}
+  const pl=Pp.meta.level||0;
+  $('#bank2Note').innerHTML=`<strong>${slots} emplacements</strong> (8 + 3 par Prestige ; ton Héroïque est Prestige ${S.meta.prestige||0}). Le contenu de la Banque passe dans l'inventaire de ton principal à la fin de la saison (lundi 8 h). Classement <strong>fin de jeu</strong> pour ton <strong>principal</strong> (éléments de son deck${Pp===SNAP?' ; données d\'exemple : importe son export':''}) : valeur de l'objet sur un perso niveau 200 (les objets sous le tier C à ce niveau sont écartés) × rareté (objet <em>hors bestiaire</em> = introuvable en farm ×1,5, drop &lt; 0,5 % ×1,3) ; un objet que ton principal a déjà compte pour presque rien, et au-delà de 2 anneaux / 6 Dofus / 1 objet par autre emplacement, les suivants passent derrière. `;
+  $('#bank2Out').innerHTML=`<table><tr><th>#</th><th>Objet</th><th>Empl.</th><th class="num">Niv.</th><th title="Comparé aux meilleurs objets connus de cet emplacement au niveau visé">Tier</th><th>Obtention</th><th>Pourquoi</th></tr>${pick.map((u,i)=>`<tr class="${i<slots?'changed':''}"><td class="num">${i+1}${i===slots-1?'<div class="note">dernier</div>':''}</td><td><strong>${esc(u.it.n)}</strong>${u.it.f?` <span class="dim">+${u.it.f}</span>`:''}<div class="note">${esc(u.where.saison||'')}</div></td><td>${SLOT_FR[u.it.s]||u.it.s}</td><td class="num">${u.it.lvl||''}</td><td><span class="tier ${tierOf(u.rH)}">${tierOf(u.rH)}</span></td><td class="dim">${obtainText(X,u)}</td><td class="dim">${[u.dup?'ton principal l\'a déjà':'',u.later?'au-dessus du niveau visé':'',u.extra?'emplacement déjà couvert':'',!X.inCat.has(u.it.id)?'introuvable en farm':'',u.setB?`panoplie (${sCnt[u.it.setId]} pièces)`:'',`valeur ${fmt(u.vb,1)}`].filter(Boolean).join(' · ')}</td></tr>`).join('')}</table><p class="note">Les ${slots} premiers (surlignés) tiennent dans ta Banque ; les suivants sont les remplaçants. Un objet équipé compte aussi : déséquipe-le pour le déposer.</p>`;
+}
+
+/* ---------- Sauvegarde du Labo ---------- */
+$('#bkDl').onclick=()=>{try{const data={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(/^labo/.test(k))data[k]=localStorage.getItem(k)}const txt=JSON.stringify({kind:'labo-sauvegarde-site',v:1,t:Date.now(),data});saveFile('labo-site-sauvegarde-'+new Date().toISOString().slice(0,10)+'.json',txt);$('#bkMsg').textContent='Sauvegarde téléchargée ('+Math.round(txt.length/1024)+' Ko).'}catch(e){$('#bkMsg').textContent='Impossible : '+e.message}};
+$('#bkRest').onclick=()=>$('#bkFile').click();
+$('#bkFile').onchange=()=>{const f=$('#bkFile').files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const b=JSON.parse(String(rd.result));if(!b||!b.data)throw new Error('pas une sauvegarde');if(b.kind==='labo-sauvegarde')throw new Error('c\'est la sauvegarde du script (à restaurer dans le panneau du jeu)');let n=0;for(const [k,v] of Object.entries(b.data))if(/^labo/.test(k)&&typeof v==='string'){localStorage.setItem(k,v);n++}LPROF=localStorage.getItem('labo-lprofile')==='saison'?'saison':'principal';loadProfile();init();$('#bkMsg').textContent=n+' éléments restaurés.'}catch(e){$('#bkMsg').textContent='Fichier illisible : '+e.message}};rd.readAsText(f)};
+
+/* ---------- Ce qui a changé entre deux imports ---------- */
+function diffImports(a,b){const out=[];if(!a||!b)return out;
+  const ca=Object.fromEntries((a.cards||[]).map(c=>[c.n,c])),cb=Object.fromEntries((b.cards||[]).map(c=>[c.n,c]));
+  const sig=c=>JSON.stringify([c.ap,c.cc,(c.eff||[]).map(l=>[l.k,l.el,l.min,l.max,l.v,l.turns,l.zone]),c.crit||null]);
+  const shape=c=>JSON.stringify([c.ap,(c.eff||[]).map(l=>[l.k,l.el,l.zone,l.turns])]);const nums=c=>(c.eff||[]).flatMap(l=>[l.min||0,l.max||0,l.v||0]);let up=[];
+  for(const [n,c] of Object.entries(cb)){const o=ca[n];if(!o){continue}if(sig(o)===sig(c))continue;
+    // même carte, mêmes effets, chiffres un peu plus hauts : simple progression de la carte, pas un changement du jeu
+    if(shape(o)===shape(c)){const a1=nums(o),b1=nums(c);if(a1.every((x,i)=>b1[i]>=x)){up.push(n);continue}}
+    out.push({k:'Carte',n,t:(o.ap!==c.ap?`coût ${o.ap} → ${c.ap} PA. `:'')+describeEffDiff(o,c)})}
+  const nw=Object.keys(cb).filter(n=>!ca[n]);if(nw.length)out.push({k:'Cartes',n:'nouvelles',t:nw.slice(0,12).join(', ')+(nw.length>12?'…':'')});
+  if(up.length)out.push({k:'Cartes',n:'en progression',t:up.length+' cartes ont gagné un peu de puissance (niveau de carte) : '+up.slice(0,8).join(', ')+(up.length>8?'…':''),minor:1});
+  const ma=Object.fromEntries(((a.bestiary&&a.bestiary.mech)||[]).map(m=>[m.n,m])),mb=((b.bestiary&&b.bestiary.mech)||[]);
+  if(Object.keys(ma).length)for(const m of mb){const o=ma[m.n];const tx=x=>(x.m||[]).map(y=>y.x).sort().join('|');if(!o){out.push({k:'Monstre',n:m.n,t:'nouvelle fiche de mécaniques'});continue}if(tx(o)!==tx(m)){const old=new Set((o.m||[]).map(y=>y.x));const nw=(m.m||[]).filter(y=>!old.has(y.x)).map(y=>y.x);out.push({k:'Monstre',n:m.n,t:nw.length?'nouveau : '+nw.join(' / '):'mécanique retirée ou modifiée'})}}
+  const ia=Object.fromEntries(((a.bestiary&&a.bestiary.items)||[]).map(i=>[i.id,i]));
+  if(Object.keys(ia).length)for(const i of ((b.bestiary&&b.bestiary.items)||[])){const o=ia[i.id];if(!o)continue;const ks=new Set(Object.keys(o.st||{}).concat(Object.keys(i.st||{})));const ch=[...ks].filter(k=>(o.st||{})[k]!==(i.st||{})[k]).map(k=>`${k} ${(o.st||{})[k]||0} → ${(i.st||{})[k]||0}`);if(ch.length)out.push({k:'Objet',n:i.n,t:ch.slice(0,4).join(', ')})}
+  return out}
+function describeEffDiff(o,c){const f=x=>(x.eff||[]).map(l=>l.k+(l.min!=null?' '+l.min+'-'+l.max:'')+(l.v!=null?' '+l.v:'')).join(', ');return f(o)!==f(c)?`effets : ${f(o)} → ${f(c)}`:'détails modifiés'}
+function renderChanges(){const el=$('#changesOut');if(!el)return;let c=null;try{c=JSON.parse(localStorage.getItem('labo-changes-'+LPROF)||'null')}catch(e){}
+  if(!c){el.innerHTML='Rien à comparer pour l\'instant : il faut deux imports de ce perso.';return}
+  el.innerHTML=`<div>Comparaison ${c.from?'du '+new Date(c.from).toLocaleString('fr-FR'):'de l\'import précédent'} → ${new Date(c.to).toLocaleString('fr-FR')}</div>`+(c.list.length?`<ul style="margin:6px 0 0;padding-left:18px">${c.list.slice(0,40).map(x=>`<li><strong>${esc(x.k)} ${esc(x.n)}</strong> : ${esc(x.t)}</li>`).join('')}</ul>${c.list.length>40?`<div>… et ${c.list.length-40} autres</div>`:''}`:'<div class="up" style="margin-top:4px">Aucun changement détecté.</div>')+(c.list.length&&c.list.every(x=>x.minor)?'<div class="up" style="margin-top:4px">Rien qui touche les règles du jeu.</div>':'')}
+
+/* ---------- Santé du simulateur (combats réels rejoués) ---------- */
+let healthJob=0;
+function healthCheck(force){const out=$('#healthOut');if(!out)return;const fs=(DATA.fights||[]).filter(f=>f.bsig&&DATA.builds&&DATA.builds[f.bsig]&&DATA.builds[f.bsig].stats&&f.kind!=='boss').slice(-150);
+  const key='labo-health-'+LPROF,sig=fs.length+':'+(fs.length?fs[fs.length-1].t:0);
+  if(!force){try{const c=JSON.parse(localStorage.getItem(key)||'null');if(c&&c.sig===sig){out.innerHTML=healthHtml(c);return}}catch(e){}}
+  if(fs.length<20){out.textContent='Pas assez de combats enregistrés avec leur build (il en faut 20).';return}
+  const byName=Object.fromEntries(DATA.cards.map(c=>[c.n,c])),items=(DATA.items||[]).concat(DATA.worn||[]),mons=Object.fromEntries((DATA.monsters||[]).map(m=>[m.name+'#'+m.grade,m]));
+  const job=++healthJob;let i=0;const acc={n:0,obsR:0,simR:0,ape:0,obsW:0,simW:0,dmgN:0,obsD:0,simD:0};
+  const step=()=>{if(job!==healthJob)return;const end=Math.min(fs.length,i+6);
+    for(;i<end;i++){const f=fs[i],b=DATA.builds[f.bsig];const defs=f.mons.map(k=>mons[k]);if(defs.some(x=>!x))continue;
+      const S=R.deriveStats(b.stats,{maxHp:b.maxHp,basePa:b.basePa,breedId:DATA.meta.breedId});
+      const deck=(b.deck||[]).map(n=>byName[n]).filter(Boolean).map((c,j)=>R.prepCard(c,'c'+j));const wi=b.weapon&&items.find(x=>x.n===b.weapon&&x.w);
+      const r=R.runMany({S,deck,weapon:wi?R.weaponCard(wi,wi.f||0):null,monsters:defs,level:DATA.meta.level,auto:f.auto!==false,weaponMode:W_MODE,seed:11+i},40);
+      acc.n++;acc.obsW+=f.status==='won'?1:0;acc.simW+=r.winRate;
+      if(f.status==='won'&&isFinite(r.avgRounds)){acc.obsR+=f.rounds;acc.simR+=r.avgRounds;acc.ape+=Math.abs(r.avgRounds-f.rounds)/f.rounds}
+      if(f.dmgTaken!=null){acc.dmgN++;acc.obsD+=f.dmgTaken;acc.simD+=r.avgHpLost}}
+    out.textContent=`Vérification… ${i} / ${fs.length} combats`;
+    if(i<fs.length)setTimeout(step,0);else{const c=Object.assign({sig,t:Date.now()},acc);try{localStorage.setItem(key,JSON.stringify(c))}catch(e){}out.innerHTML=healthHtml(c)}};
+  setTimeout(step,30)}
+function healthHtml(c){if(!c.n)return 'Aucun combat rejouable.';const nr=c.obsW||1;const ro=c.obsR/nr,rs=c.simR/nr,dr=ro?rs/ro-1:0,mape=c.ape/nr;
+  const dd=c.dmgN&&c.obsD>c.dmgN*5?c.simD/c.obsD-1:null;const worst=Math.max(Math.abs(dr),dd!=null?Math.abs(dd):0);
+  const st=worst<0.05?['up','Simulateur fiable']:worst<0.10?['','À surveiller']:['down','Écart important : le jeu a sans doute changé'];
+  return `<div class="${st[0]}" style="font-weight:700">${st[1]}</div><table style="margin-top:6px"><tr><th></th><th class="num">Réel</th><th class="num">Simulé</th><th class="num">Écart</th></tr>
+  <tr><td>Tours (victoires)</td><td class="num">${fmt(ro,2)}</td><td class="num">${fmt(rs,2)}</td><td class="num">${dr>=0?'+':''}${fmt(dr*100,1)} %</td></tr>
+  <tr><td>Victoires</td><td class="num">${fmt(c.obsW/c.n*100,1)} %</td><td class="num">${fmt(c.simW/c.n*100,1)} %</td><td></td></tr>
+  ${dd!=null?`<tr><td>PV perdus / combat</td><td class="num">${fmt(c.obsD/c.dmgN)}</td><td class="num">${fmt(c.simD/c.dmgN)}</td><td class="num">${dd>=0?'+':''}${fmt(dd*100,1)} %</td></tr>`:`<tr><td>PV perdus</td><td colspan="3" class="dim">trop peu de dégâts reçus pour juger (combats gagnés trop vite)</td></tr>`}</table>
+  <div class="note">${c.n} combats rejoués · erreur moyenne par combat ${fmt(mape*100,1)} % · ${new Date(c.t).toLocaleString('fr-FR')}</div>`}
+$('#healthRun').onclick=()=>healthCheck(true);
+
+/* ---------- Farm : zones à essayer ---------- */
+let predJob=0;
+function renderPredict(){const out=$('#fPredict');if(!out)return;const B=DATA.bestiary||{};const L=DATA.meta.level||200;
+  const fights=(DATA.fights||[]).filter(f=>f.kind!=='boss'&&!(f.ctx&&f.ctx.onAscension)&&f.mons&&f.mons.length);
+  const last=fights.slice().reverse().find(f=>f.bsig&&DATA.builds&&DATA.builds[f.bsig]&&DATA.builds[f.bsig].stats);
+  if(!last||!B.zones){out.textContent='Il faut des combats enregistrés avec le script (build + bestiaire) pour estimer.';return}
+  const mons=DATA.monsters||[];const byName={};for(const m of mons){const p=byName[m.name];if(!p||(m.seen||0)>(p.seen||0))byName[m.name]=m}
+  const xpMult=(()=>{const r=fights.filter(f=>f.xp>0).map(f=>{const b=f.mons.reduce((a,k)=>{const m=mons.find(x=>x.name+'#'+x.grade===k);return a+((m&&m.xp)||0)},0);return b>0?f.xp/b:null}).filter(x=>x).sort((a,b)=>a-b);return r.length?r[r.length>>1]:1})();
+  const size=fights.slice(-300).reduce((a,f)=>a+f.mons.length,0)/Math.min(300,fights.length);
+  const Zs=farmStats();const gaps1=[],gapsN=[];const fsT=fights.filter(f=>f.t).sort((a,b)=>a.t-b.t);for(let i=1;i<fsT.length;i++){const g=(fsT[i].t-fsT[i-1].t)/1000;if(g>0&&g<300)(fsT[i].rounds<=1?gaps1:gapsN).push([g,fsT[i].rounds])}
+  const med=a=>{if(!a.length)return null;const b=a.slice().sort((x,y)=>x-y);return b[b.length>>1]};const base=med(gaps1.map(x=>x[0]))||6;const perR=gapsN.length>=10?Math.max(1.5,(med(gapsN.map(x=>x[0]))-base)/Math.max(0.5,med(gapsN.map(x=>x[1]))-1)):4;
+  const visited=Object.fromEntries(Zs.map(z=>[z.id,z]));
+  const byZ={};for(const m of (B.monsters||[]))for(const z of (m.z||[]))(byZ[z]=byZ[z]||[]).push(m);
+  const zones=(B.zones||[]).filter(z=>z.max>=Math.min(L,200)-10&&z.min<=L&&byZ[z.id]).map(z=>{const sp=byZ[z.id];const known=sp.map(m=>byName[m.n]).filter(Boolean);return {z,sp,known}}).filter(o=>o.known.length>=Math.max(1,Math.ceil(o.sp.length/2)));
+  if(!zones.length){out.textContent='Aucune zone de ton niveau dont tu connais déjà la moitié des monstres.';return}
+  const b=DATA.builds[last.bsig];const cardsBy=Object.fromEntries(DATA.cards.map(c=>[c.n,c]));const items=(DATA.items||[]).concat(DATA.worn||[]);
+  const S=R.deriveStats(b.stats,{maxHp:b.maxHp,basePa:b.basePa,breedId:DATA.meta.breedId});const deck=(b.deck||[]).map(n=>cardsBy[n]).filter(Boolean).map((c,j)=>R.prepCard(c,'c'+j));const wi=b.weapon&&items.find(x=>x.n===b.weapon&&x.w);const weapon=wi?R.weaponCard(wi,wi.f||0):null;
+  const job=++predJob;let i=0;const rows=[];const n=Math.max(1,Math.round(size));
+  const step=()=>{if(job!==predJob)return;for(let e=Math.min(zones.length,i+2);i<e;i++){const o=zones[i];let rs=0,ws=0,xs=0;const K=24;
+      for(let k=0;k<K;k++){const g=[];for(let j=0;j<n;j++)g.push(o.known[(k*7+j*3+i)%o.known.length]);const r=R.runMany({S,deck,weapon,monsters:g,level:L,auto:true,weaponMode:W_MODE,seed:101+k},4);rs+=isFinite(r.avgRounds)?r.avgRounds:30;ws+=r.winRate;xs+=g.reduce((a,m)=>a+(m.xp||0),0)*xpMult}
+      const rounds=rs/K,win=ws/K,xp=xs/K,sec=base+Math.max(0,rounds-1)*perR;rows.push({o,rounds,win,xp,sec,xph:3600/sec*xp*win,v:visited[o.z.id]})}
+    out.textContent=`Estimation… ${i} / ${zones.length} zones`;if(i<zones.length){setTimeout(step,0);return}
+    // recalage sur tes zones déjà farmées : rapport médian réel / estimé
+    const rat=rows.filter(r=>r.v&&r.v.perH&&r.v.xp&&r.v.n>=20&&r.xph>0).map(r=>r.v.perH*r.v.xp*r.v.winRate/r.xph).sort((a,b)=>a-b);const cal=rat.length>=2?rat[rat.length>>1]:1;for(const r of rows)r.xph*=cal;
+    rows.sort((a,b)=>b.xph-a.xph);
+    out.innerHTML=`<table><tr><th>Zone</th><th class="num">Monstres connus</th><th class="num">Tours</th><th class="num">Victoires</th><th class="num">XP/combat</th><th class="num">XP/h estimée</th><th>Déjà farmée</th></tr>${rows.slice(0,20).map(r=>`<tr><td><strong>${esc(r.o.z.n)}</strong><div class="note">${esc(r.o.z.area||'')} · niv. ${r.o.z.min}-${r.o.z.max}</div></td><td class="num">${r.o.known.length} / ${r.o.sp.length}</td><td class="num">${fmt(r.rounds,2)}</td><td class="num ${r.win<0.99?'down':''}">${fmt(r.win*100,0)} %</td><td class="num">${fmt(r.xp)}</td><td class="num"><strong>${fmt(r.xph)}</strong></td><td class="dim">${r.v?`oui · réel ${r.v.perH&&r.v.xp?fmt(r.v.perH*r.v.xp*r.v.winRate)+' XP/h':'—'}`:'non'}</td></tr>`).join('')}</table><p class="note">${rat.length>=2?`Estimations recalées sur tes ${rat.length} zones déjà farmées (×${fmt(cal,2)}). `:''}Groupes de ${n} monstres (ta moyenne), multiplicateur d'XP réel ×${fmt(xpMult,2)}, combat de ${fmt(base,1)} s + ${fmt(perR,1)} s par tour en plus. Une victoire sous 99 % = risque réel (mortel en Héroïque).</p>`};
+  setTimeout(step,30)}
+function renderItemsTab(){try{renderBank2()}catch(e){$('#bank2Out').textContent='Erreur : '+e.message}try{renderTierList()}catch(e){$('#tlOut').textContent='Erreur : '+e.message}}
+['tlFor','tlSlot','tlSrc','tlMin','tlMax','tlStyle','tlQ','bkStyle','tlSet'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener(id==='tlQ'||id==='tlMin'||id==='tlMax'||id==='bkLvl'?'input':'change',()=>{if(id.startsWith('tl')){if(id==='tlSet')TL=null;$('#tlOut').dataset.n=150;renderTierList()}else renderBank2()})});
 function init(){prepare();renderPerso();try{renderCardUse();renderFreePts();renderBank()}catch(e){}renderAscPanel();renderBest();packOptions($('#simPack'));packOptions($('#oPack'));{const o=document.createElement('option');o.value='poly';o.textContent='Polyvalent · tes adversaires habituels (conseillé)';$('#oPack').insertBefore(o,$('#oPack').firstChild);$('#oPack').value='poly'}deckOptions($('#simDeck'));deckOptions($('#oStart'));runSim();setTimeout(()=>{markReady($('#oPack'),'opt');markReady($('#aPack'),'asc')},400);}
 setupData();init();
 try{const t=localStorage.getItem('labo-tab');if(t&&document.getElementById(t))showTab(t)}catch(e){}
