@@ -192,7 +192,7 @@ textarea{min-height:110px;font-family:var(--f-mono);font-size:.8rem}
         <div class="field"><label for="simPack">Groupe de monstres</label><select id="simPack"></select></div>
         <div class="field"><label for="simDiff">Difficulté <span class="mono" id="simDiffV">×1,0</span></label><input type="range" id="simDiff" min="1" max="6" step="0.25" value="1"><span class="note">Multiplie PV et attaque des monstres, pour approcher l'Ascension ou des zones plus dures.</span></div>
         <div class="field"><label for="simDeck">Deck</label><select id="simDeck"></select></div>
-<div class="field"><label for="simSus">Soins et boucliers</label><select id="simSus"><option value="all" selected>Tout autorisé</option><option value="shield">Boucliers + vol de vie (pas de carte de soin)</option><option value="none">Ni soin ni bouclier : full dégâts (vol de vie gardé)</option></select><label class="chk" ><input type="checkbox" id="simNoSteal">Exclure aussi le vol de vie (cartes et arme)</label></div>
+<div class="field"><span class="lbl">Survie autorisée</span><label class="chk"><input type="checkbox" id="simHeal" checked>Soins</label><label class="chk"><input type="checkbox" id="simShield" checked>Boucliers</label><label class="chk"><input type="checkbox" id="simSteal" checked>Vol de vie (cartes et arme)</label></div>
         <div class="field"><span class="lbl">Mécanique de boss</span><label class="chk"><input type="checkbox" id="simInv">Soins inversés à partir du tour <input type="number" id="simInvT" min="1" max="30" value="3" style="width:4.2em;padding:3px 6px"></label><label class="chk"><input type="checkbox" id="simInvS">Les boucliers blessent aussi</label><span class="note">Le vol de vie et les soins te retirent des PV au lieu d'en rendre.</span></div>
         <div class="field"><label for="simCode">Tester un code du jeu</label><input type="text" id="simCode" placeholder="DM-E-… ou DM-S-…" style="font:inherit;font-family:var(--f-mono);font-size:.85rem;color:var(--ink);background:var(--bg);border:1px solid var(--line2);border-radius:7px;padding:7px 9px;width:100%"><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn ghost" id="simCodeLoad" type="button">Charger le code</button><button class="btn ghost" id="simCodeReset" type="button">Revenir à mon build</button></div><span class="toast note" id="simCodeMsg"></span></div>
         <div class="field"><label for="simN">Nombre de combats</label><select id="simN"><option value="1000">1 000</option><option value="3000" selected>3 000</option><option value="10000">10 000</option></select></div>
@@ -243,7 +243,7 @@ textarea{min-height:110px;font-family:var(--f-mono);font-size:.8rem}
         </div>
         <div class="field"><label for="oPack">Groupe de monstres</label><select id="oPack"></select></div>
         <div class="field"><label for="oDiff">Difficulté <span class="mono" id="oDiffV">×1,0</span></label><input type="range" id="oDiff" min="1" max="6" step="0.25" value="1"></div>
-<div class="field"><label for="oSus">Soins et boucliers</label><select id="oSus"><option value="all" selected>Tout autorisé</option><option value="shield">Boucliers + vol de vie (pas de carte de soin)</option><option value="none">Ni soin ni bouclier : full dégâts (vol de vie gardé)</option></select><label class="chk" ><input type="checkbox" id="oNoSteal">Exclure aussi le vol de vie (cartes et arme)</label></div>
+<div class="field"><span class="lbl">Survie autorisée</span><label class="chk"><input type="checkbox" id="oHeal" checked>Soins</label><label class="chk"><input type="checkbox" id="oShield" checked>Boucliers</label><label class="chk"><input type="checkbox" id="oSteal" checked>Vol de vie (cartes et arme)</label></div>
         <div class="field"><span class="lbl">Mécanique de boss</span><label class="chk"><input type="checkbox" id="oInv">Soins inversés à partir du tour <input type="number" id="oInvT" min="1" max="30" value="3" style="width:4.2em;padding:3px 6px"></label><label class="chk"><input type="checkbox" id="oInvS">Les boucliers blessent aussi</label><span class="note">Le vol de vie et les soins te retirent des PV au lieu d'en rendre.</span></div>
         <div class="field"><label for="oStart">Deck de départ</label><select id="oStart"></select></div>
         <div class="field"><label for="oSlots">Emplacements de deck</label><input type="number" id="oSlots" min="5" max="30" class="slots"><span class="note">Lu dans ton export. Corrige-le si tu viens de passer un Prestige.</span></div>
@@ -272,7 +272,7 @@ textarea{min-height:110px;font-family:var(--f-mono);font-size:.8rem}
         <div class="field" id="aFloorWrap"><label for="aFloorT">Étage de référence du build polyvalent</label><input type="number" id="aFloorT" min="1" max="200" class="slots-no"><span class="note" id="aFloorNote"></span></div>
         <div class="field"><span class="lbl">Style du build</span><div class="seg" id="aStyle"><button type="button" data-v="ascension" aria-pressed="true">Équilibré</button><button type="button" data-v="ascension-tank" aria-pressed="false">Tank</button><button type="button" data-v="ascension-burst" aria-pressed="false">Dégâts</button></div><span class="note" id="aStyleNote">Équilibré : gagner le plus souvent, sans sacrifier ni les PV ni la vitesse.</span></div>
         <div class="field"><label for="aDiff">Renfort des monstres <span class="mono" id="aDiffV">×1,0</span></label><input type="range" id="aDiff" min="1" max="6" step="0.25" value="1"><span class="note">Laisse ×1 pour un étage déjà enregistré. Monte-le pour anticiper un étage plus dur.</span></div>
-        <div class="field"><label for="aSus">Soins et boucliers</label><select id="aSus"><option value="auto" selected>Automatique</option><option value="all">Tout autorisé</option><option value="shield">Boucliers + vol de vie (pas de carte de soin)</option><option value="none">Ni soin ni bouclier (vol de vie gardé)</option></select></div>
+        <div class="field"><span class="lbl">Survie autorisée</span><label class="chk" id="aSusAutoL"><input type="checkbox" id="aSusAuto" checked><span id="aSusAutoT">Auto (selon les mécaniques du boss)</span></label><label class="chk"><input type="checkbox" id="aHeal" checked>Soins</label><label class="chk"><input type="checkbox" id="aShield" checked>Boucliers</label><label class="chk"><input type="checkbox" id="aSteal" checked>Vol de vie (cartes et arme)</label></div>
         <div class="field"><label for="aSlots">Emplacements de deck</label><input type="number" id="aSlots" min="5" max="30" class="slots"></div>
         <div class="field"><span class="lbl">Effort de recherche</span>
           <div class="seg" id="aEffort"><button type="button" data-v="1" aria-pressed="false">Rapide</button><button type="button" data-v="2" aria-pressed="true">Tous éléments</button><button type="button" data-v="3" aria-pressed="false">Approfondi</button></div><span class="note">Rapide : ajuste ton build actuel (quelques secondes). Tous éléments : un build complet par élément (Terre, Feu, Eau, Air, multi) puis comparaison, environ 10 à 30 s (les éléments sont cherchés en parallèle sur les cœurs de ton processeur). Approfondi : pareil avec deux passes stuff ↔ caracs ↔ sorts et une confirmation, environ 30 s à 1 min 30.</span>
@@ -1065,13 +1065,17 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     return r.winRate * 1000 - rounds * 40 - hpPct * 2; // vitesse, mono, multi
   }
   function cardEls(c) { return [...new Set((c.eff || []).filter(l => l.k === 'dmg' || l.k === 'steal' || l.k === 'bomb').map(l => l.el || 0))]; }
-  // sustain : 'all' | 'shield' (pas de soin) | 'none' (ni soin ni bouclier)
+  // sustain : 'all' | 'shield' (pas de soin) | 'none' (ni soin ni bouclier) | {heal, shield, steal} (cases à cocher)
+  function normSus(sustain, noSteal) {
+    if (sustain && typeof sustain === 'object') return { heal: sustain.heal !== false, shield: sustain.shield !== false, steal: sustain.steal !== false && !noSteal };
+    const s = sustain || 'all';
+    return { heal: s === 'all', shield: s !== 'none', steal: !noSteal };
+  }
   function sustainAllowed(c, sustain, noSteal) {
-    const ks = (c.eff || []).map(l => l.k);
-    if (noSteal && ks.includes('steal')) return false; // le vol de vie reste permis (c'est des dégâts) sauf exclusion explicite ou mécanique qui inverse les soins
-    if (!sustain || sustain === 'all') return true;
-    if (ks.some(k => k === 'heal' || k === 'healPct')) return false;
-    if (sustain === 'none' && ks.some(k => k === 'shieldHp' || k === 'shieldLvl')) return false;
+    const ks = (c.eff || []).map(l => l.k), A = normSus(sustain, noSteal);
+    if (!A.steal && ks.includes('steal')) return false; // le vol de vie reste permis (c'est des dégâts) sauf exclusion explicite ou mécanique qui inverse les soins
+    if (!A.heal && ks.some(k => k === 'heal' || k === 'healPct')) return false;
+    if (!A.shield && ks.some(k => k === 'shieldHp' || k === 'shieldLvl')) return false;
     return true;
   }
   function cardAllowed(c, objective, sustain, noSteal) {
@@ -1241,7 +1245,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     let ev = 0;
     const total = R.pointsTotal(ctx.level);
     const tick = (phase, done, of, best) => opts.onProgress && opts.onProgress({ phase, done, of, best, evals: ev });
-    const FO = { invertFrom: opts.invertFrom || 0, invertShields: !!opts.invertShields, auto: !!opts.auto, weaponMode: opts.weaponMode, plan: (opts.effort || 2) >= 3, seed: 1 }; const SU = opts.sustain || 'all', NS = !!opts.noSteal;
+    const FO = { invertFrom: opts.invertFrom || 0, invertShields: !!opts.invertShields, auto: !!opts.auto, weaponMode: opts.weaponMode, plan: (opts.effort || 2) >= 3, seed: 1 }; const SU = opts.sustain || 'all', NS = !normSus(opts.sustain, opts.noSteal).steal;
     const s0 = opts.start0 || opts.start; const start0 = { gear: Object.assign({}, s0.gear), deck: s0.deck.slice() };
     const changes = st => SLOTS.filter(([s]) => (st.gear[s] && st.gear[s].id) !== (start0.gear[s] && start0.gear[s].id)).length + st.deck.filter(k => !start0.deck.includes(k)).length;
     // Ascension : à efficacité égale, on préfère le build qui change le moins de choses
@@ -1526,7 +1530,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     throw new Error('type de code inconnu : ' + m[1]);
   }
 
-  const api = { optimizeDeep, deepRuns, deepPart, deepStart, deepMerge, ARCHS, weaponSteals, encodeGear, encodeDeck, decodeCode, sustainAllowed, SLOTS, ORIENT, optimize, evaluate, buildState, itemPool, allocTemplates, score, cardAllowed };
+  const api = { optimizeDeep, deepRuns, deepPart, deepStart, deepMerge, ARCHS, weaponSteals, normSus, encodeGear, encodeDeck, decodeCode, sustainAllowed, SLOTS, ORIENT, optimize, evaluate, buildState, itemPool, allocTemplates, score, cardAllowed };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.OPT = api;
 })(typeof self !== 'undefined' ? self : this);
 </script>
@@ -1569,7 +1573,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
 <script type="text/plain" id="src-userscript">// ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.6.0
+// @version      2.6.1
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -2208,6 +2212,25 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       for (const [t, v] of Object.entries(m.mech.texts)) parseMechanic(m.mech.parsed, t, (v && v.firstRound) || 1);
     }
   } catch (e) {}
+  // v2.6.1 : nettoyage des étages pollués par des boss de donjon (comptés à tort comme étages d'Ascension)
+  try {
+    if (!db.migAsc1) {
+      const nm = k => String(k).split('#')[0];
+      const stN = f => (f.bossStats || []).map(b => nm(b.k));
+      const pageRead = f => !!(f.power || f.difficulty || (stN(f).length && (f.bosses || []).length && !stN(f).some(x => f.bosses.includes(x))));
+      const maxPage = Math.max(0, ...Object.values(db.floors).filter(pageRead).map(f => +f.floor));
+      let maxOk = 0;
+      for (const [n, f] of Object.entries(db.floors)) {
+        if (+n > maxPage && !pageRead(f)) { delete db.floors[n]; continue; }
+        const sn = stN(f);
+        if (sn.length && (f.bosses || []).length && !sn.some(x => f.bosses.includes(x))) { delete f.bossStats; delete f.bossKeys; f.attempts = 0; f.wins = 0; for (const k of Object.keys(f.mech || {})) if (!f.bosses.includes(nm(k))) delete f.mech[k]; }
+        maxOk = Math.max(maxOk, +n);
+      }
+      for (const b of db.bossLogs || []) if (b.floor && (!db.floors[b.floor] || !(b.mons || []).some(m => (db.floors[b.floor].bosses || []).includes(nm(m.k))))) b.floor = null;
+      try { const cf = +localStorage.getItem(floorKey()) || 0; if (cf > maxOk + 1) localStorage.setItem(floorKey(), String(maxOk + 1)); } catch (e) {}
+      db.migAsc1 = 1;
+    }
+  } catch (e) {}
   try { for (const b of db.bossLogs || []) if (b.floor && db.floors[b.floor] && !db.floors[b.floor].bossStats && b.mons) db.floors[b.floor].bossStats = b.mons.map(m => ({ k: m.k, maxHp: m.maxHp, atk: m.atk })); } catch (e) {}
   setTimeout(() => { try { save(); } catch (e) {} }, 1500);
   function load() {
@@ -2253,12 +2276,12 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   function onPayload(text) {
     if (text.indexOf('"state"') < 0 && text.indexOf('"screen"') < 0) return;
     for (const obj of parseRsc(text)) {
-      if (obj && obj.screen) { context = screenContext(obj.screen); if (context.onAscension) { const fl = currentFloor(); if (fl) context.floor = fl; } }
+      if (obj && obj.screen) { context = screenContext(obj.screen); context.ascScreen = !!context.onAscension; if (context.onAscension) { const fl = currentFloor(); if (fl) context.floor = fl; } }
       const st = obj && (obj.state || (obj.screen && obj.screen.initial));
       if (!st || !st.fighters) continue;
       const root = obj;
       trackTurn(st);
-      if (st.kind === 'boss' || st.ascension) { context.onAscension = true; if (!context.floor) { const fl = currentFloor(); if (fl) context.floor = fl; } }
+      if (st.kind === 'boss' || st.ascension) { const af = ascFloorFor(st); context.onAscension = !!af; context.floor = af; }
       collectMonsters(st, root);
       learnMechanics(st, root);
       maybeWarn(st, root);
@@ -2317,6 +2340,15 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   }
 
   // ---------- Étage d'Ascension (lu sur la page Ascension) ----------
+  // Étage d'Ascension d'un combat : seulement si l'écran dit Ascension (ou si les boss correspondent à ceux lus sur la page de l'étage).
+  // Un boss de donjon (kind 'boss' hors Ascension) n'est jamais compté comme étage.
+  function ascFloorFor(st) {
+    const fl = context.floor || currentFloor(); if (!fl) return 0;
+    const names = Object.values(st.fighters || {}).filter(f => f && f.kind === 'monster').map(f => f.name);
+    const f = db.floors[fl], page = f && f.bosses && f.bosses.length ? f.bosses : null;
+    if (page) return names.some(n => page.includes(n)) ? fl : 0;
+    return (st.ascension || context.ascScreen) ? fl : 0;
+  }
   function currentFloor() { try { return +localStorage.getItem(floorKey()) || 0; } catch (e) { return 0; } }
   function readAscensionPage() {
     if (!/\/ascension/.test(location.pathname) || !document.body) return;
@@ -2497,7 +2529,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const known = keys.map(k => db.monsters[k]).filter(m => m && (mechSummary(m).length || m.isBoss));
     const builds = loadBuilds().builds.filter(b => (b.targets || []).some(t => keys.includes(t)));
     const fl = context.onAscension && context.floor ? db.floors[context.floor] : null;
-    const flN = (st.ascension || st.kind === 'boss') ? (context.floor || currentFloor() || 0) : 0;
+    const flN = context.onAscension ? (context.floor || 0) : 0;
     // mécaniques cachées connues par le bestiaire (cache local, rafraîchi au plus une fois par jour)
     const B = loadBest();
     if ((!B || !B.mech || Date.now() - (B.t || 0) > 864e5) && !bestFetching && Date.now() - bestTriedAt > 6e5 && mons.some(m => m.isBoss)) {
@@ -2699,7 +2731,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       if (e.t === 'dmg' && e.who === 'p') dmgTaken += (e.v || 0);
       if (e.t === 'heal' && e.who === 'p') healTaken += (e.v || 0);
     }
-    const flFight = (st.kind === 'boss' || st.ascension) ? (context.floor || currentFloor() || null) : null;
+    const flFight = context.onAscension ? (context.floor || null) : null;
     if (st.kind === 'boss' || st.ascension) {
       const fl = flFight;
       if (fl) {
@@ -3251,10 +3283,10 @@ function fightOpts(p){const o=p&&$('#'+p+'Inv')&&$('#'+p+'Inv').checked?{invertF
 let simOverride={gear:null,deck:null};
 function runSim(){
   const pack=packs[+$('#simPack').value];const deckIdx=+$('#simDeck').value;const mult=+$('#simDiff').value;
-  const sus=$('#simSus').value;const baseDeck=(simOverride.deck||DATA.meta.decks[deckIdx]).filter(k=>cardsByKey[k]);
-  const ns=$('#simNoSteal').checked;const deck=baseDeck.filter(k=>O.sustainAllowed(cardsByKey[k],sus,ns));
+  const sus=susOf('sim');const baseDeck=(simOverride.deck||DATA.meta.decks[deckIdx]).filter(k=>cardsByKey[k]);
+  const deck=baseDeck.filter(k=>O.sustainAllowed(cardsByKey[k],sus,false));
   const b=O.buildState(DATA,{gear:simOverride.gear||curGear,alloc:curAlloc,deck},ctx);
-  const noWeapon=ns&&b.weapon&&O.weaponSteals((simOverride.gear||curGear).arme);if(noWeapon)b.weapon=null;
+  const noWeapon=!sus.steal&&b.weapon&&O.weaponSteals((simOverride.gear||curGear).arme);if(noWeapon)b.weapon=null;
   $('#simMech').innerHTML=packMechHtml(pack);const oldRot=document.getElementById('simRot');if(oldRot)oldRot.remove();
   const removed=baseDeck.length-deck.length;
   const btn=$('#simRun');btn.disabled=true;btn.textContent='Simulation…';
@@ -3321,7 +3353,7 @@ function markReady(sel,kind){if(!sel)return;try{const l=memoLoad();if(!l.length)
   const note=document.getElementById(kind==='opt'?'oReady':'aReady');if(note)note.textContent=n?`✓ = résultat déjà calculé avec ces réglages (affiché tout de suite). ${n} prêt${n>1?'s':''}.`:''}catch(e){}}
 function memoNote(el,t,rerun){el.innerHTML=`Résultat mémorisé du ${new Date(t).toLocaleString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} : rien n'a changé depuis (équipement, cartes, réglages, modèle). <button type="button">Recalculer quand même</button>`;el.querySelector('button').onclick=rerun}
 function optOptsFor(v){const pack=v==='poly'?polyPack():packs[+v];if(!pack)return null;const mult=+$('#oDiff').value;const deckIdx=+$('#oStart').value;
-  const opts={optGear:$('#oGear').checked,optAlloc:$('#oAlloc').checked,optDeck:$('#oDeck').checked,deckSize:deckSlots(),objective:$('#oObj').value,sustain:$('#oSus').value,noSteal:$('#oNoSteal').checked||!!$('#oInv').checked,...fightOpts('o'),effort:+segVal('oEffort'),monsters:monstersFor(pack,mult),ctx,start:{gear:curGear,alloc:curAlloc,deck:DATA.meta.decks[deckIdx]}};return {pack,mult,deckIdx,opts}}
+  const opts={optGear:$('#oGear').checked,optAlloc:$('#oAlloc').checked,optDeck:$('#oDeck').checked,deckSize:deckSlots(),objective:$('#oObj').value,sustain:susOf('o'),noSteal:!!$('#oInv').checked,...fightOpts('o'),effort:+segVal('oEffort'),monsters:monstersFor(pack,mult),ctx,start:{gear:curGear,alloc:curAlloc,deck:DATA.meta.decks[deckIdx]}};return {pack,mult,deckIdx,opts}}
 function runOpt(force){
   const B=optOptsFor($('#oPack').value);if(!B)return;const {pack,mult,deckIdx,opts}=B;opts._pv=$('#oPack').value;
   if(!opts.optGear&&!opts.optAlloc&&!opts.optDeck){$('#oStatus').textContent='Coche au moins une chose à optimiser.';return}
@@ -3596,6 +3628,8 @@ function curAscPack(){const v=$('#aPack').value;if(v==='asc-poly')return ascPoly
 let ascBuilds=[];try{ascBuilds=JSON.parse(localStorage.getItem('labo-asc-builds')||'[]')}catch(e){}
 function saveAsc(){try{localStorage.setItem('labo-asc-builds',JSON.stringify(ascBuilds))}catch(e){}}
 function allocText(a){return ['vitalite','sagesse','force','intelligence','chance','agilite'].filter(k=>a[k]).map(k=>`${STAT_LABEL[k]} ${a[k]}`).join(', ')}
+function susOf(p){return{heal:$('#'+p+'Heal').checked,shield:$('#'+p+'Shield').checked,steal:$('#'+p+'Steal').checked}}
+function susNote(o){const off=[!o.heal&&'soin',!o.shield&&'bouclier',!o.steal&&'vol de vie'].filter(Boolean);return off.length?'Sans '+off.join(', '):''}
 function autoSustain(pack){if(pack.poly)return{sustain:'all',noSteal:false};const mm=pack.defs.map(d=>d.mech||{});if(mm.some(m=>m.invertFrom&&m.invertShields))return{sustain:'none',noSteal:true};if(mm.some(m=>m.invertFrom))return{sustain:'shield',noSteal:true};return{sustain:'all',noSteal:false}}
 function renderAscPanel(){
   const sel=$('#aPack');const prev=sel.value;sel.innerHTML='';
@@ -3617,7 +3651,9 @@ function renderAscPanel(){
   renderAscGuide();
   showAscMech();renderAscBuilds();
 }
-function showAscMech(){const p=curAscPack();$('#aRun').disabled=!(p&&p.defs);if(!p||!p.defs){$('#aMech').innerHTML='';return}$('#aFloorWrap').hidden=!(p&&p.poly);if(p.poly){$('#aMech').innerHTML=polyHtml(p);$('#aSus').options[0].textContent='Auto : tout autorisé';return}$('#aMech').innerHTML=packMechHtml(p);const a=autoSustain(p);$('#aSus').options[0].textContent='Auto : '+({all:'tout autorisé',shield:a.noSteal?'boucliers seuls (vol de vie exclu : soins inversés)':'boucliers + vol de vie',none:'ni soin ni bouclier ni vol de vie'})[a.sustain];$('#aSus').title=({all:'Tout autorisé',shield:a.noSteal?'Boucliers seulement : le boss inverse les soins, le vol de vie te blesserait':'Boucliers et vol de vie, sans carte de soin',none:'Ni soin ni bouclier ni vol de vie : le boss inverse soins et boucliers'})[a.sustain]}
+function syncAscSus(p){const auto=$('#aSusAuto').checked;let a=null;if(p&&p.defs)a=autoSustain(p);const o=a?O.normSus(a.sustain,a.noSteal):{heal:true,shield:true,steal:true};['Heal','Shield','Steal'].forEach(k=>{const el=$('#a'+k);el.disabled=auto;if(auto)el.checked=o[k.toLowerCase()]});const n=susNote(o);$('#aSusAutoT').textContent='Auto (selon les mécaniques du boss)'+(auto?' : '+(n||'tout autorisé'):'');$('#aSusAutoL').title=a&&a.noSteal?'Le boss inverse les soins : le vol de vie te blesserait':''}
+function showAscMech(){const p=curAscPack();$('#aRun').disabled=!(p&&p.defs);syncAscSus(p);if(!p||!p.defs){$('#aMech').innerHTML='';return}$('#aFloorWrap').hidden=!(p&&p.poly);if(p.poly){$('#aMech').innerHTML=polyHtml(p);return}$('#aMech').innerHTML=packMechHtml(p)}
+document.addEventListener('change',e=>{if(e.target&&e.target.id==='aSusAuto')syncAscSus(curAscPack())});
 
 const PRESTIGE_GOALS=[[4,20,0],[5,30,500000],[6,40,1000000],[7,40,0],[8,60,0],[9,80,0],[10,110,0]];
 function prestigeGoalHtml(){const p=DATA.meta.prestige||0;const best=Math.max(0,...(DATA.floors||[]).filter(f=>f.wins).map(f=>f.floor));const next=PRESTIGE_GOALS.find(g=>g[0]>p);
@@ -3630,7 +3666,7 @@ function renderAscBuilds(){
   $('#aBuilds').querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ascBuilds.splice(+b.dataset.del,1);saveAsc();renderAscBuilds()});
 }
 function ascOptsFor(v){const pack=v==='asc-poly'?ascPolyPack():ascList().find(p=>p.key===v);if(!pack||!pack.defs)return null;const mult=+$('#aDiff').value;
-  const su=$('#aSus').value==='auto'?autoSustain(pack):{sustain:$('#aSus').value,noSteal:false};
+  const su=$('#aSusAuto').checked?autoSustain(pack):{sustain:susOf('a'),noSteal:false};
   const opts={optGear:true,optAlloc:true,optDeck:true,deckSize:deckSlots(),objective:segVal('aStyle')||'ascension',sustain:su.sustain,noSteal:su.noSteal,auto:PLAY_AUTO,weaponMode:W_MODE,effort:+segVal('aEffort'),monsters:monstersFor(pack,mult),ctx,start:{gear:curGear,alloc:curAlloc,deck:DATA.meta.decks[DATA.meta.active]}};
   return {pack,mult,su,opts}}
 function runAsc(force){
@@ -3659,7 +3695,7 @@ function renderAscResult(res,pack,mult,su){
   const unsim=!pack.poly&&pack.defs.some(d=>mechLines(d).some(l=>/non simulé/.test(l)));
   const wr=b.winRate;const tone=wr>=0.9?'up':wr>=0.6?'':'down';
   const changes=O.SLOTS.filter(([s])=>(curGear[s]&&curGear[s].id)!==(st.gear[s]&&st.gear[s].id)).map(([s])=>`${SLOT_LABEL[s]} : ${st.gear[s]?st.gear[s].n+(st.gear[s].f?' '+tierLabel(st.gear[s].f):''):'vide'}`);
-  lastAsc={label:(pack.floor||pack.label)+({'ascension-tank':' · Tank','ascension-burst':' · Dégâts'}[segVal('aStyle')]||''),targetLabel:pack.label+(mult>1?' ×'+fmt(mult,2):''),targets:pack.poly?[]:[...new Set(pack.defs.map(d=>d.name+'#'+d.grade))],winRate:wr,mult,gearCode:gCode,deckCode:dCode,points:allocText(st.alloc),deck:st.deck.map(k=>cardsByKey[k]&&cardsByKey[k].n).filter(Boolean),gear:changes,note:(su.sustain!=='all'?({shield:'Sans soin',none:'Sans soin ni bouclier'})[su.sustain]+(su.noSteal?', sans vol de vie':''):'')};
+  lastAsc={label:(pack.floor||pack.label)+({'ascension-tank':' · Tank','ascension-burst':' · Dégâts'}[segVal('aStyle')]||''),targetLabel:pack.label+(mult>1?' ×'+fmt(mult,2):''),targets:pack.poly?[]:[...new Set(pack.defs.map(d=>d.name+'#'+d.grade))],winRate:wr,mult,gearCode:gCode,deckCode:dCode,points:allocText(st.alloc),deck:st.deck.map(k=>cardsByKey[k]&&cardsByKey[k].n).filter(Boolean),gear:changes,note:susNote(O.normSus(su.sustain,su.noSteal))};
   $('#aResult').innerHTML=`<div class="kpis"><div class="kpi"><span class="lbl">Victoires estimées</span><span class="v ${tone}">${fmt(wr*100,0)} %</span><span class="d muted">avant : ${fmt(a.winRate*100,0)} % avec ton build actuel</span></div><div class="kpi"><span class="lbl">Tours moyens</span><span class="v">${isFinite(b.avgRounds)?fmt(b.avgRounds,1):'—'}</span></div><div class="kpi"><span class="lbl">PV perdus</span><span class="v">${fmt(b.avgHpLost)}</span><span class="d muted">sur ${fmt(res.final.S._maxHp)}</span></div></div>
   ${LPROF==='saison'&&wr<0.99?`<div class="alert"><strong>Perso Héroïque :</strong> ${fmt((1-wr)*100,1)} % de risque de mort définitive. Ne lance pas cet étage tant que le build n'atteint pas 99 %.</div>`:''}
   ${unsim?'<div class="alert">Une partie des mécaniques de ce groupe n\'est pas encore simulée : le taux réel peut être plus bas.</div>':''}
