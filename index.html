@@ -693,7 +693,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   // ---------- Combat ----------
   function makeMonster(m, i) {
     const hp = Math.round((m.hpMin + m.hpMax) / 2);
-    return { mech: m.mech || null, id: 'm' + i, name: m.name, hp, maxHp: hp, cap: hp, atk: m.atk, el: m.element, pattern: m.pattern, idx: 0, res: m.stats || {}, rage: 0, weaken: 0, shield: 0, alive: true, isBoss: !!m.isBoss, bombs: [] };
+    return { mech: m.mech || null, id: 'm' + i, name: m.name, hp, maxHp: hp, cap: hp, atk: m.atk, el: m.element, pattern: m.pattern, idx: (m.pattern && m.pattern.length > 1 && !m.fixedStart) ? Math.floor(RND() * m.pattern.length) : 0, /* le cycle d'intentions ne commence pas toujours au début (observé : 15 combats sur 18) */ res: m.stats || {}, rage: 0, weaken: 0, shield: 0, alive: true, isBoss: !!m.isBoss, bombs: [] };
   }
 
   // opts: {S, deck:[cards], weapon, monsters:[defs], maxRounds}
@@ -802,7 +802,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         if (intent === 'guard') { m.shield = Math.round(m.atk * GUARD_PCT); continue; }
         const fury = intent === 'drain' ? 1 : (m.furyNext || 1); if (intent !== 'drain') m.furyNext = 0;
         // Fureur : observé en Ascension, le coup « déchaîné » vaut ~×fureur l'attaque de base (il remplace le bonus de l'intention)
-        const mult = (fury > 1 && intent !== 'drain' ? fury : (INTENT_MULT[intent] || 1)) * (1 + RAGE_STEP * m.rage) * (1 - Math.min(100, m.weaken) / 100) * (DF.glaces ? 0.9 : 1); // Glaces : frappe −10 %
+        const mult = (fury > 1 && intent !== 'drain' ? fury : (INTENT_MULT[intent] || 1)) * (1 + RAGE_STEP * m.rage) * (1 - Math.min(100, m.weaken) / 100) * (DF.glaces && (m.glaces || 0) >= round ? 0.9 : 1); // Glaces : la cible touchée frappe 10 % moins fort pendant 2 tours
         m.weaken = 0;
         if (RND() * 100 < Math.min(DF.vulbis ? 75 : 100, S._dodge + vulb)) continue;
         if (DF.vulbis) vulb += 2; // Vulbis : +2 % d'esquive par coup non esquivé
@@ -810,6 +810,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         let dmg = Math.max(0, Math.floor((m.atk * mult * (1 - (S._red || 0) / 100) - rf) * (1 - rp / 100)));
         // coup critique du monstre (rare, observé ~6 %) : la Résistance Critiques retire sa valeur au coup critique reçu
         if (RND() < MON_CRIT_P) dmg = Math.max(0, Math.floor(dmg * MON_CRIT_MULT) - (S.resCritiques || 0));
+        if (opts.mlog) { opts.mlog.hits = (opts.mlog.hits || 0) + 1; opts.mlog.raw = (opts.mlog.raw || 0) + dmg; if (round === 1) opts.mlog.r1 = (opts.mlog.r1 || 0) + 1; }
         for (const s of P.shields) { const a = Math.min(s.value, dmg); s.value -= a; dmg -= a; if (!dmg) break; }
         if (DF.ivoire) dmg = Math.min(dmg, Math.floor(maxHp * 0.35)); // Ivoire : aucun coup ordinaire au-delà de 35 % des PV max
         P.hp -= dmg; hpLost += dmg;
@@ -959,6 +960,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       }
       const absorbed = Math.min(m.shield, Math.floor(d * (1 - (S._perfo || 0) / 100))); m.shield -= absorbed; const real = Math.min(m.hp, d - absorbed);
       if (opts.log) opts.log.push([T.round, label, m.name, d, !!opt.crit, !!opt.sec]);
+      if (DF.glaces && real > 0) m.glaces = T.round + 1;
       m.hp -= real; if (S._ero) m.cap = Math.max(1, m.cap - real * S._ero / 100); dmgDone += real; perCard[label] = (perCard[label] || 0) + real;
       if (m.hp <= 0) { m.hp = 0; down(m); }
       return real;
@@ -1748,7 +1750,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
 <script type="text/plain" id="src-userscript">// ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.7.2
+// @version      2.7.3
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -1981,7 +1983,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   // ---------- Combat ----------
   function makeMonster(m, i) {
     const hp = Math.round((m.hpMin + m.hpMax) / 2);
-    return { mech: m.mech || null, id: 'm' + i, name: m.name, hp, maxHp: hp, cap: hp, atk: m.atk, el: m.element, pattern: m.pattern, idx: 0, res: m.stats || {}, rage: 0, weaken: 0, shield: 0, alive: true, isBoss: !!m.isBoss, bombs: [] };
+    return { mech: m.mech || null, id: 'm' + i, name: m.name, hp, maxHp: hp, cap: hp, atk: m.atk, el: m.element, pattern: m.pattern, idx: (m.pattern && m.pattern.length > 1 && !m.fixedStart) ? Math.floor(RND() * m.pattern.length) : 0, /* le cycle d'intentions ne commence pas toujours au début (observé : 15 combats sur 18) */ res: m.stats || {}, rage: 0, weaken: 0, shield: 0, alive: true, isBoss: !!m.isBoss, bombs: [] };
   }
 
   // opts: {S, deck:[cards], weapon, monsters:[defs], maxRounds}
@@ -2090,7 +2092,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         if (intent === 'guard') { m.shield = Math.round(m.atk * GUARD_PCT); continue; }
         const fury = intent === 'drain' ? 1 : (m.furyNext || 1); if (intent !== 'drain') m.furyNext = 0;
         // Fureur : observé en Ascension, le coup « déchaîné » vaut ~×fureur l'attaque de base (il remplace le bonus de l'intention)
-        const mult = (fury > 1 && intent !== 'drain' ? fury : (INTENT_MULT[intent] || 1)) * (1 + RAGE_STEP * m.rage) * (1 - Math.min(100, m.weaken) / 100) * (DF.glaces ? 0.9 : 1); // Glaces : frappe −10 %
+        const mult = (fury > 1 && intent !== 'drain' ? fury : (INTENT_MULT[intent] || 1)) * (1 + RAGE_STEP * m.rage) * (1 - Math.min(100, m.weaken) / 100) * (DF.glaces && (m.glaces || 0) >= round ? 0.9 : 1); // Glaces : la cible touchée frappe 10 % moins fort pendant 2 tours
         m.weaken = 0;
         if (RND() * 100 < Math.min(DF.vulbis ? 75 : 100, S._dodge + vulb)) continue;
         if (DF.vulbis) vulb += 2; // Vulbis : +2 % d'esquive par coup non esquivé
@@ -2098,6 +2100,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         let dmg = Math.max(0, Math.floor((m.atk * mult * (1 - (S._red || 0) / 100) - rf) * (1 - rp / 100)));
         // coup critique du monstre (rare, observé ~6 %) : la Résistance Critiques retire sa valeur au coup critique reçu
         if (RND() < MON_CRIT_P) dmg = Math.max(0, Math.floor(dmg * MON_CRIT_MULT) - (S.resCritiques || 0));
+        if (opts.mlog) { opts.mlog.hits = (opts.mlog.hits || 0) + 1; opts.mlog.raw = (opts.mlog.raw || 0) + dmg; if (round === 1) opts.mlog.r1 = (opts.mlog.r1 || 0) + 1; }
         for (const s of P.shields) { const a = Math.min(s.value, dmg); s.value -= a; dmg -= a; if (!dmg) break; }
         if (DF.ivoire) dmg = Math.min(dmg, Math.floor(maxHp * 0.35)); // Ivoire : aucun coup ordinaire au-delà de 35 % des PV max
         P.hp -= dmg; hpLost += dmg;
@@ -2247,6 +2250,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       }
       const absorbed = Math.min(m.shield, Math.floor(d * (1 - (S._perfo || 0) / 100))); m.shield -= absorbed; const real = Math.min(m.hp, d - absorbed);
       if (opts.log) opts.log.push([T.round, label, m.name, d, !!opt.crit, !!opt.sec]);
+      if (DF.glaces && real > 0) m.glaces = T.round + 1;
       m.hp -= real; if (S._ero) m.cap = Math.max(1, m.cap - real * S._ero / 100); dmgDone += real; perCard[label] = (perCard[label] || 0) + real;
       if (m.hp <= 0) { m.hp = 0; down(m); }
       return real;
@@ -2874,9 +2878,11 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       const deck = Object.values(cards).map(c => c && c.name).filter(Boolean).sort();
       const wc = resolveIn(root, P.weaponCard); const weapon = wc && wc.name || null;
       const keep = {}; for (const [k, v] of Object.entries(stats)) if (typeof v === 'number' && v) keep[k] = v;
-      const sig = JSON.stringify([keep, deck, weapon, P.maxHp, P.basePa]).length + ':' + deck.join('|').length + ':' + (P.maxHp || 0) + ':' + Object.values(keep).reduce((a, v) => a + v, 0);
+      // signature sans la vitalité ni les PV max (ils bougent de quelques points à chaque combat) : un même build garde la même fiche ; les PV max sont notés sur chaque combat
+      const core = Object.assign({}, keep); delete core.vitalite;
+      const sig = 'b2:' + JSON.stringify([core, deck, weapon, P.basePa]).length + ':' + deck.join('|').length + ':' + Object.values(core).reduce((a, v) => a + v, 0);
       db.builds = db.builds || {};
-      if (!db.builds[sig]) { db.builds[sig] = { t: Date.now(), stats: keep, deck, weapon, maxHp: P.maxHp, basePa: P.basePa }; const ks = Object.keys(db.builds); if (ks.length > 40) delete db.builds[ks[0]]; }
+      if (!db.builds[sig]) { db.builds[sig] = { t: Date.now(), stats: keep, deck, weapon, maxHp: P.maxHp, basePa: P.basePa }; const ks = Object.keys(db.builds); if (ks.length > 150) delete db.builds[ks[0]]; }
       return sig;
     } catch (e) { return null; }
   }
@@ -3581,7 +3587,7 @@ function memoStoreKey(){return 'labo-memo-'+LPROF}
 function memoLoad(){try{return JSON.parse(localStorage.getItem(memoStoreKey())||'[]',(k,v)=>v==='__INF__'?Infinity:v)||[]}catch(e){return []}}
 function memoSave(list){const js=x=>JSON.stringify(x,(k,v)=>v===Infinity?'__INF__':v);let l=list.slice(0,30);while(l.length){try{localStorage.setItem(memoStoreKey(),js(l));return}catch(e){l=l.slice(0,l.length-1)}}try{localStorage.removeItem(memoStoreKey())}catch(e){}}
 function dataSig(d){const m=d.meta||{};return fnv(JSON.stringify([m.level,m.prestige,m.breedId,m.forge&&m.forge.level,m.discordBonus,m.scrolls,(d.items||[]).map(i=>i.id+'/'+(i.f||0)),(d.worn||[]).map(i=>i.id+'/'+(i.f||0)),(d.cards||[]).map(c=>c.key),Object.keys(d.setBonus||{}).length]))}
-function partSig(o){const c=Object.assign({rev:"2026-10-10b"},o);delete c.onProgress;delete c.seed;delete c.monsters;delete c.sustain;delete c.noSteal;delete c._pv;return fnv(JSON.stringify(c))}
+function partSig(o){const c=Object.assign({rev:"2026-10-10c"},o);delete c.onProgress;delete c.seed;delete c.monsters;delete c.sustain;delete c.noSteal;delete c._pv;return fnv(JSON.stringify(c))}
 function packSig(kind,v){return fnv([kind,v,v==='asc-poly'?ascTargetFloor():'',kind==='opt'?$('#oDiff').value:$('#aDiff').value].join('|'))}
 function optsSig(o){const c=Object.assign({},o);delete c.onProgress;delete c.seed;delete c._pv;return fnv(JSON.stringify(c))}
 function goalSig(kind,o){return kind+'|'+o.objective+'|'+fnv(JSON.stringify(o.monsters))}
@@ -4198,25 +4204,25 @@ function healthCheck(force){const out=$('#healthOut');if(!out)return;const fs=(D
   if(!force){try{const c=JSON.parse(localStorage.getItem(key)||'null');if(c&&c.sig===sig){out.innerHTML=healthHtml(c);return}}catch(e){}}
   if(fs.length<20){out.textContent='Pas assez de combats enregistrés avec leur build (il en faut 20).';return}
   const byName=Object.fromEntries(DATA.cards.map(c=>[c.n,c])),items=(DATA.items||[]).concat(DATA.worn||[]),mons=Object.fromEntries((DATA.monsters||[]).map(m=>[m.name+'#'+m.grade,m]));
-  const job=++healthJob;let i=0;const acc={n:0,obsR:0,simR:0,ape:0,obsW:0,simW:0,dmgN:0,obsD:0,simD:0};
+  const job=++healthJob;let i=0;const acc={n:0,obsR:0,simR:0,ape:0,obsW:0,simW:0,dmgN:0,obsD:0,simD:0,hitN:0};
   const step=()=>{if(job!==healthJob)return;const end=Math.min(fs.length,i+6);
     for(;i<end;i++){const f=fs[i],b=DATA.builds[f.bsig];const defs=f.mons.map(k=>mons[k]);if(defs.some(x=>!x))continue;
-      const S=R.deriveStats(b.stats,{maxHp:b.maxHp,basePa:b.basePa,breedId:DATA.meta.breedId,dofus:(DATA.worn||[]).filter(w=>w.s==='dofus').map(w=>w.n)});
+      const S=R.deriveStats(b.stats,{maxHp:(typeof f!=='undefined'&&f&&f.maxHp)||b.maxHp,basePa:b.basePa,breedId:DATA.meta.breedId,dofus:(DATA.worn||[]).filter(w=>w.s==='dofus').map(w=>w.n)});
       const deck=(b.deck||[]).map(n=>byName[n]).filter(Boolean).map((c,j)=>R.prepCard(c,'c'+j));const wi=b.weapon&&items.find(x=>x.n===b.weapon&&x.w);
       const r=R.runMany({S,deck,weapon:wi?R.weaponCard(wi,wi.f||0):null,monsters:defs,level:DATA.meta.level,auto:f.auto!==false,weaponMode:W_MODE,seed:11+i},40);
       acc.n++;acc.obsW+=f.status==='won'?1:0;acc.simW+=r.winRate;
       if(f.status==='won'&&isFinite(r.avgRounds)){acc.obsR+=f.rounds;acc.simR+=r.avgRounds;acc.ape+=Math.abs(r.avgRounds-f.rounds)/f.rounds}
-      if(f.dmgTaken!=null){acc.dmgN++;acc.obsD+=f.dmgTaken;acc.simD+=r.avgHpLost}}
+      if(f.dmgTaken!=null){acc.dmgN++;acc.obsD+=f.dmgTaken;acc.simD+=r.avgHpLost;if(f.dmgTaken>0)acc.hitN++}}
     out.textContent=`Vérification… ${i} / ${fs.length} combats`;
     if(i<fs.length)setTimeout(step,0);else{const c=Object.assign({sig,t:Date.now()},acc);try{localStorage.setItem(key,JSON.stringify(c))}catch(e){}out.innerHTML=healthHtml(c)}};
   setTimeout(step,30)}
 function healthHtml(c){if(!c.n)return 'Aucun combat rejouable.';const nr=c.obsW||1;const ro=c.obsR/nr,rs=c.simR/nr,dr=ro?rs/ro-1:0,mape=c.ape/nr;
-  const dd=c.dmgN&&c.obsD>c.dmgN*5?c.simD/c.obsD-1:null;const worst=Math.max(Math.abs(dr),dd!=null?Math.abs(dd):0);
+  const dd=c.dmgN&&c.obsD>c.dmgN*5?c.simD/c.obsD-1:null;const fewHits=(c.hitN||0)<40;const worst=Math.max(Math.abs(dr),dd!=null?(fewHits?Math.min(0.09,Math.abs(dd)):Math.abs(dd)):0);
   const st=worst<0.05?['up','Simulateur fiable']:worst<0.10?['','À surveiller']:['down','Écart important : le jeu a sans doute changé'];
   return `<div class="${st[0]}" style="font-weight:700">${st[1]}</div><table style="margin-top:6px"><tr><th></th><th class="num">Réel</th><th class="num">Simulé</th><th class="num">Écart</th></tr>
   <tr><td>Tours (victoires)</td><td class="num">${fmt(ro,2)}</td><td class="num">${fmt(rs,2)}</td><td class="num">${dr>=0?'+':''}${fmt(dr*100,1)} %</td></tr>
   <tr><td>Victoires</td><td class="num">${fmt(c.obsW/c.n*100,1)} %</td><td class="num">${fmt(c.simW/c.n*100,1)} %</td><td></td></tr>
-  ${dd!=null?`<tr><td>PV perdus / combat</td><td class="num">${fmt(c.obsD/c.dmgN)}</td><td class="num">${fmt(c.simD/c.dmgN)}</td><td class="num">${dd>=0?'+':''}${fmt(dd*100,1)} %</td></tr>`:`<tr><td>PV perdus</td><td colspan="3" class="dim">trop peu de dégâts reçus pour juger (combats gagnés trop vite)</td></tr>`}</table>
+  ${dd!=null?`<tr><td>PV perdus / combat</td><td class="num">${fmt(c.obsD/c.dmgN)}</td><td class="num">${fmt(c.simD/c.dmgN)}</td><td class="num">${dd>=0?'+':''}${fmt(dd*100,1)} %</td></tr>${fewHits?`<tr><td colspan="4" class="dim">PV perdus : indicatif, seulement ${c.hitN||0} combats où tu as pris des dégâts (il en faut 40 pour juger).</td></tr>`:''}`:`<tr><td>PV perdus</td><td colspan="3" class="dim">trop peu de dégâts reçus pour juger (combats gagnés trop vite)</td></tr>`}</table>
   <div class="note">${c.n} combats rejoués · erreur moyenne par combat ${fmt(mape*100,1)} % · ${new Date(c.t).toLocaleString('fr-FR')}</div>`}
 $('#healthRun').onclick=()=>healthCheck(true);
 
@@ -4236,7 +4242,7 @@ function renderPredict(){const out=$('#fPredict');if(!out)return;const B=DATA.be
   const zones=(B.zones||[]).filter(z=>z.max>=Math.min(L,200)-10&&z.min<=L&&byZ[z.id]).map(z=>{const sp=byZ[z.id];const known=sp.map(m=>byName[m.n]).filter(Boolean);return {z,sp,known}}).filter(o=>o.known.length>=Math.max(1,Math.ceil(o.sp.length/2)));
   if(!zones.length){out.textContent='Aucune zone de ton niveau dont tu connais déjà la moitié des monstres.';return}
   const b=DATA.builds[last.bsig];const cardsBy=Object.fromEntries(DATA.cards.map(c=>[c.n,c]));const items=(DATA.items||[]).concat(DATA.worn||[]);
-  const S=R.deriveStats(b.stats,{maxHp:b.maxHp,basePa:b.basePa,breedId:DATA.meta.breedId,dofus:(DATA.worn||[]).filter(w=>w.s==='dofus').map(w=>w.n)});const deck=(b.deck||[]).map(n=>cardsBy[n]).filter(Boolean).map((c,j)=>R.prepCard(c,'c'+j));const wi=b.weapon&&items.find(x=>x.n===b.weapon&&x.w);const weapon=wi?R.weaponCard(wi,wi.f||0):null;
+  const S=R.deriveStats(b.stats,{maxHp:last.maxHp||b.maxHp,basePa:b.basePa,breedId:DATA.meta.breedId,dofus:(DATA.worn||[]).filter(w=>w.s==='dofus').map(w=>w.n)});const deck=(b.deck||[]).map(n=>cardsBy[n]).filter(Boolean).map((c,j)=>R.prepCard(c,'c'+j));const wi=b.weapon&&items.find(x=>x.n===b.weapon&&x.w);const weapon=wi?R.weaponCard(wi,wi.f||0):null;
   const job=++predJob;let i=0;const rows=[];const n=Math.max(1,Math.round(size));
   const step=()=>{if(job!==predJob)return;for(let e=Math.min(zones.length,i+2);i<e;i++){const o=zones[i];let rs=0,ws=0,xs=0;const K=24;
       for(let k=0;k<K;k++){const g=[];for(let j=0;j<n;j++)g.push(o.known[(k*7+j*3+i)%o.known.length]);const r=R.runMany({S,deck,weapon,monsters:g,level:L,auto:true,weaponMode:W_MODE,seed:101+k},4);rs+=isFinite(r.avgRounds)?r.avgRounds:30;ws+=r.winRate;xs+=g.reduce((a,m)=>a+(m.xp||0),0)*xpMult}
