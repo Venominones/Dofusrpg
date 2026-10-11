@@ -304,7 +304,7 @@ textarea{min-height:110px;font-family:var(--f-mono);font-size:.8rem}
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><h2 style="margin:0">Build manuel</h2><span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" type="button" id="mbLoadCur">Mon stuff actuel</button><button class="btn" type="button" id="mbClear">Tout vider</button></span></div>
         <div class="mb-doll">
           <div class="mb-col" id="mbLeft"></div>
-          <div class="mb-center"><strong id="mbClass"></strong><div id="mbSel" class="note">Clique un emplacement, puis un objet dans la liste.</div></div>
+          <div class="mb-center"><strong id="mbClass"></strong><div id="mbSel" class="note">Clique un emplacement, puis un objet dans la liste.</div><p class="note" style="margin:0">Astuce : clique un emplacement équipé pour changer son amélioration (Tiers 1 à Rayonnant +5).</p></div>
           <div class="mb-col" id="mbRight"></div>
         </div>
         <div class="mb-dofus" id="mbDofus"></div>
@@ -4715,8 +4715,13 @@ function renderMB(){if(!$('#mb'))return;const b=mbLoad();
   $('#mbClass').textContent=`${names[DATA.meta.breedId]||'Personnage'} · niv. ${DATA.meta.level} · prestige ${DATA.meta.prestige||0}`;
   // emplacement choisi : détail + fusion
   const x=b.gear[MB_SEL],it=x&&mbAll().m[x.id];const own=it&&mbAll().own[it.id];
-  $('#mbSel').innerHTML=`<strong>${esc(SLOT_LABEL[MB_SEL]||MB_SEL)}</strong> : ${it?esc(it.n)+` <span class="muted">niv. ${it.lvl||'?'}${own?' · possédé':''}</span>`:'<span class="muted">vide</span>'}`;
-  $('#mbSlotInfo').innerHTML=it?`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><label class="note">Niveau de fusion <select id="mbFus">${MB_FUS.map((l,i)=>`<option value="${i}" ${i===(x.f||0)?'selected':''}>${l}${own&&own.f===i?' (le tien)':''}</option>`).join('')}</select></label><button class="btn" type="button" id="mbRemove">Retirer</button></div><p class="note" style="margin:4px 0 0">${esc(mbShort(mbStats(it,x.f),12))}</p>`:'';
+  // emplacement choisi : nom, amélioration (fusion) bien visible au centre, et retrait
+  $('#mbSel').innerHTML=`<div><strong>${esc(SLOT_LABEL[MB_SEL]||MB_SEL)}</strong></div>${it?`<div>${esc(it.n)} <span class="muted">niv. ${it.lvl||'?'}${own?' · possédé':''}</span></div>
+    <label style="display:grid;gap:2px;margin-top:4px"><span class="lbl">Amélioration</span><span style="display:flex;gap:4px;align-items:center"><button class="btn" type="button" id="mbFusM" style="padding:1px 8px" title="Baisser">−</button><select id="mbFus" style="flex:1;min-width:0">${MB_FUS.map((l,i)=>`<option value="${i}" ${i===(x.f||0)?'selected':''}>${l}${own&&own.f===i?' (le tien)':''}</option>`).join('')}</select><button class="btn" type="button" id="mbFusP" style="padding:1px 8px" title="Monter">+</button></span></label>
+    <button class="btn" type="button" id="mbRemove" style="margin-top:4px;justify-self:start">Retirer</button>`:'<div class="muted">vide : choisis un objet dans la liste à droite</div>'}`;
+  $('#mbSlotInfo').innerHTML=it?`<p class="note" style="margin:0">${esc(it.n)} (${MB_FUS[x.f||0]}) : ${esc(mbShort(mbStats(it,x.f),12))}</p>`:'';
+  const setF=f=>{b.gear[MB_SEL].f=Math.max(0,Math.min(7,f));mbSave();renderMB()};
+  if($('#mbFusM'))$('#mbFusM').onclick=()=>setF((x.f||0)-1);if($('#mbFusP'))$('#mbFusP').onclick=()=>setF((x.f||0)+1);
   if($('#mbFus'))$('#mbFus').onchange=e=>{b.gear[MB_SEL].f=+e.target.value;mbSave();renderMB()};
   if($('#mbRemove'))$('#mbRemove').onclick=()=>{delete b.gear[MB_SEL];mbSave();renderMB()};
   renderMBAlloc();renderMBDeck();renderMBStats();renderMBList();renderMBSaves()}
