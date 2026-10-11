@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.12.1
+// @version      2.12.2
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -66,6 +66,9 @@
   const SUSTAIN = { maxPctHp: 25, perTurn: 2 };
   const RES_PCT_CAP_PLAYER = 50;
   const HAND_SIZE = 5;
+  // Bluff (« Pioche 4 ») : pioche simulée. Calé sur 216 combats réels en auto : 3 cartes effectives (tours 1,65 simulé / 1,68 réel ;
+  // part de Bluff vs Tempête 2,77 / 2,73). Avant ce modèle, Bluff était sous-estimé d'environ 30 %.
+  const HAND_K = 0, HAND_DISCARD = false, DRAW_EFF = 3;
   const DRAWS_MAX = 3;
   const CLASS_SPECTRAL = { 9: 26 }; // Crâ : Œil de lynx (patch du 10/10 : 18 → 26 %, plafond 60 %)
   // Passifs de classe observés en combat : 8 = « Enchaînement » (+15 % sur les sorts de dégâts suivants du tour, cumulable)
@@ -241,6 +244,8 @@
     return {
       uid, id: c.id, name: c.n || c.name, ap: c.ap, cc: c.cc || 0, eff, crit: c.crit || null,
       weapon: !!c.weapon, chanceLines,
+      // Bluff & co : « Pioche N » (refait la main) et dégâts « augmentés selon les Cartes » dans la main (calibré sur les combats réels)
+      drawN: +((String(c.d || c.desc || '').match(/Pioche (\d+)/i) || [])[1] || 0), handScale: /augment[ée]s selon les Cartes/i.test(String(c.d || c.desc || '')),
       dmgLines: eff.filter(isDmg),
       isSustain: eff.some(l => ['heal', 'healPct', 'shieldHp', 'shieldLvl'].includes(l.k)) && !eff.some(isDmg),
       hasDmg: eff.some(l => isDmg(l) || l.k === 'bomb' || l.k === 'dmgCasterHp'),
@@ -379,7 +384,7 @@
         if (T.apNow) { ap += T.apNow; T.apNow = 0; } // PA gagnés tout de suite (Précipitation)
         if (P.hp <= 0 && !saved()) return result(false, round);
         ap -= cost(pick); if (!pick.weapon) T.seal = 0;
-        if (pick.weapon) T.weaponUsed = true; else { hand.splice(hand.indexOf(pick), 1); discard.push(pick); }
+        if (pick.weapon) T.weaponUsed = true; else { hand.splice(hand.indexOf(pick), 1); discard.push(pick); if (pick.drawN) { if (pick.handScale && HAND_DISCARD) { while (hand.length) discard.push(hand.pop()); } for (let k = 0; k < Math.min(pick.drawN, DRAW_EFF) && hand.length < 9; k++) { const c2 = draw(); if (!c2) break; hand.push(c2); } } }
       }
       if (!mons.some(m => m.alive)) return result(true, round);
       // PA comptés : sinon il te pulvérise
@@ -498,7 +503,7 @@
     function valueOf(c) {
       let v = 0;
       if (c.hasDmg) {
-        const raw = dmgCardValue(c, T.buffP, T.buffC, T.dmgPct);
+        const raw = dmgCardValue(c, T.buffP, T.buffC, T.dmgPct) * (c.handScale ? 1 + HAND_K * Math.max(0, hand.length - 1) : 1) * (c.drawN ? 1.25 : 1);
         const tot = mons.filter(m => m.alive).reduce((a, m) => a + m.hp + m.shield, 0);
         v += Math.min(raw, tot);
       }
@@ -607,7 +612,7 @@
       const lines = crit && c.crit ? c.crit : c.eff;
       if (PK && c.hasDmg) { C.att++; C.cur = { portal: PK === 'eliotrope' && C.att % 2 === 0, lance: PK === 'forgelance' && !C.firstDone && !c.weapon }; } else C.cur = null;
       C.inTurn = true;
-      let luck = 1; if (ECA && !c.weapon && c.hasDmg) { const r = RND(); luck = r < 0.32 ? 2 : r < 0.34 ? 0.5 : 1; } // Chance d'Ecaflip
+      let luck = c.handScale ? 1 + HAND_K * Math.max(0, hand.length - 1) : 1; if (ECA && !c.weapon && c.hasDmg) { const r = RND(); luck = r < 0.32 ? 2 : r < 0.34 ? 0.5 : 1; } // Chance d'Ecaflip
       const spec = !c.weapon && c.hasDmg && RND() < specP;  // Vision spectrale : tout le sort est doublé (toutes cibles et lignes, vérifié dans le journal)
       if (c.hasDmg && !c.weapon) {
         const el = mainEl(c), sh = mv('shockPct', 0);
