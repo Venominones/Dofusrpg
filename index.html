@@ -1455,6 +1455,14 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       if (!it.st || typeof it.st !== 'object') continue;
       (pool[it.s] = pool[it.s] || []).push(it);
     }
+    // Même objet à plusieurs fusions : la plus haute est toujours au moins aussi bonne (la fusion n'augmente que les stats positives).
+    // On ne garde donc que la meilleure (le jeu interdit aussi deux anneaux identiques) ; sinon l'optimiseur pouvait proposer un Dofus normal alors qu'on l'a en +5.
+    for (const t in pool) {
+      const byId = {};
+      for (const it of pool[t]) (byId[it.id] = byId[it.id] || []).push(it);
+      const keep = 1;
+      pool[t] = [].concat(...Object.values(byId).map(l => l.sort((a, b) => (b.f || 0) - (a.f || 0)).slice(0, keep)));
+    }
     return pool;
   }
 
@@ -1524,6 +1532,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     }
     const ids = SLOTS.filter(s => s[1] === 'dofus').map(s => gear[s[0]] && gear[s[0]].id).filter(Boolean);
     if (new Set(ids).size !== ids.length) return false;
+    if (gear.anneau1 && gear.anneau2 && gear.anneau1.id === gear.anneau2.id) return false; // deux anneaux identiques interdits par le jeu
     if (gear.arme && gear.arme.w && gear.arme.w.twoHanded && gear.bouclier) return false;
     return true;
   }
