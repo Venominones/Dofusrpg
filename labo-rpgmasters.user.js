@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.11.1
+// @version      2.11.2
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -882,9 +882,9 @@
       const k = monsterKey(f);
       const m = db.monsters[k];
       const ctx = Object.keys(context).length ? JSON.stringify(context) : null;
-      if (!m) db.monsters[k] = { name: f.name, monsterId: f.monsterId, level: f.level, grade: f.grade, hpMin: f.maxHp, hpMax: f.maxHp, atk: f.atk, element: f.element, pattern, stats, isBoss: !!f.isBoss, xp: f.xp, gfx: f.gfx || f.look || f.img || f.icon || null, seen: 1, ctx: ctx ? [ctx] : [] };
+      if (!m) db.monsters[k] = { name: f.name, monsterId: f.monsterId, level: f.level, grade: f.grade, hpMin: f.maxHp, hpMax: f.maxHp, atk: f.atk, element: f.element, pattern, stats, isBoss: !!f.isBoss, xp: f.xp, gfx: imgField(f), seen: 1, ctx: ctx ? [ctx] : [] };
       else {
-        m.hpMin = Math.min(m.hpMin, f.maxHp); m.hpMax = Math.max(m.hpMax, f.maxHp); m.seen = (m.seen || 0) + 1; m.isBoss = m.isBoss || !!f.isBoss; if (!m.gfx) m.gfx = f.gfx || f.look || f.img || f.icon || null;
+        m.hpMin = Math.min(m.hpMin, f.maxHp); m.hpMax = Math.max(m.hpMax, f.maxHp); m.seen = (m.seen || 0) + 1; m.isBoss = m.isBoss || !!f.isBoss; if (!m.gfx) m.gfx = imgField(f);
         if (ctx && !(m.ctx || []).includes(ctx)) (m.ctx = m.ctx || []).push(ctx);
       }
       // champs inconnus d'un boss : on garde un échantillon pour analyse
@@ -961,6 +961,38 @@
     if (changed) try { localStorage.setItem(SETS_KEY, JSON.stringify(sets)); } catch (e) {}
   }
   setInterval(readSetsPage, 3000);
+  // v2.11.2 : « Équipements enregistrés » (page Personnage) lus à l'écran : nom, objets, caracs. Le jeu ne les envoie pas dans les données de la page.
+  const PRESETS_DOM_KEY = 'labo-presets-dom';
+  const CAR_FR = { vita: 'vitalite', vitalite: 'vitalite', 'vitalité': 'vitalite', chance: 'chance', force: 'force', intel: 'intelligence', intelligence: 'intelligence', agi: 'agilite', 'agilité': 'agilite', agilite: 'agilite', sagesse: 'sagesse', sag: 'sagesse' };
+  function readPresetsPage() {
+    if (!/\/personnage/.test(location.pathname) || !document.body) return;
+    const head = [...document.querySelectorAll('h1,h2,h3,h4,h5,h6,div,span,p')].find(e => e.children.length === 0 && /^\s*équipements enregistrés\s*$/i.test(e.textContent || ''));
+    if (!head) return;
+    let box = head; for (let k = 0; k < 6 && box && box.querySelectorAll('input').length < 2; k++) box = box.parentElement;
+    if (!box) return;
+    const out = [];
+    for (const inp of box.querySelectorAll('input')) {
+      let card = inp; for (let k = 0; k < 5 && card.parentElement && card.parentElement.querySelectorAll('input').length === 1; k++) card = card.parentElement;
+      const leaves = [...card.querySelectorAll('*')].filter(e => e.children.length === 0).map(e => (e.textContent || '').trim()).filter(Boolean);
+      const listTxt = leaves.find(x => /^\d+\s*objets?\s*:/i.test(x)) || '';
+      const items = listTxt ? listTxt.replace(/^\d+\s*objets?\s*:\s*/i, '').split(/\s*,\s*/).map(s => s.replace(/[.…]+$/, '').trim()).filter(Boolean) : [];
+      const car = {}; for (const x of leaves) for (const m of x.matchAll(/(Vita(?:lité)?|Chance|Force|Intel(?:ligence)?|Agi(?:lité)?|Sag(?:esse)?)\s+(\d+)/gi)) { const k2 = CAR_FR[m[1].toLowerCase()]; if (k2) car[k2] = +m[2]; }
+      out.push({ name: (inp.value || '').trim() || (inp.placeholder || '').trim(), n: +((listTxt.match(/^(\d+)/) || [])[1] || 0), items, car, empty: !items.length });
+    }
+    if (out.length) { try { localStorage.setItem(PRESETS_DOM_KEY, JSON.stringify({ t: Date.now(), presets: out })); } catch (e) {} }
+  }
+  setInterval(readPresetsPage, 3000);
+  function presetsFromDom(I, best) {
+    let raw = null; try { raw = JSON.parse(localStorage.getItem(PRESETS_DOM_KEY) || 'null'); } catch (e) {}
+    if (!raw || !raw.presets) return null;
+    const byName = {}; const add = (it, f) => { if (!it || !it.n) return; const o = byName[it.n]; if (!o || (f || 0) > o.f) byName[it.n] = { id: it.id, s: it.s, f: f || 0 }; };
+    for (const e of (I.entries || [])) add(e.item, e.fusion); for (const e of (I.slots || [])) add(e.item, e.fusion); for (const it of ((best && best.items) || [])) if (!byName[it.n]) add(it, 0);
+    return raw.presets.map((p, i) => {
+      const gear = {}, cnt = {}; const miss = [];
+      for (const nm of p.items) { const x = byName[nm]; if (!x) { miss.push(nm); continue; } let slot = x.s; if (x.s === 'anneau') slot = gear.anneau1 ? 'anneau2' : 'anneau1'; else if (x.s === 'dofus') { let k = 1; while (gear['dofus' + k] && k < 6) k++; slot = 'dofus' + k; } if (!gear[slot]) gear[slot] = { id: x.id, f: x.f }; }
+      return { i, name: p.name || ('Équipement ' + (i + 1)), gear, alloc: Object.keys(p.car || {}).length ? p.car : null, src: 'dom', missing: miss, listed: p.n, t: raw.t };
+    });
+  }
 
 
   // ---------- Panoplies d'origine (base publique DofusDB : mêmes identifiants que le jeu) ----------
@@ -1385,7 +1417,7 @@
     let dofusSets = null; try { const ids = ((best && best.items) || []).map(x => x.setId).concat((I.sets || []).map(x => x.id)).concat((I.entries || []).map(e => e.item && e.item.setId).concat((I.slots || []).map(e => e.item && e.item.setId))); dofusSets = await fetchDofusSets(ids.filter(Boolean)); } catch (e) {}
     const it = (x) => ({ id: x.item.id, n: x.item.n, lvl: x.item.lvl, s: x.item.s, r: x.item.r, setId: x.item.setId || null, st: x.item.st, w: x.item.w || null, icon: x.item.icon || x.item.gfx || null });
     return {
-      meta: { profile: PROFILE, forge, companion, level: I.level || 200, prestige: H.prestige || 0, breedId: D.breedId, deckSize: D.deckSize, discordBonus: 5, scrolls: I.scrollValues || {}, rows: Pp.rows.map(r => ({ key: r.key, base: r.base, bonus: r.bonus, tiers: r.tiers })), pointsFree: Pp.pointsFree, decks: D.initialDecks, deckNames: D.initialNames, active: D.initialActive, ranked: D.initialRanked || null, presets: (() => { try { return findPresets(perso); } catch (e) { return null; } })(), presetsRaw: (() => { try { return presetsRaw(perso); } catch (e) { return null; } })() },
+      meta: { profile: PROFILE, forge, companion, level: I.level || 200, prestige: H.prestige || 0, breedId: D.breedId, deckSize: D.deckSize, discordBonus: 5, scrolls: I.scrollValues || {}, rows: Pp.rows.map(r => ({ key: r.key, base: r.base, bonus: r.bonus, tiers: r.tiers })), pointsFree: Pp.pointsFree, decks: D.initialDecks, deckNames: D.initialNames, active: D.initialActive, ranked: D.initialRanked || null, presets: (() => { try { return findPresets(perso) || presetsFromDom(I, best); } catch (e) { return null; } })(), presetsRaw: (() => { try { return presetsRaw(perso); } catch (e) { return null; } })(), diag: (() => { try { const s = Object.values(db.bossSamples || {})[0]; const o = s ? JSON.parse(s) : null; let pd = null; try { pd = JSON.parse(localStorage.getItem('labo-presets-dom') || 'null'); } catch (e) {} return { fighterKeys: o ? Object.keys(o) : null, mech: best && best.diag || null, presetsDom: pd ? { t: pd.t, n: (pd.presets || []).length } : null }; } catch (e) { return null; } })() },
       worn: I.slots.filter(s => s.item).map(s => Object.assign(it(s), { slot: s.slot, f: s.fusion })),
       items: I.entries.map(e => Object.assign(it(e), { f: e.fusion, q: e.qty })),
       cards: D.collection.map(c => ({ key: c.key, id: c.card.id, n: c.card.n, ap: c.card.ap, cc: c.card.cc, cls: c.card.cls, r: c.card.r, f: c.card.f, eff: c.card.eff, crit: c.card.crit || null, sig: !!c.card.sig, d: (c.card.d || '').slice(0, 180), ic: cardIcon(c.card) })),
@@ -1435,6 +1467,13 @@
     return out;
   }
   // v2.11 : image des sorts (le n° d'image diffère du n° de sort) et équipements enregistrés de la page Personnage
+  // n° ou chemin d'image d'un objet du jeu (monstre, boss) : premier champ qui y ressemble
+  function imgField(o) {
+    if (!o || typeof o !== 'object') return null;
+    for (const k of ['gfx', 'gfxId', 'look', 'img', 'image', 'icon', 'sprite', 'skin', 'avatar', 'pic']) { const v = o[k]; if (v != null && v !== '' && (typeof v === 'number' || typeof v === 'string')) return v; }
+    for (const k in o) { const v = o[k]; if ((typeof v === 'number' || typeof v === 'string') && /gfx|look|img|icon|sprite|skin|avatar|bone|pic/i.test(k)) return v; if (typeof v === 'string' && /\/img\/monsters\//.test(v)) return v; }
+    return null;
+  }
   function cardIcon(c) {
     if (!c) return null;
     for (const k of ['icon', 'img', 'image', 'gfx', 'sprite', 'pic', 'iconId', 'spellIcon', 'spellId', 'sid']) { const v = c[k]; if (v != null && v !== '' && (typeof v === 'number' || typeof v === 'string')) return String(v); }
@@ -1528,8 +1567,8 @@
     if (C) {
       // les mécaniques ne sont révélées qu'aux persos qui ont battu le boss : on garde celles déjà connues (perso principal)
       const prev = Object.fromEntries((out.mech || []).map(c => [c.id, c]));
-      out.mech = C.cards.map(c => { const m = (c.m || []).map(e => parseMechEntry(e.n, e.x, e.w)); const p = prev[c.id]; return { id: c.id, n: c.n, l: c.l, t: c.t, u: c.u ? 1 : (p && p.u) || 0, v: c.v, g: c.gfx || c.icon || c.img || c.image || (p && p.g) || null, m: m.length ? m : (p && p.m) || [] }; });
-      out.tagLabels = C.tagLabels; out.t = Date.now();
+      out.mech = C.cards.map(c => { const m = (c.m || []).map(e => parseMechEntry(e.n, e.x, e.w)); const p = prev[c.id]; return { id: c.id, n: c.n, l: c.l, t: c.t, u: c.u ? 1 : (p && p.u) || 0, v: c.v, g: imgField(c) || (p && p.g) || null, m: m.length ? m : (p && p.m) || [] }; });
+      out.tagLabels = C.tagLabels; out.t = Date.now(); try { out.diag = { mechKeys: Object.keys(C.cards[0] || {}), mechSample: JSON.stringify(C.cards[0]).slice(0, 1500) }; } catch (e) {}
     }
     if (full) {
       const bp = await rsc('/bestiaire');
