@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.11.11
+// @version      2.12.0
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -1379,10 +1379,10 @@
     try {
       const req = args[0], init = args[1] || {};
       const method = (init.method || (req && req.method) || 'GET').toUpperCase();
-      if (method === 'POST') res.clone().text().then(t => { detectProfile(t); onPayload(t); try { if (/\/bestiaire/.test(location.pathname)) { const L = JSON.parse(localStorage.getItem('labo-sniff') || '[]'); const h = {}; try { const H = init.headers || {}; for (const k in H) if (/^next-|^rsc|content-type/i.test(k)) h[k] = String(H[k]).slice(0, 300); } catch (e) {} L.unshift({ t: Date.now(), url: String(req && req.url || req).slice(0, 300), body: typeof init.body === 'string' ? init.body.slice(0, 600) : null, headers: h, resp: t.slice(0, 1500) }); localStorage.setItem('labo-sniff', JSON.stringify(L.slice(0, 4))); } } catch (e) {} }).catch(() => {});
+      if (method === 'POST') res.clone().text().then(t => { detectProfile(t); onPayload(t); }).catch(() => {});
       else if (/x-component/.test(res.headers && res.headers.get ? (res.headers.get('content-type') || '') : '')) res.clone().text().then(t => { detectProfile(t); onPayload(t); }).catch(() => {});
       const u0 = String(req && req.url || req);
-      if (/\/bestiaire/.test(location.pathname) && !/\/api\/(chat|file)/.test(u0)) res.clone().text().then(t => { const got = harvestItems(t, method + ' ' + u0.slice(0, 120)); try { const L = JSON.parse(localStorage.getItem('labo-sniff') || '[]'); L.unshift({ t: Date.now(), m: method, url: u0.slice(0, 300), ct: res.headers.get('content-type'), len: t.length, lvl: (t.match(/"lvl"/g) || []).length, got, body: typeof init.body === 'string' ? init.body.slice(0, 400) : null, resp: t.slice(0, 800) }); localStorage.setItem('labo-sniff', JSON.stringify(L.slice(0, 15))); } catch (e) {} }).catch(() => {}); // rafraîchissements (ex. Auto AFK après rechargement)
+      if (/\/bestiaire/.test(location.pathname) && /onglet=objets/.test(u0)) res.clone().text().then(t => harvestItems(t, 'page')).catch(() => {});
     } catch (e) {}
     return res;
   };
@@ -1419,7 +1419,7 @@
     let dofusSets = null; try { const ids = ((best && best.items) || []).map(x => x.setId).concat((I.sets || []).map(x => x.id)).concat((I.entries || []).map(e => e.item && e.item.setId).concat((I.slots || []).map(e => e.item && e.item.setId))); dofusSets = await fetchDofusSets(ids.filter(Boolean)); } catch (e) {}
     const it = (x) => ({ id: x.item.id, n: x.item.n, lvl: x.item.lvl, s: x.item.s, r: x.item.r, setId: x.item.setId || null, st: x.item.st, w: x.item.w || null, icon: x.item.icon || x.item.gfx || null });
     return {
-      meta: { scriptV: (typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) || '2.11.10', profile: PROFILE, forge, companion, level: I.level || 200, prestige: H.prestige || 0, breedId: D.breedId, deckSize: D.deckSize, discordBonus: 5, scrolls: I.scrollValues || {}, rows: Pp.rows.map(r => ({ key: r.key, base: r.base, bonus: r.bonus, tiers: r.tiers })), pointsFree: Pp.pointsFree, decks: D.initialDecks, deckNames: D.initialNames, active: D.initialActive, ranked: D.initialRanked || null, presets: (() => { try { return findPresets(perso) || presetsFromDom(I, best); } catch (e) { return null; } })(), presetsRaw: (() => { try { return presetsRaw(perso); } catch (e) { return null; } })(), diag: (() => { try { const s = Object.values(db.bossSamples || {})[0]; const o = s ? JSON.parse(s) : null; let pd = null; try { pd = JSON.parse(localStorage.getItem('labo-presets-dom') || 'null'); } catch (e) {} let ai = null; try { ai = JSON.parse(localStorage.getItem('labo-allitems-diag') || 'null'); } catch (e) {} let live = null; try { const L = JSON.parse(localStorage.getItem('labo-allitems-live') || 'null'); live = L ? { n: (L.items || []).length, log: L.log } : null; } catch (e) {} const objRaw = localStorage.getItem('labo-objets-raw'); let sn = null; try { sn = JSON.parse(localStorage.getItem('labo-sniff') || 'null'); } catch (e) {} return { allItems: ai, live, objRaw, sniff: sn, fighterKeys: o ? Object.keys(o) : null, mech: best && best.diag || null, presetsDom: pd ? { t: pd.t, n: (pd.presets || []).length } : null }; } catch (e) { return null; } })() },
+      meta: { scriptV: (typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) || '2.11.10', profile: PROFILE, forge, companion, level: I.level || 200, prestige: H.prestige || 0, breedId: D.breedId, deckSize: D.deckSize, discordBonus: 5, scrolls: I.scrollValues || {}, rows: Pp.rows.map(r => ({ key: r.key, base: r.base, bonus: r.bonus, tiers: r.tiers })), pointsFree: Pp.pointsFree, decks: D.initialDecks, deckNames: D.initialNames, active: D.initialActive, ranked: D.initialRanked || null, presets: (() => { try { return findPresets(perso) || presetsFromDom(I, best); } catch (e) { return null; } })(), diag: (() => { try { let ai = null; try { ai = JSON.parse(localStorage.getItem('labo-allitems-diag') || 'null'); } catch (e) {} return { allItems: ai }; } catch (e) { return null; } })() },
       worn: I.slots.filter(s => s.item).map(s => Object.assign(it(s), { slot: s.slot, f: s.fusion })),
       items: I.entries.map(e => Object.assign(it(e), { f: e.fusion, q: e.qty })),
       cards: D.collection.map(c => ({ key: c.key, id: c.card.id, n: c.card.n, ap: c.card.ap, cc: c.card.cc, cls: c.card.cls, r: c.card.r, f: c.card.f, eff: c.card.eff, crit: c.card.crit || null, sig: !!c.card.sig, d: (c.card.d || '').slice(0, 180), ic: cardIcon(c.card) })),
@@ -1618,6 +1618,8 @@
     if (s && s.length !== harvestDocument.len) { harvestDocument.len = s.length; harvestItems('<x>' + s + '</x>', 'page ' + location.search); }
   }
   setInterval(harvestDocument, 4000);
+  // v2.12 : purge des journaux de diagnostic des versions précédentes (dont des messages du chat captés par erreur)
+  try { for (const k of ['labo-sniff', 'labo-objets-raw', 'labo-allitems']) localStorage.removeItem(k); } catch (e) {}
   // Le serveur plafonne n à 200 objets par réponse : on découpe par emplacement, puis par tranche de niveau (bisection),
   // puis par rareté, jusqu'à ce que chaque réponse contienne tout ce qu'elle annonce (« shown »).
   async function fetchAllItems() {

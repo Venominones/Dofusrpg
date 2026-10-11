@@ -2087,7 +2087,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
 <script type="text/plain" id="src-userscript">// ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.11.11
+// @version      2.12.0
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -3465,10 +3465,10 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     try {
       const req = args[0], init = args[1] || {};
       const method = (init.method || (req && req.method) || 'GET').toUpperCase();
-      if (method === 'POST') res.clone().text().then(t => { detectProfile(t); onPayload(t); try { if (/\/bestiaire/.test(location.pathname)) { const L = JSON.parse(localStorage.getItem('labo-sniff') || '[]'); const h = {}; try { const H = init.headers || {}; for (const k in H) if (/^next-|^rsc|content-type/i.test(k)) h[k] = String(H[k]).slice(0, 300); } catch (e) {} L.unshift({ t: Date.now(), url: String(req && req.url || req).slice(0, 300), body: typeof init.body === 'string' ? init.body.slice(0, 600) : null, headers: h, resp: t.slice(0, 1500) }); localStorage.setItem('labo-sniff', JSON.stringify(L.slice(0, 4))); } } catch (e) {} }).catch(() => {});
+      if (method === 'POST') res.clone().text().then(t => { detectProfile(t); onPayload(t); }).catch(() => {});
       else if (/x-component/.test(res.headers && res.headers.get ? (res.headers.get('content-type') || '') : '')) res.clone().text().then(t => { detectProfile(t); onPayload(t); }).catch(() => {});
       const u0 = String(req && req.url || req);
-      if (/\/bestiaire/.test(location.pathname) && !/\/api\/(chat|file)/.test(u0)) res.clone().text().then(t => { const got = harvestItems(t, method + ' ' + u0.slice(0, 120)); try { const L = JSON.parse(localStorage.getItem('labo-sniff') || '[]'); L.unshift({ t: Date.now(), m: method, url: u0.slice(0, 300), ct: res.headers.get('content-type'), len: t.length, lvl: (t.match(/"lvl"/g) || []).length, got, body: typeof init.body === 'string' ? init.body.slice(0, 400) : null, resp: t.slice(0, 800) }); localStorage.setItem('labo-sniff', JSON.stringify(L.slice(0, 15))); } catch (e) {} }).catch(() => {}); // rafraîchissements (ex. Auto AFK après rechargement)
+      if (/\/bestiaire/.test(location.pathname) && /onglet=objets/.test(u0)) res.clone().text().then(t => harvestItems(t, 'page')).catch(() => {});
     } catch (e) {}
     return res;
   };
@@ -3505,7 +3505,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     let dofusSets = null; try { const ids = ((best && best.items) || []).map(x => x.setId).concat((I.sets || []).map(x => x.id)).concat((I.entries || []).map(e => e.item && e.item.setId).concat((I.slots || []).map(e => e.item && e.item.setId))); dofusSets = await fetchDofusSets(ids.filter(Boolean)); } catch (e) {}
     const it = (x) => ({ id: x.item.id, n: x.item.n, lvl: x.item.lvl, s: x.item.s, r: x.item.r, setId: x.item.setId || null, st: x.item.st, w: x.item.w || null, icon: x.item.icon || x.item.gfx || null });
     return {
-      meta: { scriptV: (typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) || '2.11.10', profile: PROFILE, forge, companion, level: I.level || 200, prestige: H.prestige || 0, breedId: D.breedId, deckSize: D.deckSize, discordBonus: 5, scrolls: I.scrollValues || {}, rows: Pp.rows.map(r => ({ key: r.key, base: r.base, bonus: r.bonus, tiers: r.tiers })), pointsFree: Pp.pointsFree, decks: D.initialDecks, deckNames: D.initialNames, active: D.initialActive, ranked: D.initialRanked || null, presets: (() => { try { return findPresets(perso) || presetsFromDom(I, best); } catch (e) { return null; } })(), presetsRaw: (() => { try { return presetsRaw(perso); } catch (e) { return null; } })(), diag: (() => { try { const s = Object.values(db.bossSamples || {})[0]; const o = s ? JSON.parse(s) : null; let pd = null; try { pd = JSON.parse(localStorage.getItem('labo-presets-dom') || 'null'); } catch (e) {} let ai = null; try { ai = JSON.parse(localStorage.getItem('labo-allitems-diag') || 'null'); } catch (e) {} let live = null; try { const L = JSON.parse(localStorage.getItem('labo-allitems-live') || 'null'); live = L ? { n: (L.items || []).length, log: L.log } : null; } catch (e) {} const objRaw = localStorage.getItem('labo-objets-raw'); let sn = null; try { sn = JSON.parse(localStorage.getItem('labo-sniff') || 'null'); } catch (e) {} return { allItems: ai, live, objRaw, sniff: sn, fighterKeys: o ? Object.keys(o) : null, mech: best && best.diag || null, presetsDom: pd ? { t: pd.t, n: (pd.presets || []).length } : null }; } catch (e) { return null; } })() },
+      meta: { scriptV: (typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) || '2.11.10', profile: PROFILE, forge, companion, level: I.level || 200, prestige: H.prestige || 0, breedId: D.breedId, deckSize: D.deckSize, discordBonus: 5, scrolls: I.scrollValues || {}, rows: Pp.rows.map(r => ({ key: r.key, base: r.base, bonus: r.bonus, tiers: r.tiers })), pointsFree: Pp.pointsFree, decks: D.initialDecks, deckNames: D.initialNames, active: D.initialActive, ranked: D.initialRanked || null, presets: (() => { try { return findPresets(perso) || presetsFromDom(I, best); } catch (e) { return null; } })(), diag: (() => { try { let ai = null; try { ai = JSON.parse(localStorage.getItem('labo-allitems-diag') || 'null'); } catch (e) {} return { allItems: ai }; } catch (e) { return null; } })() },
       worn: I.slots.filter(s => s.item).map(s => Object.assign(it(s), { slot: s.slot, f: s.fusion })),
       items: I.entries.map(e => Object.assign(it(e), { f: e.fusion, q: e.qty })),
       cards: D.collection.map(c => ({ key: c.key, id: c.card.id, n: c.card.n, ap: c.card.ap, cc: c.card.cc, cls: c.card.cls, r: c.card.r, f: c.card.f, eff: c.card.eff, crit: c.card.crit || null, sig: !!c.card.sig, d: (c.card.d || '').slice(0, 180), ic: cardIcon(c.card) })),
@@ -3704,6 +3704,8 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     if (s && s.length !== harvestDocument.len) { harvestDocument.len = s.length; harvestItems('<x>' + s + '</x>', 'page ' + location.search); }
   }
   setInterval(harvestDocument, 4000);
+  // v2.12 : purge des journaux de diagnostic des versions précédentes (dont des messages du chat captés par erreur)
+  try { for (const k of ['labo-sniff', 'labo-objets-raw', 'labo-allitems']) localStorage.removeItem(k); } catch (e) {}
   // Le serveur plafonne n à 200 objets par réponse : on découpe par emplacement, puis par tranche de niveau (bisection),
   // puis par rareté, jusqu'à ce que chaque réponse contienne tout ce qu'elle annonce (« shown »).
   async function fetchAllItems() {
@@ -4024,7 +4026,7 @@ function syncSlots(v){document.querySelectorAll('.slots').forEach(x=>x.value=v)}
 function baseFor(p){if(p!=='saison')return SNAP;let best=null;try{const m=JSON.parse(dsGet('labo-data')||'null');best=m&&m.bestiary}catch(e){}return Object.assign({},SNAP,{fights:[],floors:[],bestiary:best||SNAP.bestiary})}
 // Bestiaire : les mécaniques révélées au perso principal servent aussi au perso de saison
 function mergeBest(a,b){if(!a)return b;if(!b)return a;const prev=Object.fromEntries((a.mech||[]).map(c=>[c.id,c]));const mech=(b.mech||[]).map(c=>{const p=prev[c.id];return (c.m&&c.m.length)||!p?c:Object.assign({},c,{m:p.m,u:p.u})});return Object.assign({},a,b,{mech})}
-function loadProfile(){DATA=SNAP;try{const s=dsGet(dataKey(LPROF));if(s){const d=JSON.parse(s);if(d&&d.items&&d.cards){const b=baseFor(LPROF);DATA=mergeData(b,d);DATA.bestiary=mergeBest(b.bestiary,d.bestiary)}}}catch(e){}}
+function loadProfile(){try{for(const p of ['principal','saison']){const s=dsGet(dataKey(p));if(s&&/"diag":|"presetsRaw":/.test(s)){const d=JSON.parse(s);if(d&&d.meta){delete d.meta.diag;delete d.meta.presetsRaw;dsSet(dataKey(p),JSON.stringify(d))}}}}catch(e){}DATA=SNAP;try{const s=dsGet(dataKey(LPROF));if(s){const d=JSON.parse(s);if(d&&d.items&&d.cards){const b=baseFor(LPROF);DATA=mergeData(b,d);DATA.bestiary=mergeBest(b.bestiary,d.bestiary)}}}catch(e){}}
 loadProfile();
 
 const fmt=(n,d=0)=>Number(n).toLocaleString('fr-FR',{minimumFractionDigits:d,maximumFractionDigits:d});
@@ -4365,7 +4367,7 @@ function setupData(){
 function flash(t){let el=document.getElementById('laboFlash');if(!el){el=document.createElement('div');el.id='laboFlash';el.setAttribute('role','status');el.style.cssText='position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:50;max-width:min(560px,92vw);padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--panel,var(--bg));box-shadow:0 6px 20px rgba(0,0,0,.35);font-size:.92rem';document.body.appendChild(el)}el.textContent=t;el.hidden=false;clearTimeout(flash.t);flash.t=setTimeout(()=>el.hidden=true,6000)}
 function looksExport(t){return typeof t==='string'&&t.length>200&&/^\s*\{/.test(t)&&t.includes('"meta"')&&t.includes('"cards"')}
 function importText(txt){
-    try{const d=JSON.parse(txt);if(!d.items||!d.cards||!d.worn||!d.meta)throw new Error('champs manquants');
+    try{const d=JSON.parse(txt);if(!d.items||!d.cards||!d.worn||!d.meta)throw new Error('champs manquants');delete d.meta.diag;delete d.meta.presetsRaw;
       const pr=d.meta.profile==='saison'?'saison':d.meta.profile==='principal'?'principal':LPROF;LPROF=pr;try{const prev=JSON.parse(dsGet(dataKey(pr))||'null');if(prev&&prev.cards){mergeHistory(prev,d);const list=diffImports(prev,d);localStorage.setItem('labo-changes-'+pr,JSON.stringify({from:prev._importedAt||0,to:Date.now(),list}))}d._importedAt=Date.now()}catch(e){}let saveErr=null;try{localStorage.setItem('labo-lprofile',pr)}catch(e){}try{dsSet(dataKey(pr),JSON.stringify(d))}catch(e){saveErr=e;DS[dataKey(pr)]=JSON.stringify(d)}
       loadProfile();init();const okMsg=`Importé pour le perso ${LPROF==='saison'?'Héroïque':'principal'} : ${d.items.length} objets, ${d.cards.length} cartes, ${DATA.monsters.length} monstres connus, ${DATA.fights.length} combats.`+(saveErr?' Attention : le navigateur a refusé de l\'enregistrer (stockage plein), il sera perdu en fermant la page.':'');$('#importMsg').textContent=okMsg;flash(okMsg);$('#importBox').value=''}
     catch(e){$('#importMsg').textContent='Export illisible ('+e.message+'). Recopie la sortie complète du script.';flash('Export illisible : recopie la sortie complète du script.')}};
