@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.9.9
+// @version      2.10.0
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -1383,7 +1383,7 @@
     let companion = null; if (PROFILE !== 'saison') for (const path of ['/compagnon', '/companion']) { try { const cp = await rsc(path); const holder = cp.find(p => p && p.initial && typeof p.initial === 'object' && ('kibble' in p.initial || 'bonusPct' in p.initial)); const C = (holder && holder.initial) || cp.find(p => p && typeof p === 'object' && !Array.isArray(p) && Object.keys(p).some(k => /croq|kibble|compan|pet|food/i.test(k))) || cp.find(p => p && typeof p === 'object' && 'level' in p && Object.keys(p).some(k => /bonus|pct|percent|mult/i.test(k))); if (C) { companion = { path }; for (const [k, v] of Object.entries(C)) { if (typeof v === 'number' || typeof v === 'string' && v.length < 60) companion[k] = v; } const pk = Object.keys(C).find(k => /bonus|pct|percent|statmult|mult/i.test(k) && typeof C[k] === 'number'); if ('bonusPct' in C) companion.pct = C.bonusPct; else if (pk) companion.pct = C[pk]; companion.raw = JSON.stringify(C).slice(0, 2000); break; } } catch (e) {} }
     let vitrines = null; try { vitrines = await fetchVitrines(false); } catch (e) {}
     let dofusSets = null; try { const ids = ((best && best.items) || []).map(x => x.setId).concat((I.sets || []).map(x => x.id)).concat((I.entries || []).map(e => e.item && e.item.setId).concat((I.slots || []).map(e => e.item && e.item.setId))); dofusSets = await fetchDofusSets(ids.filter(Boolean)); } catch (e) {}
-    const it = (x) => ({ id: x.item.id, n: x.item.n, lvl: x.item.lvl, s: x.item.s, r: x.item.r, setId: x.item.setId || null, st: x.item.st, w: x.item.w || null });
+    const it = (x) => ({ id: x.item.id, n: x.item.n, lvl: x.item.lvl, s: x.item.s, r: x.item.r, setId: x.item.setId || null, st: x.item.st, w: x.item.w || null, icon: x.item.icon || x.item.gfx || null });
     return {
       meta: { profile: PROFILE, forge, companion, level: I.level || 200, prestige: H.prestige || 0, breedId: D.breedId, deckSize: D.deckSize, discordBonus: 5, scrolls: I.scrollValues || {}, rows: Pp.rows.map(r => ({ key: r.key, base: r.base, bonus: r.bonus, tiers: r.tiers })), pointsFree: Pp.pointsFree, decks: D.initialDecks, deckNames: D.initialNames, active: D.initialActive, ranked: D.initialRanked || null },
       worn: I.slots.filter(s => s.item).map(s => Object.assign(it(s), { slot: s.slot, f: s.fusion })),
@@ -1420,7 +1420,7 @@
       try {
         const t = await rawRsc('/vitrines/' + id);
         const its = []; let i = -1;
-        while ((i = t.indexOf('"item":{', i + 1)) >= 0) { try { const o = JSON.parse(jsonAt(t, i + 7)); if (o && o.id && o.st) { items[o.id] = { id: o.id, n: o.n, lvl: o.lvl, s: o.s, r: o.r, st: o.st, w: o.w || null, setId: o.setId || null }; its.push(o.id); } } catch (e) {} }
+        while ((i = t.indexOf('"item":{', i + 1)) >= 0) { try { const o = JSON.parse(jsonAt(t, i + 7)); if (o && o.id && o.st) { items[o.id] = { id: o.id, n: o.n, lvl: o.lvl, s: o.s, r: o.r, st: o.st, w: o.w || null, setId: o.setId || null, icon: o.icon || o.gfx || null }; its.push(o.id); } } catch (e) {} }
         const deck = [...t.matchAll(/\["\$","div","(\d+)",\{"type":"\$undefined","onClick":"\$undefined","disabled":"\$undefined","title":"((?:[^"\\]|\\.)*)"[\s\S]{0,1500}?"aria-label":"(\d+) PA"[\s\S]{0,900}?line-clamp-2","children":"((?:[^"\\]|\\.)*)"\}\],\["\$","\$L[0-9a-z]+",null,\{"lines":(\[[^\]]*\])/g)].map(m => { const c = { id: +m[1], n: m[4], ap: +m[3], lines: (() => { try { return JSON.parse(m[5]); } catch (e) { return []; } })() }; cards[c.id] = c; return c.id; });
         const codes = [...new Set([...t.matchAll(/DM-[ES]-[0-9A-Z]+-[0-9A-Z]{4}/g)].map(m => m[0]))];
         const head = (t.match(/"h1"[^\]]{0,300}"children":"([^"]+)"/) || [])[1] || '';
