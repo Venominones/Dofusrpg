@@ -6,29 +6,28 @@
 <title>Labo RpgMasters</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@500;700&family=Alegreya+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
 /* Layout : établi de forge — barre d'onglets, un panneau de réglages à gauche, résultats à droite ; une colonne sur téléphone */
 :root{
-  --bg:#efe5c9; --panel:#f8f1dd; --ink:#3a2a17; --muted:#77603f; --line:#dccb9f; --line2:#b99a5f;
-  --gold:#c4661a; --gold-soft:#f4dfae; --good:#4d7a1a; --warn:#b5651d; --bad:#a8322a;
-  --neutre:#7d766c; --terre:#8f5f22; --feu:#c2462f; --eau:#2f6fb6; --air:#3d8a3a;
-  --frame:#4b3421; --frame2:#2f2014; --frame-ink:#f3e4bd; --page:#e3d4ad;
-  --f-display:"Alegreya SC", "Palatino Linotype", Georgia, serif;
-  --f-body:"Alegreya Sans", "Segoe UI", system-ui, sans-serif;
+  --page:#141a28; --bg:#1b2233; --panel:#212a3e; --ink:#e8ecf4; --muted:#9ba5ba; --line:#2d3650; --line2:#3c4764;
+  --gold:#f3b552; --gold-soft:rgba(243,181,82,.15); --good:#5fd39a; --warn:#f3a95c; --bad:#ff7d88;
+  --neutre:#b5b9c4; --terre:#d9a35f; --feu:#ff8a6b; --eau:#6aa8ff; --air:#62d48c;
+  --frame:#10162299; --btn-a:#f7c262; --btn-b:#ee8b32; --btn-ink:#1d1406; --hi:#283149; --glow1:rgba(98,212,200,.10); --glow2:rgba(243,181,82,.09);
+  --f-display:"Outfit", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Inter", "Segoe UI", system-ui, sans-serif;
   --f-mono:"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
-  color-scheme: light;
+  color-scheme: dark;
 }
-/* Thème « Dofus » : parchemin, cadres en bois, boutons orangés ; une variante nuit en bois sombre (jamais noire) si on la force */
-:root[data-theme="dark"]{
-  --bg:#3a2c1d; --panel:#453624; --ink:#f1e3c2; --muted:#c9b48c; --line:#5d4830; --line2:#7d6240;
-  --gold:#f09a3a; --gold-soft:#5a4024; --good:#9cc45a; --warn:#e8a050; --bad:#f08070;
-  --neutre:#b8b0a4; --terre:#d0a060; --feu:#f08a70; --eau:#80b0f0; --air:#80c880;
-  --frame:#2a1d11; --frame2:#1d140b; --frame-ink:#f3e4bd; --page:#33261a; color-scheme: dark; }
+:root[data-theme="light"]{
+  --page:#e8ebf2; --bg:#f0f2f7; --panel:#f9fafc; --ink:#1c2232; --muted:#5b6478; --line:#d8dde8; --line2:#c2c9d8;
+  --gold:#c4721a; --gold-soft:#fbe8cc; --good:#2f8a55; --warn:#b7661d; --bad:#c23b44;
+  --neutre:#6c6f78; --terre:#94652a; --feu:#c8452f; --eau:#2d68c4; --air:#2f8a48;
+  --frame:#ffffffb3; --btn-a:#f6b452; --btn-b:#e07a22; --btn-ink:#1d1406; --hi:#e9ecf3; --glow1:rgba(60,160,150,.10); --glow2:rgba(230,150,50,.10); color-scheme: light; }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html{margin:0}body{margin:0}
-body{background:var(--page) radial-gradient(ellipse at 50% -10%,#f6edd3 0%,var(--page) 55%,#d5c193 100%) fixed;color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5}
+body{background:radial-gradient(1100px 600px at 0% -10%,var(--glow1),transparent 60%),radial-gradient(1000px 520px at 100% 0%,var(--glow2),transparent 60%),var(--page);background-attachment:fixed;color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5}
 .wrap{max-width:1180px;margin:0 auto;padding-inline:16px;padding-block:20px 48px}
 h1,h2,h3{font-family:var(--f-display);font-weight:700;text-wrap:balance;margin:0;line-height:1.15}
 h1{font-size:clamp(1.7rem,4vw,2.4rem);letter-spacing:.01em}
@@ -161,34 +160,50 @@ textarea{min-height:110px;font-family:var(--f-mono);font-size:.8rem}
 .pre-card h3{margin:0;font-size:1.05rem}.pre-card p{margin:0}
 .pre-det{display:grid;grid-template-columns:minmax(0,430px) minmax(0,1fr);gap:14px;align-items:start}
 @media (max-width:820px){.pre-det{grid-template-columns:1fr}}
-/* --- habillage Dofus --- */
-header.top{background:linear-gradient(180deg,var(--frame),var(--frame2));color:var(--frame-ink);border:2px solid #8a6a3a;border-radius:12px;padding:14px 18px;box-shadow:0 3px 0 #9c7b45,inset 0 1px 0 rgba(255,230,180,.25)}
-header.top p,header.top .eyebrow,.freshness{color:#d9c69c}
-header.top h1{color:#ffd58a;text-shadow:0 2px 0 #2a1a0c}
-nav.tabs{background:linear-gradient(180deg,var(--frame),var(--frame2));border:2px solid #8a6a3a;border-radius:10px;padding:6px;box-shadow:0 2px 0 #9c7b45}
-nav.tabs button{color:#e8d6a8;border-radius:7px}
-nav.tabs button:hover{background:rgba(255,220,160,.1)}
-nav.tabs button[aria-selected="true"]{background:linear-gradient(180deg,#f7b04e,#d3711a);color:#2b1606;border-color:#8a4a12;box-shadow:inset 0 1px 0 rgba(255,255,255,.45)}
-nav.tabs .wipdot{display:inline-block;font-size:.62rem;font-weight:800;letter-spacing:.06em;background:#7a2e8f;color:#fff;border-radius:4px;padding:0 4px;margin-left:5px;vertical-align:2px}
-.panel{border:2px solid var(--line2);border-radius:12px;box-shadow:inset 0 0 0 1px #fffaf0,0 2px 0 #c5ab72}
-.panel h2,.panel>h3{color:#5a3816}
-.btn{background:linear-gradient(180deg,#f6ab4a,#d2701a);color:#2a1606;border:1px solid #8a4a12;box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 1px 0 #9c6a2a}
-.btn:hover{filter:brightness(1.06)}
-.btn.ghost{background:linear-gradient(180deg,#fbf3df,#ecdcb6);color:var(--ink);border:1px solid var(--line2);box-shadow:inset 0 1px 0 #fff}
-.seg{background:#efe2bf;border-color:var(--line2)}
-.seg button[aria-pressed="true"]{background:linear-gradient(180deg,#f7d58f,#e9b25a);color:#2b1606}
-.kpi{background:linear-gradient(180deg,#fbf5e4,#f1e5c3);border-color:var(--line2)}
-.kpi .v{color:#6a3d12}
-select,input[type=number],input[type=text],input[type=search],textarea{background:#fffaf0;border-color:var(--line2)}
-.alert{background:#fbe9c4;border-color:#c98a3a}
-.alert.theory{background:#efe7fb;border-color:#8a68b8}
-.mb-slot,.pre-ic{background:radial-gradient(circle at 50% 40%,#fffaf0,#e9dbb6);border-color:#a8885a}
-.mb-center,.pre-mid{background:linear-gradient(180deg,#fbf5e4,#efe2bd)}
-:root[data-theme="dark"] .panel h2,:root[data-theme="dark"] .panel>h3,:root[data-theme="dark"] .kpi .v{color:#ffd58a}
-:root[data-theme="dark"] .seg,:root[data-theme="dark"] .kpi,:root[data-theme="dark"] .btn.ghost,:root[data-theme="dark"] select,:root[data-theme="dark"] input,:root[data-theme="dark"] .mb-slot,:root[data-theme="dark"] .pre-ic,:root[data-theme="dark"] .mb-center,:root[data-theme="dark"] .pre-mid,:root[data-theme="dark"] .alert{background:#4a3825;color:var(--ink)}
+/* --- habillage moderne --- */
+body{-webkit-font-smoothing:antialiased;font-size:15px}
+h1,h2,h3{font-family:var(--f-display);font-weight:600;letter-spacing:-.01em}
+header.top{border:0;padding:6px 2px 14px;align-items:center}
+header.top h1{font-weight:700;font-size:clamp(1.8rem,4vw,2.5rem);background:linear-gradient(90deg,var(--gold),#ff8f5a 55%,#62d4c8);-webkit-background-clip:text;background-clip:text;color:transparent}
+header.top .eyebrow{color:var(--muted);letter-spacing:.14em}
+header.top p,.freshness{color:var(--muted)}
+nav.tabs{background:var(--frame);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:14px;padding:6px;gap:2px}
+nav.tabs button{color:var(--muted);border-radius:10px;font:600 .9rem var(--f-body);padding:8px 14px;transition:background .15s,color .15s}
+nav.tabs button:hover{background:var(--hi);color:var(--ink)}
+nav.tabs button[aria-selected="true"]{background:linear-gradient(135deg,var(--btn-a),var(--btn-b));color:var(--btn-ink);border-color:transparent;box-shadow:0 4px 14px rgba(238,139,50,.3)}
+nav.tabs .wipdot{display:inline-block;font-size:.6rem;font-weight:800;letter-spacing:.06em;background:linear-gradient(135deg,#a56bff,#6b5bff);color:#fff;border-radius:5px;padding:1px 5px;margin-left:6px;vertical-align:2px}
+.panel{border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:18px}
+.panel h2{color:var(--ink);font-size:1.3rem}
+.panel>h3,.panel h3{color:var(--ink)}
+.btn{background:linear-gradient(135deg,var(--btn-a),var(--btn-b));color:var(--btn-ink);border:0;border-radius:10px;font:600 .92rem var(--f-body);box-shadow:0 4px 14px rgba(238,139,50,.25);transition:transform .1s,filter .15s}
+.btn:hover{filter:brightness(1.06)}.btn:active{transform:translateY(1px)}
+.btn.ghost{background:var(--hi);color:var(--ink);border:1px solid var(--line2);box-shadow:none}
+.btn.ghost:hover{border-color:var(--gold)}
+.seg{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
+.seg button{border-radius:8px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--hi);color:var(--ink);box-shadow:inset 0 0 0 1px var(--gold)}
+.kpi{background:var(--bg);border:1px solid var(--line);border-radius:12px}
+.kpi .v{color:var(--ink);font-family:var(--f-display);font-weight:600}
+.kpi .lbl,.lbl,.field>label:not(.chk),th{color:var(--muted)}
+select,input[type=number],input[type=text],input[type=search],textarea{background:var(--bg);border:1px solid var(--line2);color:var(--ink);border-radius:9px}
+.chk{border-color:var(--line2);border-radius:9px}
+.alert{background:var(--gold-soft);border:1px solid rgba(243,169,92,.45);border-radius:12px}
+.alert.theory{background:rgba(140,110,255,.10);border-color:rgba(160,130,255,.45)}
+.mb-slot,.pre-ic{background:var(--hi);border:1px solid var(--line2);border-radius:12px}
+.mb-slot:hover{border-color:var(--gold)}
+.mb-center,.pre-mid,.mb-it,.mb-card,.pre-card,.ctile,.otop{background:var(--bg);border-color:var(--line)}
+.pre-card{border-radius:14px;transition:transform .12s,border-color .12s}.pre-card:hover{transform:translateY(-2px);border-color:var(--gold)}
+#mbTip{background:var(--panel);border-color:var(--line2);box-shadow:0 12px 30px rgba(0,0,0,.35)}
+tr.changed td{background:var(--gold-soft)}
+th,td{border-bottom-color:var(--line)}
+.bar .fill,.hist .b,.progress>div{background:linear-gradient(90deg,var(--btn-a),var(--btn-b))}
+.theme-tg{font:600 .8rem var(--f-body);background:var(--hi);color:var(--ink);border:1px solid var(--line2);border-radius:9px;padding:5px 12px;cursor:pointer;margin-top:6px}
+.wip-card{border:1px dashed rgba(160,130,255,.6);border-radius:14px;padding:16px;display:grid;gap:8px;background:rgba(140,110,255,.07)}
+.wip-card h3{color:#b79bff}
+.pill.wip{background:linear-gradient(135deg,#a56bff,#6b5bff);color:#fff;border-color:transparent}
 /* cartes de sorts, vignettes */
 .ctiles{display:flex;flex-wrap:wrap;gap:8px}
-.ctile{width:96px;display:grid;gap:3px;justify-items:center;text-align:center;border:1px solid var(--line2);border-radius:9px;padding:6px 4px;background:linear-gradient(180deg,#fffaf0,#efe2bf);font-size:12px;line-height:1.2;position:relative}
+.ctile{width:96px;display:grid;gap:3px;justify-items:center;text-align:center;border:1px solid var(--line2);border-radius:9px;padding:6px 4px;background:var(--bg);font-size:12px;line-height:1.2;position:relative}
 .ctile img,.ctile .ph{width:56px;height:56px;object-fit:contain;border-radius:9px}
 .ctile .ph{display:grid;place-items:center;font:700 18px var(--f-display);color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.4)}
 .ctile .ap{position:absolute;top:3px;right:4px;font:700 11px var(--f-mono);background:#2f6fb6;color:#fff;border-radius:50%;width:20px;height:20px;display:grid;place-items:center}
@@ -197,10 +212,7 @@ select,input[type=number],input[type=text],input[type=search],textarea{backgroun
 .ochecks{list-style:none;margin:0;padding:0;display:grid;gap:4px}
 .ochecks li{display:grid;grid-template-columns:22px 1fr;gap:6px;font-size:.92rem}
 .ochecks .ok{color:var(--good);font-weight:800}.ochecks .ko{color:var(--warn);font-weight:800}.ochecks .bad{color:var(--bad);font-weight:800}
-.otop{display:grid;gap:8px;border:2px solid var(--line2);border-radius:10px;padding:10px 12px;background:linear-gradient(180deg,#fff8e6,#f3e4bd)}
-.wip-card{border:2px dashed #8a68b8;border-radius:12px;padding:14px;display:grid;gap:8px;background:repeating-linear-gradient(135deg,#f5eefb 0 14px,#efe5f8 14px 28px)}
-.wip-card h3{color:#5b2d7a;font-size:1.25rem}
-.pill.wip{background:#7a2e8f;color:#fff;border-color:#7a2e8f}
+.otop{display:grid;gap:8px;border:1px solid var(--line2);border-radius:10px;padding:10px 12px}
 </style>
 
 </head>
@@ -212,7 +224,7 @@ select,input[type=number],input[type=text],input[type=search],textarea{backgroun
       <h1>Labo RpgMasters</h1>
       <p>Rejoue des milliers de combats avec ton stuff, tes caractéristiques et ton deck, puis cherche la meilleure combinaison parmi ce que tu possèdes. Aucune action n'est envoyée au jeu.</p>
     </div>
-    <div class="freshness" id="fresh"></div>
+    <div style="display:grid;justify-items:end"><div class="freshness" id="fresh"></div><button type="button" class="theme-tg" id="themeTg">Thème clair</button></div>
   </header>
 
   <div class="alert" id="exampleBanner" hidden style="margin-top:14px"><strong>Tu regardes un personnage d'exemple.</strong><span>Pour simuler et optimiser ton propre personnage, installe le script de collecte puis importe tes données : onglet <a href="#data" id="goData">Mes données</a>, une minute environ.</span></div>
@@ -2072,7 +2084,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
 <script type="text/plain" id="src-userscript">// ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.11.0
+// @version      2.11.1
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -2953,9 +2965,9 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       const k = monsterKey(f);
       const m = db.monsters[k];
       const ctx = Object.keys(context).length ? JSON.stringify(context) : null;
-      if (!m) db.monsters[k] = { name: f.name, monsterId: f.monsterId, level: f.level, grade: f.grade, hpMin: f.maxHp, hpMax: f.maxHp, atk: f.atk, element: f.element, pattern, stats, isBoss: !!f.isBoss, xp: f.xp, seen: 1, ctx: ctx ? [ctx] : [] };
+      if (!m) db.monsters[k] = { name: f.name, monsterId: f.monsterId, level: f.level, grade: f.grade, hpMin: f.maxHp, hpMax: f.maxHp, atk: f.atk, element: f.element, pattern, stats, isBoss: !!f.isBoss, xp: f.xp, gfx: f.gfx || f.look || f.img || f.icon || null, seen: 1, ctx: ctx ? [ctx] : [] };
       else {
-        m.hpMin = Math.min(m.hpMin, f.maxHp); m.hpMax = Math.max(m.hpMax, f.maxHp); m.seen = (m.seen || 0) + 1; m.isBoss = m.isBoss || !!f.isBoss;
+        m.hpMin = Math.min(m.hpMin, f.maxHp); m.hpMax = Math.max(m.hpMax, f.maxHp); m.seen = (m.seen || 0) + 1; m.isBoss = m.isBoss || !!f.isBoss; if (!m.gfx) m.gfx = f.gfx || f.look || f.img || f.icon || null;
         if (ctx && !(m.ctx || []).includes(ctx)) (m.ctx = m.ctx || []).push(ctx);
       }
       // champs inconnus d'un boss : on garde un échantillon pour analyse
@@ -3887,7 +3899,8 @@ loadProfile();
 
 const fmt=(n,d=0)=>Number(n).toLocaleString('fr-FR',{minimumFractionDigits:d,maximumFractionDigits:d});
 const EL_COL=['var(--neutre)','var(--terre)','var(--feu)','var(--eau)','var(--air)'];
-const SLOT_LABEL={chapeau:'Chapeau',cape:'Cape',amulette:'Amulette',anneau1:'Anneau',anneau2:'Anneau',ceinture:'Ceinture',bottes:'Bottes',arme:'Arme',bouclier:'Bouclier',familier:'Familier',dofus1:'Dofus 1',dofus2:'Dofus 2',dofus3:'Dofus 3',dofus4:'Dofus 4',dofus5:'Dofus 5',dofus6:'Dofus 6'};
+const SLOT_LABEL={chapeau:'Chapeau',cape:'Cape',amulette:'Amulette',anneau1:'Anneau',anneau2:'Anneau',ceinture:'Ceinture',bottes:'Bottes',arme:'Arme',bouclier:'Bouclier',familier:'Familier',dofus1:'Dofus / Trophée 1',dofus2:'Dofus / Trophée 2',dofus3:'Dofus / Trophée 3',dofus4:'Dofus / Trophée 4',dofus5:'Dofus / Trophée 5',dofus6:'Dofus / Trophée 6'};
+function emptyLbl(s){return /^dofus/.test(s)?'<span style="font-size:10px;line-height:1.15;text-align:center">Dofus<br>ou<br>Trophée</span>':esc((SLOT_LABEL[s]||s).slice(0,5))};
 const STAT_LABEL={vitalite:'Vitalité',sagesse:'Sagesse',force:'Force',intelligence:'Intelligence',chance:'Chance',agilite:'Agilité',puissance:'Puissance',dommages:'Dommages',critique:'% Critique',dommagesCritiques:'Dommages crit.',dommagesNeutre:'Do Neutre',dommagesTerre:'Do Terre',dommagesFeu:'Do Feu',dommagesEau:'Do Eau',dommagesAir:'Do Air',resPctNeutre:'Rés. % Neutre',resPctTerre:'Rés. % Terre',resPctFeu:'Rés. % Feu',resPctEau:'Rés. % Eau',resPctAir:'Rés. % Air',soins:'Soins',po:'PO',pm:'PM'};
 const tierLabel=f=>!f?'':f<2?'T'+(f+1):f===2?'★':'★+'+(f-2);
 function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
@@ -4610,7 +4623,7 @@ function renderBest(){
     const names=new Set(items.map(i=>i.n).concat([...byKey.values()].map(o=>o.it.n)));const seen={};for(const fi of (DATA.fights||[]))for(const n of (fi.items||[])){const k=String(n).replace(/^\d+\s*×\s*/,'');if(!names.has(k))seen[k]=(seen[k]||0)+1}
     const list=[...byKey.values()].filter(o=>(!q||o.it.n.toLowerCase().includes(q))&&(!sl||o.it.s===sl)).sort((a,b)=>(a.it.s==='dofus'?0:1)-(b.it.s==='dofus'?0:1)||(b.it.lvl||0)-(a.it.lvl||0));
     const seenL=Object.entries(seen).filter(([n])=>!q||n.toLowerCase().includes(q)).sort((a,b)=>b[1]-a[1]);
-    o.innerHTML=`<p class="note">${list.length} objet${list.length>1?'s':''} possédé${list.length>1?'s':''} qu'aucun monstre du bestiaire ne donne (Dofus, trophées, objets de boss, d'Ascension ou de quête). Le Labo ne connaît que ceux que tes persos ont eus en main : ceux jamais obtenus restent invisibles.</p><table><tr><th>Objet</th><th>Empl.</th><th class="num">Niv.</th><th>Stats et effet</th><th>Possédé</th></tr>${list.map(({it,own})=>`<tr><td>${itemImg(it)}<strong>${esc(it.n)}</strong>${it.f?` <span class="dim">+${it.f}</span>`:''}</td><td>${SLOT_FR[it.s]||esc(it.s)}</td><td class="num">${it.lvl||''}</td><td class="dim">${esc(statsLine(it))}${fxOf(it).map(x=>`<div style="color:var(--gold)">Effet : ${esc(x[1])}</div>`).join('')}</td><td class="dim">${esc(own.join(', '))}</td></tr>`).join('')}</table>${seenL.length?`<h3>Vus dans tes butins, stats inconnues</h3><p class="note">Noms relevés dans les récompenses de combat, absents du bestiaire et de tes inventaires actuels.</p><p>${seenL.slice(0,80).map(([n,c])=>`${esc(n)} <span class="dim">×${c}</span>`).join(' · ')}</p>`:''}`;
+    o.innerHTML=`<p class="note">${list.length} objet${list.length>1?'s':''} possédé${list.length>1?'s':''} qu'aucun monstre du bestiaire ne donne (Dofus, trophées, objets de boss, d'Ascension ou de quête). Le Labo ne connaît que ceux que tes persos ont eus en main : ceux jamais obtenus restent invisibles.</p><table><tr><th>Objet</th><th>Empl.</th><th class="num">Niv.</th><th>Stats et effet</th><th>Possédé</th></tr>${list.map(({it,own})=>`<tr><td>${itemImg(it)}<strong>${esc(it.n)}</strong>${it.f?` <span class="dim">+${it.f}</span>`:''}</td><td style="white-space:nowrap">${SLOT_FR[it.s]||esc(it.s)}</td><td class="num" style="white-space:nowrap">${it.lvl||''}</td><td class="dim">${esc(statsLine(it))}${fxOf(it).map(x=>`<div style="color:var(--gold)">Effet : ${esc(x[1])}</div>`).join('')}</td><td class="dim">${esc(own.join(', '))}</td></tr>`).join('')}</table>${seenL.length?`<h3>Vus dans tes butins, stats inconnues</h3><p class="note">Noms relevés dans les récompenses de combat, absents du bestiaire et de tes inventaires actuels.</p><p>${seenL.slice(0,80).map(([n,c])=>`${esc(n)} <span class="dim">×${c}</span>`).join(' · ')}</p>`:''}`;
     return;
   }
   if(bView==='mon'){
@@ -4815,14 +4828,14 @@ function renderVitrines(){const el=$('#vitOut');if(!el)return;const V=vitrineDat
 // ---------- Images du jeu (monstres, objets, sorts) ----------
 const GAME='https://rpgmasters.houk.fr';
 function monImg(gfx,small){return gfx?`<img class="thumb${small?' s':''}" src="${GAME}/img/monsters/${gfx}.png" alt="" loading="lazy" onerror="this.remove()">`:''}
-function monThumb(name){const B=bestData();if(!monThumb.m||monThumb.b!==B){monThumb.m={};for(const m of ((B&&B.monsters)||[]))if(m.gfx&&!monThumb.m[m.n])monThumb.m[m.n]=m.gfx;monThumb.b=B}return monImg(monThumb.m[name])}
+function monThumb(name){const B=bestData();if(!monThumb.m||monThumb.b!==B||monThumb.d!==DATA){monThumb.m={};for(const m of ((B&&B.monsters)||[]))if(m.gfx&&!monThumb.m[m.n])monThumb.m[m.n]=m.gfx;for(const m of (DATA.monsters||[]))if(m.gfx&&!monThumb.m[m.name])monThumb.m[m.name]=m.gfx;monThumb.b=B;monThumb.d=DATA}return monImg(monThumb.m[name])}
 function itemImg(it,small){const src=mbIcon(it);return src?`<img class="thumb${small?' s':''}" src="${src}" alt="" loading="lazy" data-tip="${it.id}:${it.f||0}" onerror="this.remove()">`:''}
 function cardImg(c){const v=c&&c.ic;if(!v)return '';const s=String(v);if(/^https?:/.test(s))return s;if(s[0]==='/')return GAME+s;const m=s.match(/sort_\d+/);if(m)return `${GAME}/img/spells/${m[0]}.png`;if(/^\d+$/.test(s))return `${GAME}/img/spells/sort_${s}.png`;return ''}
 function cardTile(c,extra){if(!c)return '';const src=cardImg(c),el=mainEl(c);const ph=`<span class="ph" style="background:${el!==null?EL_COL[el]:'var(--line2)'}">${esc(String(c.n).split(/[\s'’-]+/).filter(w=>w.length>2).slice(0,2).map(w=>w[0]).join('').toUpperCase())}</span>`;
   return `<div class="ctile" title="${esc(c.n+' · '+c.ap+' PA'+(c.d?' — '+c.d:''))}">${src?`<img src="${src}" alt="" loading="lazy" onerror="this.outerHTML=this.dataset.ph" data-ph="${esc(ph)}">`:ph}<span class="ap">${c.ap}</span><span>${esc(c.n)}</span>${extra||''}</div>`}
 // ---------- Vue du personnage (onglet Mon personnage) ----------
 let PV_TAB='car';
-function dollHtml(gear,own,center){const big=s=>{const x=gear[s],it=x&&mbAll().m[x.id];const src=it&&mbIcon(it);return `<span class="mb-slot" style="cursor:default${it&&own&&!own.has(it.id)?';border-style:dashed':''}" ${it?`data-tip="${it.id}:${x.f||0}"`:`title="${esc(SLOT_LABEL[s]||s)}"`}>${it?(src?`<img src="${src}" alt="" loading="lazy">`:`<span class="mb-ini">${mbIni(it)}</span>`):esc((SLOT_LABEL[s]||s).slice(0,5))}${it&&x.f?`<span class="mb-f">${x.f>=2?'★'+(x.f>2?'+'+(x.f-2):''):'T'+(x.f+1)}</span>`:''}</span>`};
+function dollHtml(gear,own,center){const big=s=>{const x=gear[s],it=x&&mbAll().m[x.id];const src=it&&mbIcon(it);return `<span class="mb-slot" style="cursor:default${it&&own&&!own.has(it.id)?';border-style:dashed':''}" ${it?`data-tip="${it.id}:${x.f||0}"`:`title="${esc(SLOT_LABEL[s]||s)}"`}>${it?(src?`<img src="${src}" alt="" loading="lazy">`:`<span class="mb-ini">${mbIni(it)}</span>`):emptyLbl(s)}${it&&x.f?`<span class="mb-f">${x.f>=2?'★'+(x.f>2?'+'+(x.f-2):''):'T'+(x.f+1)}</span>`:''}</span>`};
   return `<div class="mb-doll"><div class="mb-col">${MB_LEFT.map(big).join('')}</div><div class="mb-center">${center||''}</div><div class="mb-col">${MB_RIGHT.map(big).join('')}</div></div><div class="mb-dofus">${MB_DOF.map(big).join('')}</div>`}
 function pvGearOpts(){const o=[['cur','Équipement porté']];(DATA.meta.presets||[]).forEach((p,i)=>{if(p&&p.gear&&Object.keys(p.gear).length)o.push(['p'+i,'Enregistré en jeu : '+p.name])});mbSavesL().forEach((x,i)=>o.push(['s'+i,'Build manuel : '+x.name]));return o}
 function pvGearBuild(v){if(v&&v[0]==='p'){const p=(DATA.meta.presets||[])[+v.slice(1)];if(p)return {gear:p.gear,alloc:p.alloc||null,name:p.name}}if(v&&v[0]==='s'){const x=mbSavesL()[+v.slice(1)];if(x)return {gear:x.gear,alloc:x.alloc,deck:x.deck,name:x.name}}const f=mbFresh();return {gear:f.gear,alloc:f.alloc,name:'Équipement porté'}}
@@ -4896,6 +4909,7 @@ const MB_LBL=Object.fromEntries(MB_STATS);
 let MB=null,MB_SEL='chapeau',MB_TAB='car';
 function mbAll(){if(mbAll.c&&mbAll.d===DATA)return mbAll.c;const m={},icon={};
   for(const i of ((DATA.bestiary&&DATA.bestiary.items)||[]))if(i&&i.icon)icon[i.id]=i.icon;
+  for(const pr of ['principal','saison']){let PD=null;try{PD=profData(pr)}catch(e){}if(PD)for(const i of (PD.items||[]).concat(PD.worn||[]))if(i&&i.icon&&!icon[i.id])icon[i.id]=i.icon}
   let V={};try{V=vitrineData()||{}}catch(e){}
   for(const i of [...((DATA.bestiary&&DATA.bestiary.items)||[]),...((V.items)||[]),...DATA.items,...(DATA.worn||[])]){if(!i||!i.st||!i.s)continue;if(i.icon)icon[i.id]=i.icon;if(!m[i.id])m[i.id]=Object.assign({},i)}
   const own={};for(const i of DATA.items.concat(DATA.worn||[])){const o=own[i.id];own[i.id]={q:(o?o.q:0)+(i.q||1),f:Math.max(o?o.f:0,i.f||0)}}
@@ -4910,7 +4924,7 @@ function mbState(b){return O.buildState(DATA,{gear:mbGear(b.gear),alloc:b.alloc|
 function mbStats(it,f){try{return R.itemStats(it,f||0)}catch(e){return it.st||{}}}
 function mbShort(st,n){return Object.entries(st).filter(([k,v])=>v&&MB_LBL[k]).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])).slice(0,n||5).map(([k,v])=>`${v>0?'+':''}${v} ${MB_LBL[k]}`).join(' · ')}
 function mbSlotBtn(s){const b=mbLoad(),x=b.gear[s],it=x&&mbAll().m[x.id];const src=it?mbIcon(it):'';
-  return `<button type="button" class="mb-slot" data-mbslot="${s}" aria-pressed="${MB_SEL===s}" ${it?`data-tip="${it.id}:${x.f||0}"`:`title="${esc(SLOT_LABEL[s]||s)}"`}>${it?(src?`<img src="${src}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'mb-ini',textContent:'${mbIni(it)}'}))">`:`<span class="mb-ini">${mbIni(it)}</span>`):esc((SLOT_LABEL[s]||s).slice(0,5))}${it&&x.f?`<span class="mb-f">${x.f>=2?'★'+(x.f>2?'+'+(x.f-2):''):'T'+(x.f+1)}</span>`:''}</button>`}
+  return `<button type="button" class="mb-slot" data-mbslot="${s}" aria-pressed="${MB_SEL===s}" ${it?`data-tip="${it.id}:${x.f||0}"`:`title="${esc(SLOT_LABEL[s]||s)}"`}>${it?(src?`<img src="${src}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'mb-ini',textContent:'${mbIni(it)}'}))">`:`<span class="mb-ini">${mbIni(it)}</span>`):emptyLbl(s)}${it&&x.f?`<span class="mb-f">${x.f>=2?'★'+(x.f>2?'+'+(x.f-2):''):'T'+(x.f+1)}</span>`:''}</button>`}
 function renderMB(){if(!$('#mb'))return;const b=mbLoad();
   $('#mbLeft').innerHTML=MB_LEFT.map(mbSlotBtn).join('');$('#mbRight').innerHTML=MB_RIGHT.map(mbSlotBtn).join('');$('#mbDofus').innerHTML=MB_DOF.map(mbSlotBtn).join('');
   document.querySelectorAll('#mb [data-mbslot]').forEach(e=>e.onclick=()=>{MB_SEL=e.dataset.mbslot;$('#mbSlotF').value=MB_TYPE[MB_SEL];renderMB()});
@@ -5006,7 +5020,7 @@ function mbFromCodes(codes,label){const b={gear:{},alloc:{},deck:[]};const byId=
 let OPT_START=null;
 function setOptStart(x){OPT_START=x;const n=$('#oStartNote');if(n){n.hidden=!x;n.innerHTML=x?`<strong>Point de départ : ${esc(x.name)}</strong><span>Stuff, points et deck du Build manuel. L'optimiseur part de là et compare à ce build.</span><button class="btn" type="button" id="oStartReset" style="justify-self:start;margin-top:4px">Revenir à mon build actuel</button>`:'';if(x)$('#oStartReset').onclick=()=>setOptStart(null)}const s=$('#oStart');if(s)s.disabled=!!x}
 function setupMB(){if(!$('#mb')||setupMB.done)return;setupMB.done=true;
-  $('#mbSlotF').innerHTML='<option value="">Tous les types</option>'+['chapeau','cape','amulette','anneau','ceinture','bottes','arme','bouclier','familier','dofus'].map(t=>`<option value="${t}">${t[0].toUpperCase()+t.slice(1)}</option>`).join('');$('#mbSlotF').value='chapeau';
+  $('#mbSlotF').innerHTML='<option value="">Tous les types</option>'+['chapeau','cape','amulette','anneau','ceinture','bottes','arme','bouclier','familier','dofus'].map(t=>`<option value="${t}">${t==='dofus'?'Dofus / Trophée':t[0].toUpperCase()+t.slice(1)}</option>`).join('');$('#mbSlotF').value='chapeau';
   $('#mbStatF').innerHTML='<option value="">Trier par niveau</option>'+MB_STATS.map(([k,l])=>`<option value="${k}">Avec : ${l}</option>`).join('');
   ['mbQ','mbLvMin','mbLvMax'].forEach(id=>$('#'+id).addEventListener('input',renderMBList));['mbSlotF','mbStatF','mbRar'].forEach(id=>$('#'+id).addEventListener('change',renderMBList));
   document.querySelectorAll('#mbSrc button').forEach(bt=>bt.addEventListener('click',()=>setTimeout(renderMBList,0)));
@@ -5035,9 +5049,9 @@ function preOwn(){return new Set(DATA.items.concat(DATA.worn||[]).map(i=>i.id))}
 function renderPrebuilds(){const el=$('#preOut');if(!el)return;const L=preList();
   if(!L.length){el.innerHTML='<p class="note">Aucun prébuild disponible.</p>';$('#preDetail').hidden=true;return}
   const own=preOwn();
-  el.innerHTML=`<div class="pre-grid">${L.map(b=>{const g=b.gear||{};const n=Object.values(g).filter(Boolean).length,no=Object.values(g).filter(x=>x&&own.has(x.id)).length;const [kv,kl]=preKpi(b);
+  el.innerHTML=`<div class="pre-grid">${L.map(b=>{const g=b.gear||{};const n=Object.values(g).filter(Boolean).length,no=Object.values(g).filter(x=>x&&own.has(x.id)).length;
     return `<button type="button" class="pre-card" data-pre="${b.arch}" aria-pressed="${PRE_SEL===b.arch}">
-      <div class="pre-doll"><div class="pre-col">${MB_LEFT.map(s=>preIc(s,g[s],own,'pre-ic')).join('')}</div><div class="pre-mid"><span class="v">${kv}</span><span class="note">${kl}</span><span class="note">${fmt(b.r.hp)} PV · ${b.r.pa} PA</span></div><div class="pre-col">${MB_RIGHT.map(s=>preIc(s,g[s],own,'pre-ic')).join('')}</div></div>
+      <div class="pre-doll"><div class="pre-col">${MB_LEFT.map(s=>preIc(s,g[s],own,'pre-ic')).join('')}</div><div class="pre-mid"></div><div class="pre-col">${MB_RIGHT.map(s=>preIc(s,g[s],own,'pre-ic')).join('')}</div></div>
       <div class="pre-dof">${MB_DOF.map(s=>preIc(s,g[s],own,'pre-ic')).join('')}</div>
       <h3>${esc(b.label)}</h3><p class="note">${esc(PRE_SHORT[b.arch]||'')}</p><p class="note">${no}/${n} objets possédés · ${(b.deck||[]).length} sorts</p></button>`}).join('')}</div>`;
   el.querySelectorAll('[data-pre]').forEach(c=>c.onclick=()=>{PRE_SEL=PRE_SEL===c.dataset.pre?null:c.dataset.pre;renderPrebuilds();if(PRE_SEL){const d=$('#preDetail');if(d.scrollIntoView)d.scrollIntoView({behavior:'smooth',block:'start'})}});
@@ -5046,7 +5060,7 @@ function renderPreDetail(){const el=$('#preDetail');const b=PRE_SEL&&preList().f
   const own=preOwn(),ownC=new Set(DATA.cards.map(c=>c.id));const gear=preGear(b),full=mbGear(gear),deck=preDeckKeys(b);
   let S=null;try{S=O.buildState(DATA,{gear:full,alloc:b.alloc||{},deck},ctx).S}catch(e){}
   let ce='',cd='';try{ce=O.encodeGear(gear);cd=O.encodeDeck(b.deck.map(c=>String(c.id)),DATA.meta.breedId)}catch(e){}
-  const big=s=>{const x=gear[s],it=x&&mbAll().m[x.id];const src=it&&mbIcon(it);return `<span class="mb-slot" style="cursor:default${it&&!own.has(it.id)?';border-style:dashed':''}" ${it?`data-tip="${it.id}:${x.f||0}"`:`title="${esc(SLOT_LABEL[s]||s)}"`}>${it?(src?`<img src="${src}" alt="" loading="lazy">`:`<span class="mb-ini">${mbIni(it)}</span>`):esc((SLOT_LABEL[s]||s).slice(0,5))}</span>`};
+  const big=s=>{const x=gear[s],it=x&&mbAll().m[x.id];const src=it&&mbIcon(it);return `<span class="mb-slot" style="cursor:default${it&&!own.has(it.id)?';border-style:dashed':''}" ${it?`data-tip="${it.id}:${x.f||0}"`:`title="${esc(SLOT_LABEL[s]||s)}"`}>${it?(src?`<img src="${src}" alt="" loading="lazy">`:`<span class="mb-ini">${mbIni(it)}</span>`):emptyLbl(s)}</span>`};
   const nOwn=Object.values(gear).filter(x=>own.has(x.id)).length;
   el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><h2 style="margin:0">${esc(b.label)}</h2><button class="btn ghost" type="button" id="preClose">Fermer</button></div>
   <p class="note" style="margin:4px 0 10px">${esc(PRE_WHY[b.arch]||'')}</p>
@@ -5065,6 +5079,7 @@ document.querySelectorAll('#preTier button').forEach(bt=>bt.addEventListener('cl
 function renderItemsTab(){try{renderVitrines()}catch(e){$('#vitOut').textContent='Erreur : '+e.message}try{renderDofusFx()}catch(e){}try{renderBank2()}catch(e){$('#bank2Out').textContent='Erreur : '+e.message}try{renderTierList()}catch(e){$('#tlOut').textContent='Erreur : '+e.message}}
 ['tlFor','tlSlot','tlSrc','tlMin','tlMax','tlStyle','tlQ','bkStyle','tlSet'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener(id==='tlQ'||id==='tlMin'||id==='tlMax'||id==='bkLvl'?'input':'change',()=>{if(id.startsWith('tl')){if(id==='tlSet')TL=null;$('#tlOut').dataset.n=150;renderTierList()}else renderBank2()})});
 function init(){prepare();renderPerso();try{renderPV()}catch(e){const x=document.getElementById('pvMsg');if(x)x.textContent='Vue impossible : '+e.message}try{renderCardUse();renderFreePts();renderBank()}catch(e){}renderAscPanel();renderBest();packOptions($('#simPack'));packOptions($('#oPack'));try{optTargetNote()}catch(e){};{const o=document.createElement('option');o.value='poly';o.textContent='Polyvalent · tes adversaires habituels (conseillé)';$('#oPack').insertBefore(o,$('#oPack').firstChild);$('#oPack').value='poly'}deckOptions($('#simDeck'));deckOptions($('#oStart'));setTimeout(()=>{markReady($('#oPack'),'opt');markReady($('#aPack'),'asc')},400);}
+(function(){const set=v=>{if(v==='light')document.documentElement.setAttribute('data-theme','light');else document.documentElement.removeAttribute('data-theme');const b=document.getElementById('themeTg');if(b)b.textContent=v==='light'?'Thème sombre':'Thème clair'};let v='dark';try{v=localStorage.getItem('labo-theme2')||'dark'}catch(e){}set(v);const b=document.getElementById('themeTg');if(b)b.onclick=()=>{v=v==='light'?'dark':'light';set(v);try{localStorage.setItem('labo-theme2',v)}catch(e){}}})();
 setupData();init();
 // imports stockés dans IndexedDB : on recharge dès qu'ils sont lus
 dsBoot().then(()=>{if(DS['labo-data']||DS['labo-data-saison']){loadProfile();init();try{const t=localStorage.getItem('labo-tab');if(t&&document.getElementById(t))showTab(t)}catch(e){}}});

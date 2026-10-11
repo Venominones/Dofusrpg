@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.11.0
+// @version      2.11.1
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -882,9 +882,9 @@
       const k = monsterKey(f);
       const m = db.monsters[k];
       const ctx = Object.keys(context).length ? JSON.stringify(context) : null;
-      if (!m) db.monsters[k] = { name: f.name, monsterId: f.monsterId, level: f.level, grade: f.grade, hpMin: f.maxHp, hpMax: f.maxHp, atk: f.atk, element: f.element, pattern, stats, isBoss: !!f.isBoss, xp: f.xp, seen: 1, ctx: ctx ? [ctx] : [] };
+      if (!m) db.monsters[k] = { name: f.name, monsterId: f.monsterId, level: f.level, grade: f.grade, hpMin: f.maxHp, hpMax: f.maxHp, atk: f.atk, element: f.element, pattern, stats, isBoss: !!f.isBoss, xp: f.xp, gfx: f.gfx || f.look || f.img || f.icon || null, seen: 1, ctx: ctx ? [ctx] : [] };
       else {
-        m.hpMin = Math.min(m.hpMin, f.maxHp); m.hpMax = Math.max(m.hpMax, f.maxHp); m.seen = (m.seen || 0) + 1; m.isBoss = m.isBoss || !!f.isBoss;
+        m.hpMin = Math.min(m.hpMin, f.maxHp); m.hpMax = Math.max(m.hpMax, f.maxHp); m.seen = (m.seen || 0) + 1; m.isBoss = m.isBoss || !!f.isBoss; if (!m.gfx) m.gfx = f.gfx || f.look || f.img || f.icon || null;
         if (ctx && !(m.ctx || []).includes(ctx)) (m.ctx = m.ctx || []).push(ctx);
       }
       // champs inconnus d'un boss : on garde un échantillon pour analyse
