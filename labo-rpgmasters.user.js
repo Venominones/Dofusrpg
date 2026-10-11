@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.11.3
+// @version      2.11.4
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -1379,7 +1379,7 @@
     try {
       const req = args[0], init = args[1] || {};
       const method = (init.method || (req && req.method) || 'GET').toUpperCase();
-      if (method === 'POST') res.clone().text().then(t => { detectProfile(t); onPayload(t); }).catch(() => {});
+      if (method === 'POST') res.clone().text().then(t => { detectProfile(t); onPayload(t); try { if (/\/bestiaire/.test(location.pathname)) { const L = JSON.parse(localStorage.getItem('labo-sniff') || '[]'); const h = {}; try { const H = init.headers || {}; for (const k in H) if (/^next-|^rsc|content-type/i.test(k)) h[k] = String(H[k]).slice(0, 300); } catch (e) {} L.unshift({ t: Date.now(), url: String(req && req.url || req).slice(0, 300), body: typeof init.body === 'string' ? init.body.slice(0, 600) : null, headers: h, resp: t.slice(0, 1500) }); localStorage.setItem('labo-sniff', JSON.stringify(L.slice(0, 4))); } } catch (e) {} }).catch(() => {});
       else if (/x-component/.test(res.headers && res.headers.get ? (res.headers.get('content-type') || '') : '')) res.clone().text().then(t => { detectProfile(t); onPayload(t); }).catch(() => {}); // rafraîchissements (ex. Auto AFK après rechargement)
     } catch (e) {}
     return res;
@@ -1417,7 +1417,7 @@
     let dofusSets = null; try { const ids = ((best && best.items) || []).map(x => x.setId).concat((I.sets || []).map(x => x.id)).concat((I.entries || []).map(e => e.item && e.item.setId).concat((I.slots || []).map(e => e.item && e.item.setId))); dofusSets = await fetchDofusSets(ids.filter(Boolean)); } catch (e) {}
     const it = (x) => ({ id: x.item.id, n: x.item.n, lvl: x.item.lvl, s: x.item.s, r: x.item.r, setId: x.item.setId || null, st: x.item.st, w: x.item.w || null, icon: x.item.icon || x.item.gfx || null });
     return {
-      meta: { profile: PROFILE, forge, companion, level: I.level || 200, prestige: H.prestige || 0, breedId: D.breedId, deckSize: D.deckSize, discordBonus: 5, scrolls: I.scrollValues || {}, rows: Pp.rows.map(r => ({ key: r.key, base: r.base, bonus: r.bonus, tiers: r.tiers })), pointsFree: Pp.pointsFree, decks: D.initialDecks, deckNames: D.initialNames, active: D.initialActive, ranked: D.initialRanked || null, presets: (() => { try { return findPresets(perso) || presetsFromDom(I, best); } catch (e) { return null; } })(), presetsRaw: (() => { try { return presetsRaw(perso); } catch (e) { return null; } })(), diag: (() => { try { const s = Object.values(db.bossSamples || {})[0]; const o = s ? JSON.parse(s) : null; let pd = null; try { pd = JSON.parse(localStorage.getItem('labo-presets-dom') || 'null'); } catch (e) {} return { fighterKeys: o ? Object.keys(o) : null, mech: best && best.diag || null, presetsDom: pd ? { t: pd.t, n: (pd.presets || []).length } : null }; } catch (e) { return null; } })() },
+      meta: { profile: PROFILE, forge, companion, level: I.level || 200, prestige: H.prestige || 0, breedId: D.breedId, deckSize: D.deckSize, discordBonus: 5, scrolls: I.scrollValues || {}, rows: Pp.rows.map(r => ({ key: r.key, base: r.base, bonus: r.bonus, tiers: r.tiers })), pointsFree: Pp.pointsFree, decks: D.initialDecks, deckNames: D.initialNames, active: D.initialActive, ranked: D.initialRanked || null, presets: (() => { try { return findPresets(perso) || presetsFromDom(I, best); } catch (e) { return null; } })(), presetsRaw: (() => { try { return presetsRaw(perso); } catch (e) { return null; } })(), diag: (() => { try { const s = Object.values(db.bossSamples || {})[0]; const o = s ? JSON.parse(s) : null; let pd = null; try { pd = JSON.parse(localStorage.getItem('labo-presets-dom') || 'null'); } catch (e) {} let ai = null; try { ai = JSON.parse(localStorage.getItem('labo-allitems-diag') || 'null'); } catch (e) {} let sn = null; try { sn = JSON.parse(localStorage.getItem('labo-sniff') || 'null'); } catch (e) {} return { allItems: ai, sniff: sn, fighterKeys: o ? Object.keys(o) : null, mech: best && best.diag || null, presetsDom: pd ? { t: pd.t, n: (pd.presets || []).length } : null }; } catch (e) { return null; } })() },
       worn: I.slots.filter(s => s.item).map(s => Object.assign(it(s), { slot: s.slot, f: s.fusion })),
       items: I.entries.map(e => Object.assign(it(e), { f: e.fusion, q: e.qty })),
       cards: D.collection.map(c => ({ key: c.key, id: c.card.id, n: c.card.n, ap: c.card.ap, cc: c.card.cc, cls: c.card.cls, r: c.card.r, f: c.card.f, eff: c.card.eff, crit: c.card.crit || null, sig: !!c.card.sig, d: (c.card.d || '').slice(0, 180), ic: cardIcon(c.card) })),
@@ -1563,23 +1563,24 @@
   // v2.11.3 : catalogue complet des objets (onglet Objets du bestiaire, ~3 300 objets), lu page par page si besoin ; gardé 24 h
   const ALLITEMS_KEY = 'labo-allitems';
   function itemArrays(v, out, d = 0) {
-    if (!v || typeof v !== 'object' || d > 10) return out;
-    if (Array.isArray(v)) { if (v.length && v.filter(x => x && typeof x === 'object' && x.id != null && typeof x.n === 'string' && typeof x.s === 'string' && (x.st || x.stats)).length >= Math.min(5, v.length)) out.push(v); for (const x of v) itemArrays(x, out, d + 1); return out; }
+    if (!v || typeof v !== 'object' || d > 12) return out;
+    if (Array.isArray(v)) { if (v.length >= 20 && v.filter(x => x && typeof x === 'object' && x.id != null && typeof (x.n || x.name) === 'string').length >= v.length * 0.8) out.push(v); for (const x of v) itemArrays(x, out, d + 1); return out; }
     for (const k in v) itemArrays(v[k], out, d + 1); return out;
   }
-  const slimItem = x => ({ id: x.id, n: x.n, lvl: x.lvl ?? x.level, s: x.s, icon: x.icon ?? x.gfx ?? null, r: x.r ?? x.rarity ?? 0, st: x.st || x.stats || {}, setName: x.setName || null, setId: x.setId || null, w: x.w || null, src: typeof x.src === 'string' ? x.src.slice(0, 200) : undefined });
+  const slimItem = x => { const it = x.item && typeof x.item === 'object' ? Object.assign({}, x.item, x) : x; return { id: it.id, n: it.n || it.name, lvl: it.lvl ?? it.level ?? it.l, s: it.s || it.slot || it.type || it.cat || null, icon: it.icon ?? it.gfx ?? it.img ?? null, r: it.r ?? it.rarity ?? 0, st: it.st || it.stats || it.carac || {}, setName: it.setName || null, setId: it.setId || null, w: it.w || null, src: typeof (it.src || it.source || it.how) === 'string' ? (it.src || it.source || it.how).slice(0, 200) : undefined }; };
+  const looksItem = a => a.some(x => x && (x.s || x.slot) && (x.lvl != null || x.level != null)) || a.some(x => x && x.item && x.item.s);
   async function fetchAllItems() {
-    try { const c = JSON.parse(localStorage.getItem(ALLITEMS_KEY) || 'null'); if (c && c.items && Date.now() - c.t < 864e5) return c.items; } catch (e) {}
-    const got = new Map(); const take = rows => { let n = 0; for (const arr of itemArrays(rows, [])) for (const x of arr) if (!got.has(x.id)) { got.set(x.id, slimItem(x)); n++; } return n; };
-    take(await rsc('/bestiaire?onglet=objets'));
-    // si la page n'en donne qu'une partie, on essaie les paramètres de pagination usuels
-    if (got.size < 1000) {
-      for (const q of ['&limit=10000', '&n=10000', '&take=10000', '&perPage=10000', '&size=10000']) { if (take(await rsc('/bestiaire?onglet=objets' + q)) > 50) break; }
-    }
-    if (got.size < 1000) {
-      for (const key of ['page', 'p']) { let added = 0; for (let k = 2; k <= 200; k++) { const n = take(await rsc('/bestiaire?onglet=objets&' + key + '=' + k)); if (!n) break; added += n; await new Promise(r => setTimeout(r, 150)); } if (added) break; }
+    try { const c = JSON.parse(localStorage.getItem(ALLITEMS_KEY) || 'null'); if (c && c.items && c.items.length > 1000 && Date.now() - c.t < 864e5) return c.items; } catch (e) {}
+    const got = new Map(); const diag = [];
+    for (const url of ['/bestiaire?onglet=objets', '/bestiaire?onglet=items', '/bestiaire?tab=objets', '/bestiaire?vue=objets', '/bestiaire/objets']) {
+      let rows; try { rows = await rsc(url); } catch (e) { diag.push({ url, err: String(e).slice(0, 100) }); continue; }
+      const arrs = itemArrays(rows, []).sort((a, b) => b.length - a.length);
+      diag.push({ url, arrays: arrs.slice(0, 4).map(a => ({ len: a.length, keys: Object.keys(a[0] || {}).slice(0, 30), item: looksItem(a), sample: JSON.stringify(a[0]).slice(0, 400) })) });
+      for (const a of arrs) if (looksItem(a)) for (const x of a) { const s = slimItem(x); if (s.id != null && !got.has(s.id)) got.set(s.id, s); }
+      if (got.size > 1000) break;
     }
     const items = [...got.values()];
+    try { localStorage.setItem('labo-allitems-diag', JSON.stringify(diag).slice(0, 20000)); } catch (e) {}
     try { localStorage.setItem(ALLITEMS_KEY, JSON.stringify({ t: Date.now(), items })); } catch (e) {}
     return items;
   }
