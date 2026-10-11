@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.10.0
+// @version      2.11.0
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -1385,10 +1385,10 @@
     let dofusSets = null; try { const ids = ((best && best.items) || []).map(x => x.setId).concat((I.sets || []).map(x => x.id)).concat((I.entries || []).map(e => e.item && e.item.setId).concat((I.slots || []).map(e => e.item && e.item.setId))); dofusSets = await fetchDofusSets(ids.filter(Boolean)); } catch (e) {}
     const it = (x) => ({ id: x.item.id, n: x.item.n, lvl: x.item.lvl, s: x.item.s, r: x.item.r, setId: x.item.setId || null, st: x.item.st, w: x.item.w || null, icon: x.item.icon || x.item.gfx || null });
     return {
-      meta: { profile: PROFILE, forge, companion, level: I.level || 200, prestige: H.prestige || 0, breedId: D.breedId, deckSize: D.deckSize, discordBonus: 5, scrolls: I.scrollValues || {}, rows: Pp.rows.map(r => ({ key: r.key, base: r.base, bonus: r.bonus, tiers: r.tiers })), pointsFree: Pp.pointsFree, decks: D.initialDecks, deckNames: D.initialNames, active: D.initialActive, ranked: D.initialRanked || null },
+      meta: { profile: PROFILE, forge, companion, level: I.level || 200, prestige: H.prestige || 0, breedId: D.breedId, deckSize: D.deckSize, discordBonus: 5, scrolls: I.scrollValues || {}, rows: Pp.rows.map(r => ({ key: r.key, base: r.base, bonus: r.bonus, tiers: r.tiers })), pointsFree: Pp.pointsFree, decks: D.initialDecks, deckNames: D.initialNames, active: D.initialActive, ranked: D.initialRanked || null, presets: (() => { try { return findPresets(perso); } catch (e) { return null; } })(), presetsRaw: (() => { try { return presetsRaw(perso); } catch (e) { return null; } })() },
       worn: I.slots.filter(s => s.item).map(s => Object.assign(it(s), { slot: s.slot, f: s.fusion })),
       items: I.entries.map(e => Object.assign(it(e), { f: e.fusion, q: e.qty })),
-      cards: D.collection.map(c => ({ key: c.key, id: c.card.id, n: c.card.n, ap: c.card.ap, cc: c.card.cc, cls: c.card.cls, r: c.card.r, f: c.card.f, eff: c.card.eff, crit: c.card.crit || null, sig: !!c.card.sig, d: (c.card.d || '').slice(0, 180) })),
+      cards: D.collection.map(c => ({ key: c.key, id: c.card.id, n: c.card.n, ap: c.card.ap, cc: c.card.cc, cls: c.card.cls, r: c.card.r, f: c.card.f, eff: c.card.eff, crit: c.card.crit || null, sig: !!c.card.sig, d: (c.card.d || '').slice(0, 180), ic: cardIcon(c.card) })),
       monsters: Object.values(db.monsters).map(m => Object.assign({}, m, { mech: m.mech ? Object.assign({}, m.mech.parsed, { texts: Object.keys(m.mech.texts || {}), hints: m.mech.hints || [] }) : undefined })),
       fights: db.fights.map(f => ({ rounds: f.rounds, status: f.status, hpEnd: f.hpEnd, mons: f.mons, kind: f.kind, ctx: f.ctx, boss: f.boss, t: f.t, floor: f.floor, auto: f.auto, afk: f.afk, hid: f.hid, bsig: f.bsig, perCard: f.perCard, plays: f.plays, crits: f.crits, dmgTaken: f.dmgTaken, maxHp: f.maxHp, xp: f.xp, kamas: f.kamas, items: f.items, card: f.card, level: f.level })),
       builds: db.builds || {},
@@ -1434,6 +1434,48 @@
     recSet(KEY, JSON.stringify(out));
     return out;
   }
+  // v2.11 : image des sorts (le n° d'image diffère du n° de sort) et équipements enregistrés de la page Personnage
+  function cardIcon(c) {
+    if (!c) return null;
+    for (const k of ['icon', 'img', 'image', 'gfx', 'sprite', 'pic', 'iconId', 'spellIcon', 'spellId', 'sid']) { const v = c[k]; if (v != null && v !== '' && (typeof v === 'number' || typeof v === 'string')) return String(v); }
+    for (const k in c) { const v = c[k]; if (typeof v === 'string' && /sort_\d+/.test(v)) return v.match(/sort_\d+/)[0]; }
+    return null;
+  }
+  const PRE_SLOTS = ['chapeau', 'cape', 'amulette', 'anneau1', 'anneau2', 'ceinture', 'bottes', 'arme', 'bouclier', 'familier', 'dofus1', 'dofus2', 'dofus3', 'dofus4', 'dofus5', 'dofus6'];
+  const PRE_CAR = ['vitalite', 'sagesse', 'force', 'intelligence', 'chance', 'agilite'];
+  function preItem(v) {
+    if (v == null) return null;
+    if (typeof v === 'number') return { id: v, f: 0 };
+    if (typeof v === 'string' && /^\d+$/.test(v)) return { id: +v, f: 0 };
+    if (typeof v === 'object') { const it = v.item && typeof v.item === 'object' ? v.item : v; const id = it.id || v.itemId || v.item_id || v.iid || (typeof v.item === 'number' ? v.item : null); if (!id) return null; return { id: +id, f: +(v.fusion ?? v.f ?? it.fusion ?? it.f ?? 0) || 0 }; }
+    return null;
+  }
+  function preGear(x, d = 0, out = {}) {
+    if (!x || typeof x !== 'object' || d > 6) return out;
+    if (Array.isArray(x)) { for (const e of x) { if (e && typeof e === 'object' && typeof e.slot === 'string' && PRE_SLOTS.includes(e.slot)) { const it = preItem(e); if (it) out[e.slot] = it; } else preGear(e, d + 1, out); } return out; }
+    const ks = Object.keys(x).filter(k => PRE_SLOTS.includes(k));
+    if (ks.length >= 2) { for (const k of ks) { const it = preItem(x[k]); if (it) out[k] = it; } return out; }
+    for (const k in x) preGear(x[k], d + 1, out);
+    return out;
+  }
+  function preAlloc(x, d = 0) {
+    if (!x || typeof x !== 'object' || d > 6) return null;
+    if (!Array.isArray(x)) { const ks = PRE_CAR.filter(k => typeof x[k] === 'number'); if (ks.length >= 3) { const o = {}; for (const k of ks) o[k] = x[k]; return o; } }
+    if (Array.isArray(x) && x.length && x.every(r => r && typeof r === 'object' && PRE_CAR.includes(r.key))) { const o = {}; for (const r of x) o[r.key] = +(r.base ?? r.value ?? r.v ?? 0) || 0; return o; }
+    for (const k in x) { const r = preAlloc(x[k], d + 1); if (r) return r; }
+    return null;
+  }
+  function preName(x) { for (const k of ['name', 'nom', 'label', 'title', 'n']) if (typeof x[k] === 'string') return x[k]; return null; }
+  function presetArrays(perso) {
+    const found = [];
+    const visit = (v, d) => { if (!v || typeof v !== 'object' || d > 9) return; if (Array.isArray(v)) { if (v.length >= 1 && v.length <= 12 && v.some(x => x && typeof x === 'object' && !Array.isArray(x)) && v.every(x => x == null || (typeof x === 'object' && !Array.isArray(x)))) { const n = v.filter(x => x && Object.keys(preGear(x)).length >= 2).length; if (n) found.push({ n, v }); } v.forEach(x => visit(x, d + 1)); return; } for (const k in v) visit(v[k], d + 1); };
+    visit(perso, 0); return found.sort((a, b) => b.n - a.n);
+  }
+  function findPresets(perso) {
+    const f = presetArrays(perso)[0]; if (!f) return null;
+    return f.v.map((x, i) => x ? { i, name: preName(x) || ('Équipement ' + (i + 1)), gear: preGear(x), alloc: preAlloc(x) } : { i, name: 'Équipement ' + (i + 1), gear: {}, alloc: null });
+  }
+  function presetsRaw(perso) { const f = presetArrays(perso)[0]; if (f) return JSON.stringify(f.v).slice(0, 40000); const s = JSON.stringify(perso); const m = s.match(/.{0,200}(preset|loadout|enregistr|saved|equipSet)[^]{0,3000}/i); return m ? m[0].slice(0, 6000) : null; }
   async function rsc(path) {
       const h = await origFetch(path, { credentials: 'include' }).then(r => r.text());
       const txt = [...h.matchAll(/self\.__next_f\.push\(\[1,"((?:[^"\\]|\\.)*)"\]\)/g)].map(m => { try { return JSON.parse('"' + m[1] + '"'); } catch (e) { return ''; } }).join('');
@@ -1486,7 +1528,7 @@
     if (C) {
       // les mécaniques ne sont révélées qu'aux persos qui ont battu le boss : on garde celles déjà connues (perso principal)
       const prev = Object.fromEntries((out.mech || []).map(c => [c.id, c]));
-      out.mech = C.cards.map(c => { const m = (c.m || []).map(e => parseMechEntry(e.n, e.x, e.w)); const p = prev[c.id]; return { id: c.id, n: c.n, l: c.l, t: c.t, u: c.u ? 1 : (p && p.u) || 0, v: c.v, m: m.length ? m : (p && p.m) || [] }; });
+      out.mech = C.cards.map(c => { const m = (c.m || []).map(e => parseMechEntry(e.n, e.x, e.w)); const p = prev[c.id]; return { id: c.id, n: c.n, l: c.l, t: c.t, u: c.u ? 1 : (p && p.u) || 0, v: c.v, g: c.gfx || c.icon || c.img || c.image || (p && p.g) || null, m: m.length ? m : (p && p.m) || [] }; });
       out.tagLabels = C.tagLabels; out.t = Date.now();
     }
     if (full) {

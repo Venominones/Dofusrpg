@@ -10,26 +10,25 @@
 <style>
 /* Layout : établi de forge — barre d'onglets, un panneau de réglages à gauche, résultats à droite ; une colonne sur téléphone */
 :root{
-  --bg:#f3efe6; --panel:#fbf8f2; --ink:#2a2219; --muted:#6e6253; --line:#ddd3c2; --line2:#c9bca6;
-  --gold:#9a6b12; --gold-soft:#f1e2bf; --good:#2f7d4f; --warn:#a8641b; --bad:#b23b33;
-  --neutre:#8a847d; --terre:#97692d; --feu:#c4504a; --eau:#3f73c2; --air:#3e8f5c;
+  --bg:#efe5c9; --panel:#f8f1dd; --ink:#3a2a17; --muted:#77603f; --line:#dccb9f; --line2:#b99a5f;
+  --gold:#c4661a; --gold-soft:#f4dfae; --good:#4d7a1a; --warn:#b5651d; --bad:#a8322a;
+  --neutre:#7d766c; --terre:#8f5f22; --feu:#c2462f; --eau:#2f6fb6; --air:#3d8a3a;
+  --frame:#4b3421; --frame2:#2f2014; --frame-ink:#f3e4bd; --page:#e3d4ad;
   --f-display:"Alegreya SC", "Palatino Linotype", Georgia, serif;
   --f-body:"Alegreya Sans", "Segoe UI", system-ui, sans-serif;
   --f-mono:"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
   color-scheme: light;
 }
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
-  --bg:#15120d; --panel:#1e1a14; --ink:#efe6d6; --muted:#a89a85; --line:#342c22; --line2:#4a3f30;
-  --gold:#e0b04f; --gold-soft:#3a2d14; --good:#6cc28d; --warn:#e3a35a; --bad:#ec7a70;
-  --neutre:#b1aaa2; --terre:#c99a5c; --feu:#e57b74; --eau:#7aa7ea; --air:#6fc48f; color-scheme: dark; } }
+/* Thème « Dofus » : parchemin, cadres en bois, boutons orangés ; une variante nuit en bois sombre (jamais noire) si on la force */
 :root[data-theme="dark"]{
-  --bg:#15120d; --panel:#1e1a14; --ink:#efe6d6; --muted:#a89a85; --line:#342c22; --line2:#4a3f30;
-  --gold:#e0b04f; --gold-soft:#3a2d14; --good:#6cc28d; --warn:#e3a35a; --bad:#ec7a70;
-  --neutre:#b1aaa2; --terre:#c99a5c; --feu:#e57b74; --eau:#7aa7ea; --air:#6fc48f; color-scheme: dark; }
+  --bg:#3a2c1d; --panel:#453624; --ink:#f1e3c2; --muted:#c9b48c; --line:#5d4830; --line2:#7d6240;
+  --gold:#f09a3a; --gold-soft:#5a4024; --good:#9cc45a; --warn:#e8a050; --bad:#f08070;
+  --neutre:#b8b0a4; --terre:#d0a060; --feu:#f08a70; --eau:#80b0f0; --air:#80c880;
+  --frame:#2a1d11; --frame2:#1d140b; --frame-ink:#f3e4bd; --page:#33261a; color-scheme: dark; }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html{margin:0}body{margin:0}
-body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5}
+body{background:var(--page) radial-gradient(ellipse at 50% -10%,#f6edd3 0%,var(--page) 55%,#d5c193 100%) fixed;color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5}
 .wrap{max-width:1180px;margin:0 auto;padding-inline:16px;padding-block:20px 48px}
 h1,h2,h3{font-family:var(--f-display);font-weight:700;text-wrap:balance;margin:0;line-height:1.15}
 h1{font-size:clamp(1.7rem,4vw,2.4rem);letter-spacing:.01em}
@@ -162,6 +161,46 @@ textarea{min-height:110px;font-family:var(--f-mono);font-size:.8rem}
 .pre-card h3{margin:0;font-size:1.05rem}.pre-card p{margin:0}
 .pre-det{display:grid;grid-template-columns:minmax(0,430px) minmax(0,1fr);gap:14px;align-items:start}
 @media (max-width:820px){.pre-det{grid-template-columns:1fr}}
+/* --- habillage Dofus --- */
+header.top{background:linear-gradient(180deg,var(--frame),var(--frame2));color:var(--frame-ink);border:2px solid #8a6a3a;border-radius:12px;padding:14px 18px;box-shadow:0 3px 0 #9c7b45,inset 0 1px 0 rgba(255,230,180,.25)}
+header.top p,header.top .eyebrow,.freshness{color:#d9c69c}
+header.top h1{color:#ffd58a;text-shadow:0 2px 0 #2a1a0c}
+nav.tabs{background:linear-gradient(180deg,var(--frame),var(--frame2));border:2px solid #8a6a3a;border-radius:10px;padding:6px;box-shadow:0 2px 0 #9c7b45}
+nav.tabs button{color:#e8d6a8;border-radius:7px}
+nav.tabs button:hover{background:rgba(255,220,160,.1)}
+nav.tabs button[aria-selected="true"]{background:linear-gradient(180deg,#f7b04e,#d3711a);color:#2b1606;border-color:#8a4a12;box-shadow:inset 0 1px 0 rgba(255,255,255,.45)}
+nav.tabs .wipdot{display:inline-block;font-size:.62rem;font-weight:800;letter-spacing:.06em;background:#7a2e8f;color:#fff;border-radius:4px;padding:0 4px;margin-left:5px;vertical-align:2px}
+.panel{border:2px solid var(--line2);border-radius:12px;box-shadow:inset 0 0 0 1px #fffaf0,0 2px 0 #c5ab72}
+.panel h2,.panel>h3{color:#5a3816}
+.btn{background:linear-gradient(180deg,#f6ab4a,#d2701a);color:#2a1606;border:1px solid #8a4a12;box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 1px 0 #9c6a2a}
+.btn:hover{filter:brightness(1.06)}
+.btn.ghost{background:linear-gradient(180deg,#fbf3df,#ecdcb6);color:var(--ink);border:1px solid var(--line2);box-shadow:inset 0 1px 0 #fff}
+.seg{background:#efe2bf;border-color:var(--line2)}
+.seg button[aria-pressed="true"]{background:linear-gradient(180deg,#f7d58f,#e9b25a);color:#2b1606}
+.kpi{background:linear-gradient(180deg,#fbf5e4,#f1e5c3);border-color:var(--line2)}
+.kpi .v{color:#6a3d12}
+select,input[type=number],input[type=text],input[type=search],textarea{background:#fffaf0;border-color:var(--line2)}
+.alert{background:#fbe9c4;border-color:#c98a3a}
+.alert.theory{background:#efe7fb;border-color:#8a68b8}
+.mb-slot,.pre-ic{background:radial-gradient(circle at 50% 40%,#fffaf0,#e9dbb6);border-color:#a8885a}
+.mb-center,.pre-mid{background:linear-gradient(180deg,#fbf5e4,#efe2bd)}
+:root[data-theme="dark"] .panel h2,:root[data-theme="dark"] .panel>h3,:root[data-theme="dark"] .kpi .v{color:#ffd58a}
+:root[data-theme="dark"] .seg,:root[data-theme="dark"] .kpi,:root[data-theme="dark"] .btn.ghost,:root[data-theme="dark"] select,:root[data-theme="dark"] input,:root[data-theme="dark"] .mb-slot,:root[data-theme="dark"] .pre-ic,:root[data-theme="dark"] .mb-center,:root[data-theme="dark"] .pre-mid,:root[data-theme="dark"] .alert{background:#4a3825;color:var(--ink)}
+/* cartes de sorts, vignettes */
+.ctiles{display:flex;flex-wrap:wrap;gap:8px}
+.ctile{width:96px;display:grid;gap:3px;justify-items:center;text-align:center;border:1px solid var(--line2);border-radius:9px;padding:6px 4px;background:linear-gradient(180deg,#fffaf0,#efe2bf);font-size:12px;line-height:1.2;position:relative}
+.ctile img,.ctile .ph{width:56px;height:56px;object-fit:contain;border-radius:9px}
+.ctile .ph{display:grid;place-items:center;font:700 18px var(--f-display);color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.4)}
+.ctile .ap{position:absolute;top:3px;right:4px;font:700 11px var(--f-mono);background:#2f6fb6;color:#fff;border-radius:50%;width:20px;height:20px;display:grid;place-items:center}
+.thumb{width:38px;height:38px;object-fit:contain;vertical-align:middle;margin-right:8px;float:left}
+.thumb.s{width:20px;height:20px;margin-right:4px;float:none}
+.ochecks{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.ochecks li{display:grid;grid-template-columns:22px 1fr;gap:6px;font-size:.92rem}
+.ochecks .ok{color:var(--good);font-weight:800}.ochecks .ko{color:var(--warn);font-weight:800}.ochecks .bad{color:var(--bad);font-weight:800}
+.otop{display:grid;gap:8px;border:2px solid var(--line2);border-radius:10px;padding:10px 12px;background:linear-gradient(180deg,#fff8e6,#f3e4bd)}
+.wip-card{border:2px dashed #8a68b8;border-radius:12px;padding:14px;display:grid;gap:8px;background:repeating-linear-gradient(135deg,#f5eefb 0 14px,#efe5f8 14px 28px)}
+.wip-card h3{color:#5b2d7a;font-size:1.25rem}
+.pill.wip{background:#7a2e8f;color:#fff;border-color:#7a2e8f}
 </style>
 
 </head>
@@ -180,12 +219,10 @@ textarea{min-height:110px;font-family:var(--f-mono);font-size:.8rem}
   <nav class="tabs" role="tablist" aria-label="Sections">
     <button role="tab" id="t-perso" aria-selected="true" data-tab="perso">Mon personnage</button>
     <button role="tab" id="t-opt" aria-selected="false" data-tab="opt">Optimiseur</button>
-    <button role="tab" id="t-asc" aria-selected="false" data-tab="asc">Ascension</button>
     <button role="tab" id="t-pre" aria-selected="false" data-tab="pre">Prébuilds</button>
     <button role="tab" id="t-mb" aria-selected="false" data-tab="mb">Build manuel</button>
     <button role="tab" id="t-best" aria-selected="false" data-tab="best">Bestiaire</button>
-    <button role="tab" id="t-farm" aria-selected="false" data-tab="farm">Farm</button>
-    <button role="tab" id="t-items" aria-selected="false" data-tab="items">Objets</button>
+    <button role="tab" id="t-wip" aria-selected="false" data-tab="wip">Abysses · Écarlate<span class="wipdot">WIP</span></button>
     <button role="tab" id="t-form" aria-selected="false" data-tab="form">Formules</button>
     <button role="tab" id="t-data" aria-selected="false" data-tab="data">Mes données</button>
   </nav>
@@ -200,6 +237,17 @@ textarea{min-height:110px;font-family:var(--f-mono);font-size:.8rem}
       </div>
       <div class="kpis" id="charKpis"></div><div id="compWrap" class="note" style="margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label for="compPct">Compagnon : bonus d'équipement</label><input type="number" id="compPct" min="0" max="100" step="0.1" placeholder="auto" style="width:6em"> % <span id="compInfo" class="dim"></span></div>
       <div id="freePts" style="margin-top:10px"></div>
+    </div>
+    <div class="panel" id="pvPanel">
+      <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><h2 style="margin:0">Vue du personnage</h2>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;flex:1;justify-content:flex-end"><select id="pvGear" style="max-width:280px" aria-label="Équipement"></select><select id="pvDeck" style="max-width:240px" aria-label="Deck"></select></div></div>
+      <div class="pre-det">
+        <div style="display:grid;gap:10px"><div id="pvDoll"></div><div id="pvAlloc" class="note"></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn ghost" type="button" id="pvToMb">Ouvrir dans le Build manuel</button><button class="btn ghost" type="button" id="pvToOpt">Envoyer à l'optimiseur</button></div><span class="note" id="pvMsg"></span></div>
+        <div id="pvStats"></div>
+      </div>
+      <h3 style="margin:0">Deck <span class="note" id="pvDeckN"></span></h3>
+      <div id="pvCards" class="ctiles"></div>
     </div>
     <div class="grid2">
       <div class="panel">
@@ -286,6 +334,7 @@ textarea{min-height:110px;font-family:var(--f-mono);font-size:.8rem}
         </div>
         <div class="field" hidden><select id="oPack"></select><input type="range" id="oDiff" min="1" max="6" step="0.25" value="1"><span id="oDiffV"></span></div>
         <div class="field"><span class="lbl">Adversaire simulé</span><span class="note" id="oTargetNote">Choisi selon l'orientation.</span></div>
+        <div class="field" id="oFloorWrap" hidden><label for="oFloor">Étage visé (Ascension)</label><input type="number" id="oFloor" min="1" max="200" placeholder="auto"><span class="note">Vide = l'étage qui suit ton record. Les boss de tes derniers étages sont ramenés à la puissance de cet étage, avec toutes les mécaniques.</span></div>
 <div class="field"><span class="lbl">Survie autorisée</span><label class="chk"><input type="checkbox" id="oHeal" checked>Soins</label><label class="chk"><input type="checkbox" id="oShield" checked>Boucliers</label><label class="chk"><input type="checkbox" id="oSteal" checked>Vol de vie (cartes et arme)</label></div>
         <div class="field"><span class="lbl">Mécanique de boss</span><label class="chk"><input type="checkbox" id="oInv">Soins inversés à partir du tour <input type="number" id="oInvT" min="1" max="30" value="3" style="width:4.2em;padding:3px 6px"></label><label class="chk"><input type="checkbox" id="oInvS">Les boucliers blessent aussi</label><span class="note">Le vol de vie et les soins te retirent des PV au lieu d'en rendre.</span></div>
         <div class="field"><label for="oSpell">Type de sorts</label><select id="oSpell"><option value="">Tous</option><option value="zone">Zone</option><option value="mono">Mono-cible</option><option value="steal">Vol de vie</option><option value="sustain">Bouclier / Soin</option><option value="apremove">Retrait PA</option></select><div class="seg" id="oSpellMode" style="margin-top:4px"><button type="button" data-v="strict" aria-pressed="true">Strict</button><button type="button" data-v="pref" aria-pressed="false">Préférence</button></div><span class="note">Strict : tous les sorts de dégâts du deck sont de ce type (boucliers, PA… restent permis). Préférence : l'optimiseur en met le plus possible sans sacrifier le résultat.</span></div>
@@ -299,6 +348,7 @@ textarea{min-height:110px;font-family:var(--f-mono);font-size:.8rem}
         <div class="toast muted" id="oStatus">Prêt. Compte de 2 s (Rapide) à environ 1 min (Approfondi).</div><div class="note" id="oReady"></div>
       </div>
       <div class="panel" id="optOut">
+        <div class="alert theory"><strong>Résultat théorique</strong><span>L'Optimiseur génère un build cohérent avec ta demande, calculé par simulation de combats. Ce n'est pas forcément le meilleur stuff possible : vérifie en jeu et ajuste à ton style.</span></div>
         <div class="kpis" id="oKpis"></div>
         <div id="oDetails" class="prose"><p class="muted">Les résultats s'affichent ici : avant/après, objets à changer, répartition des points et cartes à échanger.</p></div>
       </div>
@@ -467,6 +517,17 @@ textarea{min-height:110px;font-family:var(--f-mono);font-size:.8rem}
       <div class="tablewrap" id="tlOut"></div>
     </div>
   </section>
+  <section class="tab" id="wip" hidden>
+    <div class="panel">
+      <h2 style="margin:0">En chantier</h2>
+      <p class="note" style="margin:0">Ces modes arrivent dans le Labo. Rien n'est encore calculé ici : le script doit d'abord apprendre à lire ces contenus.</p>
+      <div class="pre-grid">
+        <div class="wip-card"><span class="pill wip" style="justify-self:start">Work in progress</span><h3>Les Abysses</h3><p class="note" style="margin:0">Prévu : lecture des étages et des monstres des Abysses par le script, simulation des combats, build conseillé et suivi de ta progression.</p></div>
+        <div class="wip-card"><span class="pill wip" style="justify-self:start">Work in progress</span><h3>Dimension Écarlate</h3><p class="note" style="margin:0">Prévu : mécaniques propres à la Dimension Écarlate dans le simulateur, orientation dédiée dans l'Optimiseur et prébuild adapté.</p></div>
+      </div>
+    </div>
+  </section>
+
   <section class="tab" id="form" hidden>
     <div class="panel prose">
       <h2>Comment le simulateur calcule</h2>
@@ -2011,7 +2072,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
 <script type="text/plain" id="src-userscript">// ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.10.0
+// @version      2.11.0
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -3395,10 +3456,10 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     let dofusSets = null; try { const ids = ((best && best.items) || []).map(x => x.setId).concat((I.sets || []).map(x => x.id)).concat((I.entries || []).map(e => e.item && e.item.setId).concat((I.slots || []).map(e => e.item && e.item.setId))); dofusSets = await fetchDofusSets(ids.filter(Boolean)); } catch (e) {}
     const it = (x) => ({ id: x.item.id, n: x.item.n, lvl: x.item.lvl, s: x.item.s, r: x.item.r, setId: x.item.setId || null, st: x.item.st, w: x.item.w || null, icon: x.item.icon || x.item.gfx || null });
     return {
-      meta: { profile: PROFILE, forge, companion, level: I.level || 200, prestige: H.prestige || 0, breedId: D.breedId, deckSize: D.deckSize, discordBonus: 5, scrolls: I.scrollValues || {}, rows: Pp.rows.map(r => ({ key: r.key, base: r.base, bonus: r.bonus, tiers: r.tiers })), pointsFree: Pp.pointsFree, decks: D.initialDecks, deckNames: D.initialNames, active: D.initialActive, ranked: D.initialRanked || null },
+      meta: { profile: PROFILE, forge, companion, level: I.level || 200, prestige: H.prestige || 0, breedId: D.breedId, deckSize: D.deckSize, discordBonus: 5, scrolls: I.scrollValues || {}, rows: Pp.rows.map(r => ({ key: r.key, base: r.base, bonus: r.bonus, tiers: r.tiers })), pointsFree: Pp.pointsFree, decks: D.initialDecks, deckNames: D.initialNames, active: D.initialActive, ranked: D.initialRanked || null, presets: (() => { try { return findPresets(perso); } catch (e) { return null; } })(), presetsRaw: (() => { try { return presetsRaw(perso); } catch (e) { return null; } })() },
       worn: I.slots.filter(s => s.item).map(s => Object.assign(it(s), { slot: s.slot, f: s.fusion })),
       items: I.entries.map(e => Object.assign(it(e), { f: e.fusion, q: e.qty })),
-      cards: D.collection.map(c => ({ key: c.key, id: c.card.id, n: c.card.n, ap: c.card.ap, cc: c.card.cc, cls: c.card.cls, r: c.card.r, f: c.card.f, eff: c.card.eff, crit: c.card.crit || null, sig: !!c.card.sig, d: (c.card.d || '').slice(0, 180) })),
+      cards: D.collection.map(c => ({ key: c.key, id: c.card.id, n: c.card.n, ap: c.card.ap, cc: c.card.cc, cls: c.card.cls, r: c.card.r, f: c.card.f, eff: c.card.eff, crit: c.card.crit || null, sig: !!c.card.sig, d: (c.card.d || '').slice(0, 180), ic: cardIcon(c.card) })),
       monsters: Object.values(db.monsters).map(m => Object.assign({}, m, { mech: m.mech ? Object.assign({}, m.mech.parsed, { texts: Object.keys(m.mech.texts || {}), hints: m.mech.hints || [] }) : undefined })),
       fights: db.fights.map(f => ({ rounds: f.rounds, status: f.status, hpEnd: f.hpEnd, mons: f.mons, kind: f.kind, ctx: f.ctx, boss: f.boss, t: f.t, floor: f.floor, auto: f.auto, afk: f.afk, hid: f.hid, bsig: f.bsig, perCard: f.perCard, plays: f.plays, crits: f.crits, dmgTaken: f.dmgTaken, maxHp: f.maxHp, xp: f.xp, kamas: f.kamas, items: f.items, card: f.card, level: f.level })),
       builds: db.builds || {},
@@ -3444,6 +3505,48 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     recSet(KEY, JSON.stringify(out));
     return out;
   }
+  // v2.11 : image des sorts (le n° d'image diffère du n° de sort) et équipements enregistrés de la page Personnage
+  function cardIcon(c) {
+    if (!c) return null;
+    for (const k of ['icon', 'img', 'image', 'gfx', 'sprite', 'pic', 'iconId', 'spellIcon', 'spellId', 'sid']) { const v = c[k]; if (v != null && v !== '' && (typeof v === 'number' || typeof v === 'string')) return String(v); }
+    for (const k in c) { const v = c[k]; if (typeof v === 'string' && /sort_\d+/.test(v)) return v.match(/sort_\d+/)[0]; }
+    return null;
+  }
+  const PRE_SLOTS = ['chapeau', 'cape', 'amulette', 'anneau1', 'anneau2', 'ceinture', 'bottes', 'arme', 'bouclier', 'familier', 'dofus1', 'dofus2', 'dofus3', 'dofus4', 'dofus5', 'dofus6'];
+  const PRE_CAR = ['vitalite', 'sagesse', 'force', 'intelligence', 'chance', 'agilite'];
+  function preItem(v) {
+    if (v == null) return null;
+    if (typeof v === 'number') return { id: v, f: 0 };
+    if (typeof v === 'string' && /^\d+$/.test(v)) return { id: +v, f: 0 };
+    if (typeof v === 'object') { const it = v.item && typeof v.item === 'object' ? v.item : v; const id = it.id || v.itemId || v.item_id || v.iid || (typeof v.item === 'number' ? v.item : null); if (!id) return null; return { id: +id, f: +(v.fusion ?? v.f ?? it.fusion ?? it.f ?? 0) || 0 }; }
+    return null;
+  }
+  function preGear(x, d = 0, out = {}) {
+    if (!x || typeof x !== 'object' || d > 6) return out;
+    if (Array.isArray(x)) { for (const e of x) { if (e && typeof e === 'object' && typeof e.slot === 'string' && PRE_SLOTS.includes(e.slot)) { const it = preItem(e); if (it) out[e.slot] = it; } else preGear(e, d + 1, out); } return out; }
+    const ks = Object.keys(x).filter(k => PRE_SLOTS.includes(k));
+    if (ks.length >= 2) { for (const k of ks) { const it = preItem(x[k]); if (it) out[k] = it; } return out; }
+    for (const k in x) preGear(x[k], d + 1, out);
+    return out;
+  }
+  function preAlloc(x, d = 0) {
+    if (!x || typeof x !== 'object' || d > 6) return null;
+    if (!Array.isArray(x)) { const ks = PRE_CAR.filter(k => typeof x[k] === 'number'); if (ks.length >= 3) { const o = {}; for (const k of ks) o[k] = x[k]; return o; } }
+    if (Array.isArray(x) && x.length && x.every(r => r && typeof r === 'object' && PRE_CAR.includes(r.key))) { const o = {}; for (const r of x) o[r.key] = +(r.base ?? r.value ?? r.v ?? 0) || 0; return o; }
+    for (const k in x) { const r = preAlloc(x[k], d + 1); if (r) return r; }
+    return null;
+  }
+  function preName(x) { for (const k of ['name', 'nom', 'label', 'title', 'n']) if (typeof x[k] === 'string') return x[k]; return null; }
+  function presetArrays(perso) {
+    const found = [];
+    const visit = (v, d) => { if (!v || typeof v !== 'object' || d > 9) return; if (Array.isArray(v)) { if (v.length >= 1 && v.length <= 12 && v.some(x => x && typeof x === 'object' && !Array.isArray(x)) && v.every(x => x == null || (typeof x === 'object' && !Array.isArray(x)))) { const n = v.filter(x => x && Object.keys(preGear(x)).length >= 2).length; if (n) found.push({ n, v }); } v.forEach(x => visit(x, d + 1)); return; } for (const k in v) visit(v[k], d + 1); };
+    visit(perso, 0); return found.sort((a, b) => b.n - a.n);
+  }
+  function findPresets(perso) {
+    const f = presetArrays(perso)[0]; if (!f) return null;
+    return f.v.map((x, i) => x ? { i, name: preName(x) || ('Équipement ' + (i + 1)), gear: preGear(x), alloc: preAlloc(x) } : { i, name: 'Équipement ' + (i + 1), gear: {}, alloc: null });
+  }
+  function presetsRaw(perso) { const f = presetArrays(perso)[0]; if (f) return JSON.stringify(f.v).slice(0, 40000); const s = JSON.stringify(perso); const m = s.match(/.{0,200}(preset|loadout|enregistr|saved|equipSet)[^]{0,3000}/i); return m ? m[0].slice(0, 6000) : null; }
   async function rsc(path) {
       const h = await origFetch(path, { credentials: 'include' }).then(r => r.text());
       const txt = [...h.matchAll(/self\.__next_f\.push\(\[1,"((?:[^"\\]|\\.)*)"\]\)/g)].map(m => { try { return JSON.parse('"' + m[1] + '"'); } catch (e) { return ''; } }).join('');
@@ -3496,7 +3599,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     if (C) {
       // les mécaniques ne sont révélées qu'aux persos qui ont battu le boss : on garde celles déjà connues (perso principal)
       const prev = Object.fromEntries((out.mech || []).map(c => [c.id, c]));
-      out.mech = C.cards.map(c => { const m = (c.m || []).map(e => parseMechEntry(e.n, e.x, e.w)); const p = prev[c.id]; return { id: c.id, n: c.n, l: c.l, t: c.t, u: c.u ? 1 : (p && p.u) || 0, v: c.v, m: m.length ? m : (p && p.m) || [] }; });
+      out.mech = C.cards.map(c => { const m = (c.m || []).map(e => parseMechEntry(e.n, e.x, e.w)); const p = prev[c.id]; return { id: c.id, n: c.n, l: c.l, t: c.t, u: c.u ? 1 : (p && p.u) || 0, v: c.v, g: c.gfx || c.icon || c.img || c.image || (p && p.g) || null, m: m.length ? m : (p && p.m) || [] }; });
       out.tagLabels = C.tagLabels; out.t = Date.now();
     }
     if (full) {
@@ -4086,13 +4189,16 @@ function renderOpt(res,opts,pack,mult,deckIdx){lastOpt=res;
   const per=Object.entries(b.perCard).sort((p,q)=>q[1]-p[1]).slice(0,8);const mx=per.length?per[0][1]:1;
   html+=`<h3>Dégâts par carte, build proposé</h3><div class="bars">${per.map(([n,v])=>`<div class="bar"><span class="name">${esc(n)}</span><span class="track"><span class="fill" style="display:block;width:${v/mx*100}%"></span></span><span class="num" style="text-align:right">${fmt(v)}</span></div>`).join('')}</div>`;
   const gCode=O.encodeGear(st.gear),dCode=O.encodeDeck(st.deck,DATA.meta.breedId);lines.push('Code équipement : '+gCode);lines.push('Code deck : '+dCode);
-  html+=`<h3>Codes à importer dans le jeu</h3><div class="field"><span class="lbl">Équipement (page Personnage, « Codes d'équipement »)</span><div class="formula" style="white-space:normal;word-break:break-all">${gCode}</div><button class="btn ghost" type="button" data-copy="${gCode}">Copier le code d'équipement</button></div>
-  <div class="field"><span class="lbl">Deck (page Deck)</span><div class="formula" style="white-space:normal;word-break:break-all">${dCode}</div><button class="btn ghost" type="button" data-copy="${dCode}">Copier le code de deck</button></div>
-  <p class="note">Les points de caractéristiques ne passent pas par les codes : répartis-les à la main.</p>`;
-  html+=`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="btn ghost" id="copySum" type="button">Copier le résumé</button><span class="toast muted" id="copyMsg"></span></div>`;
-  html+=`<p class="note">À appliquer à la main dans le jeu. Le résultat varie un peu d'un lancement à l'autre : relance pour confirmer un gros changement.</p>`;
+  const SUM=optSummary(st,Sb,b,opts,res);lines.splice(1,0,'En bref : '+SUM.short);
+  const top=`<div class="otop"><div><strong>En bref.</strong> ${esc(SUM.short)}</div><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" type="button" data-copy="${gCode}">Copier le stuff</button><button class="btn" type="button" data-copy="${dCode}">Copier le deck</button><button class="btn ghost" id="copySum" type="button">Copier le résumé</button><button class="btn ghost" id="oToMb" type="button">Ouvrir dans le Build manuel</button></div><span class="toast muted" id="copyMsg"></span>
+    <details><summary><strong>Explication détaillée</strong> : principe du build et pourquoi ces objets</summary><div class="prose" style="margin-top:6px">${SUM.long}</div></details></div>
+    <h3>Contrôle de composition</h3>${compoChecks(st,Sb,b,opts,pack)}`;
+  html=top+html;
+  html+=`<details><summary><strong>Codes à importer dans le jeu</strong> (texte)</summary><div class="field"><span class="lbl">Équipement (page Personnage, « Codes d'équipement »)</span><div class="formula" style="white-space:normal;word-break:break-all">${gCode}</div></div><div class="field"><span class="lbl">Deck (page Deck)</span><div class="formula" style="white-space:normal;word-break:break-all">${dCode}</div></div></details>
+  <p class="note">Les points de caractéristiques ne passent pas par les codes : répartis-les à la main. Le résultat varie un peu d'un lancement à l'autre : relance pour confirmer un gros changement.</p>`;
   $('#oDetails').innerHTML=html;lastSummary=lines.join('\n');
   $('#copySum').onclick=()=>copyText(lastSummary,$('#copyMsg'));
+  $('#oToMb').onclick=()=>{const g={};for(const [s,x] of Object.entries(st.gear||{}))if(x)g[s]={id:x.id,f:x.f||0};mbOpen({gear:g,alloc:Object.assign({},st.alloc||{}),deck:st.deck.slice()},'Build de l\'optimiseur')};
   $('#oDetails').querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>copyText(b.dataset.copy,$('#copyMsg')));
 }
 function copyText(t,msg){try{navigator.clipboard.writeText(t).then(()=>msg.textContent='Copié.',()=>{msg.textContent='Copie refusée : sélectionne le texte à la main.'})}catch(e){msg.textContent='Copie refusée : sélectionne le texte à la main.'}}
@@ -4124,7 +4230,7 @@ function importText(txt){
 }
 
 /* ---------- Onglets & réglages ---------- */
-function showTab(id){if(id==='sim')id='mb';document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===id?'true':'false'));document.querySelectorAll('section.tab').forEach(s=>s.hidden=s.id!==id);try{localStorage.setItem('labo-tab',id)}catch(e){}if(id==='mb'){try{setupMB();renderMB()}catch(e){$('#mbMsg').textContent='Erreur : '+e.message}}if(id==='pre'){try{renderPrebuilds()}catch(e){$('#preOut').textContent='Erreur : '+e.message}}if(id==='farm'){try{renderFarm()}catch(e){$('#fZones').textContent='Erreur : '+e.message}try{renderPredict()}catch(e){$('#fPredict').textContent='Erreur : '+e.message}}if(id==='data'){try{renderChanges()}catch(e){}try{healthCheck(false)}catch(e){$('#healthOut').textContent='Erreur : '+e.message}}if(id==='items'){TL=null;if(LPROF==='saison')$('#tlFor').value='principal';renderItemsTab()}}
+function showTab(id){if(id==='sim')id='mb';if(id==='asc')id='opt';if(id==='farm'||id==='items')id='perso';document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===id?'true':'false'));document.querySelectorAll('section.tab').forEach(s=>s.hidden=s.id!==id);try{localStorage.setItem('labo-tab',id)}catch(e){}if(id==='perso'){try{renderPV()}catch(e){}}if(id==='mb'){try{setupMB();renderMB()}catch(e){$('#mbMsg').textContent='Erreur : '+e.message}}if(id==='pre'){try{renderPrebuilds()}catch(e){$('#preOut').textContent='Erreur : '+e.message}}if(id==='farm'){try{renderFarm()}catch(e){$('#fZones').textContent='Erreur : '+e.message}try{renderPredict()}catch(e){$('#fPredict').textContent='Erreur : '+e.message}}if(id==='data'){try{renderChanges()}catch(e){}try{healthCheck(false)}catch(e){$('#healthOut').textContent='Erreur : '+e.message}}if(id==='items'){TL=null;if(LPROF==='saison')$('#tlFor').value='principal';renderItemsTab()}}
 document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
 document.querySelectorAll('.seg:not(#playMode):not(#bView):not(#profMode)').forEach(g=>g.querySelectorAll('button').forEach(b=>b.onclick=()=>{g.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b?'true':'false'))}));
 const dv=v=>'×'+Number(v).toLocaleString('fr-FR',{minimumFractionDigits:1,maximumFractionDigits:2});
@@ -4141,7 +4247,8 @@ $('#simCodeReset').onclick=()=>{simOverride={gear:null,deck:null};$('#simCodeMsg
 const OBJ_NOTES={kralamoure:'Full DPS : maximise les dégâts cumulés en 10 tours sur le Kralamoure de la Faille (il ne meurt pas). La survie ne compte que si tu risques de mourir avant la fin. Le groupe de monstres et la difficulté sont ignorés.',equilibre:'Équilibre entre finir vite et perdre peu de PV, testé aussi sur ton adversaire le plus dur renforcé : un build qui farme vite sans casser sur un mauvais tirage.',vitesse:'Minimise le nombre de tours pour gagner.',survie:'Minimise les PV perdus, quitte à taper moins fort.',sagesse:'Maximise sagesse ÷ tours, avec au moins 95 % de victoires. Hypothèse : l\'XP gagnée suit la sagesse comme sur Dofus.',pp:'Maximise la prospection (le Dofus Kaliptus compte), avec au moins 95 % de victoires ; la vitesse ne sert qu\'à départager deux builds proches. Prospection = 100 + PP des objets + Chance/10 (510 pour toi, comme affiché en jeu).',multi:'Deck limité aux cartes qui tapent dans 2 éléments ou plus (plus les cartes utilitaires).',ascension:'Survie face à des monstres renforcés : la difficulté passe à ×3, ajuste-la selon ton étage.'};
 ['1','2','3','4'].forEach(e=>OBJ_NOTES['mono:'+e]='Deck limité aux cartes d\'un seul élément (plus les cartes utilitaires sans dégâts). Les cartes interdites de ton deck de départ sont remplacées.');
 function optTargetNote(){try{const p=optAutoPack();$('#oTargetNote').textContent=p?p.label:'—'}catch(e){}}
-$('#oObj').onchange=e=>{const v=e.target.value;$('#oObjNote').textContent=OBJ_NOTES[v]||'';optTargetNote()};
+$('#oObj').onchange=e=>{const v=e.target.value;$('#oObjNote').textContent=OBJ_NOTES[v]||'';$('#oFloorWrap').hidden=!/^ascension/.test(v);optTargetNote()};
+$('#oFloor').addEventListener('input',()=>{const a=$('#aFloorT');if(a){a.value=$('#oFloor').value;a.dispatchEvent(new Event('input'))}optTargetNote()});
 $('#oObjNote').textContent=OBJ_NOTES.equilibre;
 
 
@@ -4490,7 +4597,7 @@ function renderBest(){
     if(f.dataset.v!=='mech'||!$('#bQ')){f.dataset.v='mech';f.innerHTML=`<div class="field"><label for="bQ">Boss</label><input type="text" id="bQ" placeholder="Nom du boss"></div><div class="field"><label for="bType">Où on le croise</label><select id="bType"><option value="">Tous les types</option>${Object.entries(TYPE_L).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div><div class="field"><label for="bDiff">Difficulté</label><select id="bDiff"><option value="">Toutes</option>${['F','N','D','C'].map(k=>`<option value="${k}">${DIFF_L[k]}</option>`).join('')}</select></div><div class="field"><label for="bFloor">Étage d'Ascension</label><input type="number" id="bFloor" min="1" max="200" placeholder="ex. 23"></div><div class="field"><label for="bMech">Mécanique</label><select id="bMech"><option value="">Toutes</option>${[...new Set(B.mech.flatMap(b=>(b.m||[]).map(e=>e.mn)))].sort().map(n=>`<option>${esc(n)}</option>`).join('')}</select></div>`;f.querySelectorAll('input,select').forEach(x=>x.oninput=renderBest)}
     const q=($('#bQ').value||'').toLowerCase(),ty=$('#bType').value,df=$('#bDiff').value,fl=+$('#bFloor').value||0,mn=$('#bMech').value;
     const rows=B.mech.filter(b=>(!q||b.n.toLowerCase().includes(q))&&(!ty||(b.t||[]).includes(ty))).map(b=>{let es=fl?R.bestiaryEntries(b,{floor:fl}):(b.m||[]);if(df)es=es.filter(e=>String(e.d).includes(df));if(mn)es=es.filter(e=>e.mn===mn);return {b,es}}).filter(x=>x.es.length||(!df&&!mn&&!fl&&!x.b.u));
-    o.innerHTML=`<table><tr><th>Boss</th><th>Où</th><th>Mécaniques ${fl?'à l\'étage '+fl+' ('+DIFF_L[R.diffForFloor(fl)]+')':''}</th></tr>${rows.map(({b,es})=>{const mech=R.mechFromEntries(es),aw=R.autoWarnings(mech);return `<tr><td><strong>${esc(b.n)}</strong><div class="note">niv. ${b.l}${b.u?' · vaincu '+(b.v||0)+' fois':' · <span class="pill out">pas encore vaincu</span>'}</div></td><td>${(b.t||[]).map(t=>`<span class="pill">${esc(TYPE_L[t]||t)}</span>`).join(' ')}</td><td>${es.length?es.map(e=>`<div class="mechl"><b>${esc(e.mn)}</b> <span class="dim">· ${esc(entryDiff(e))}${entryCtx(e)?' · '+esc(entryCtx(e)):''}</span><br>${esc(e.x||R.mechText(e))}</div>`).join(''):'<span class="muted">Bats-le une fois pour révéler sa mécanique.</span>'}${fl&&aw.length?`<div class="alert" style="margin-top:4px">En auto : ${esc(aw.join(' ; '))}</div>`:''}</td></tr>`}).join('')}</table>${rows.length?'':'<p class="muted">Aucun boss ne correspond.</p>'}`;
+    o.innerHTML=`<table><tr><th>Boss</th><th>Où</th><th>Mécaniques ${fl?'à l\'étage '+fl+' ('+DIFF_L[R.diffForFloor(fl)]+')':''}</th></tr>${rows.map(({b,es})=>{const mech=R.mechFromEntries(es),aw=R.autoWarnings(mech);return `<tr><td>${b.g?(/^\d+$/.test(String(b.g))?monImg(b.g):`<img class="thumb" src="${String(b.g).startsWith('http')?b.g:GAME+(String(b.g)[0]==='/'?'':'/')+b.g}" alt="" loading="lazy" onerror="this.remove()">`):monThumb(b.n)}<strong>${esc(b.n)}</strong><div class="note">niv. ${b.l}${b.u?' · vaincu '+(b.v||0)+' fois':' · <span class="pill out">pas encore vaincu</span>'}</div></td><td>${(b.t||[]).map(t=>`<span class="pill">${esc(TYPE_L[t]||t)}</span>`).join(' ')}</td><td>${es.length?es.map(e=>`<div class="mechl"><b>${esc(e.mn)}</b> <span class="dim">· ${esc(entryDiff(e))}${entryCtx(e)?' · '+esc(entryCtx(e)):''}</span><br>${esc(e.x||R.mechText(e))}</div>`).join(''):'<span class="muted">Bats-le une fois pour révéler sa mécanique.</span>'}${fl&&aw.length?`<div class="alert" style="margin-top:4px">En auto : ${esc(aw.join(' ; '))}</div>`:''}</td></tr>`}).join('')}</table>${rows.length?'':'<p class="muted">Aucun boss ne correspond.</p>'}`;
     return;
   }
   const items=B.items||[],mons=B.monsters||[],zones=Object.fromEntries((B.zones||[]).map(z=>[z.id,z]));
@@ -4503,14 +4610,14 @@ function renderBest(){
     const names=new Set(items.map(i=>i.n).concat([...byKey.values()].map(o=>o.it.n)));const seen={};for(const fi of (DATA.fights||[]))for(const n of (fi.items||[])){const k=String(n).replace(/^\d+\s*×\s*/,'');if(!names.has(k))seen[k]=(seen[k]||0)+1}
     const list=[...byKey.values()].filter(o=>(!q||o.it.n.toLowerCase().includes(q))&&(!sl||o.it.s===sl)).sort((a,b)=>(a.it.s==='dofus'?0:1)-(b.it.s==='dofus'?0:1)||(b.it.lvl||0)-(a.it.lvl||0));
     const seenL=Object.entries(seen).filter(([n])=>!q||n.toLowerCase().includes(q)).sort((a,b)=>b[1]-a[1]);
-    o.innerHTML=`<p class="note">${list.length} objet${list.length>1?'s':''} possédé${list.length>1?'s':''} qu'aucun monstre du bestiaire ne donne (Dofus, trophées, objets de boss, d'Ascension ou de quête). Le Labo ne connaît que ceux que tes persos ont eus en main : ceux jamais obtenus restent invisibles.</p><table><tr><th>Objet</th><th>Empl.</th><th class="num">Niv.</th><th>Stats et effet</th><th>Possédé</th></tr>${list.map(({it,own})=>`<tr><td><strong>${esc(it.n)}</strong>${it.f?` <span class="dim">+${it.f}</span>`:''}</td><td>${SLOT_FR[it.s]||esc(it.s)}</td><td class="num">${it.lvl||''}</td><td class="dim">${esc(statsLine(it))}${fxOf(it).map(x=>`<div style="color:var(--gold)">Effet : ${esc(x[1])}</div>`).join('')}</td><td class="dim">${esc(own.join(', '))}</td></tr>`).join('')}</table>${seenL.length?`<h3>Vus dans tes butins, stats inconnues</h3><p class="note">Noms relevés dans les récompenses de combat, absents du bestiaire et de tes inventaires actuels.</p><p>${seenL.slice(0,80).map(([n,c])=>`${esc(n)} <span class="dim">×${c}</span>`).join(' · ')}</p>`:''}`;
+    o.innerHTML=`<p class="note">${list.length} objet${list.length>1?'s':''} possédé${list.length>1?'s':''} qu'aucun monstre du bestiaire ne donne (Dofus, trophées, objets de boss, d'Ascension ou de quête). Le Labo ne connaît que ceux que tes persos ont eus en main : ceux jamais obtenus restent invisibles.</p><table><tr><th>Objet</th><th>Empl.</th><th class="num">Niv.</th><th>Stats et effet</th><th>Possédé</th></tr>${list.map(({it,own})=>`<tr><td>${itemImg(it)}<strong>${esc(it.n)}</strong>${it.f?` <span class="dim">+${it.f}</span>`:''}</td><td>${SLOT_FR[it.s]||esc(it.s)}</td><td class="num">${it.lvl||''}</td><td class="dim">${esc(statsLine(it))}${fxOf(it).map(x=>`<div style="color:var(--gold)">Effet : ${esc(x[1])}</div>`).join('')}</td><td class="dim">${esc(own.join(', '))}</td></tr>`).join('')}</table>${seenL.length?`<h3>Vus dans tes butins, stats inconnues</h3><p class="note">Noms relevés dans les récompenses de combat, absents du bestiaire et de tes inventaires actuels.</p><p>${seenL.slice(0,80).map(([n,c])=>`${esc(n)} <span class="dim">×${c}</span>`).join(' · ')}</p>`:''}`;
     return;
   }
   if(bView==='mon'){
     if(f.dataset.v!=='mon'||!$('#bMin')){f.dataset.v='mon';f.innerHTML=`<div class="field"><label for="bQ">Monstre, famille ou zone</label><input type="text" id="bQ" placeholder="ex. Bouftou, Incarnam"></div><div class="field"><label for="bMin">Niveau min.</label><input type="number" id="bMin" min="1"></div><div class="field"><label for="bMax">Niveau max.</label><input type="number" id="bMax" min="1"></div><div class="field"><label for="bDrop">Lâche un objet</label><input type="text" id="bDrop" placeholder="Nom d'objet"></div>`;f.querySelectorAll('input').forEach(x=>x.oninput=renderBest)}
     const q=($('#bQ').value||'').toLowerCase(),mi=+$('#bMin').value||0,ma=+$('#bMax').value||999,dq=($('#bDrop').value||'').toLowerCase();
     const list=mons.filter(m=>(!q||m.n.toLowerCase().includes(q)||String(m.race||'').toLowerCase().includes(q)||(m.z||[]).some(z=>zones[z]&&(zones[z].n+' '+zones[z].area).toLowerCase().includes(q)))&&m.hi>=mi&&m.lo<=ma&&(!dq||(m.d||[]).some(d=>itemById[d[0]]&&itemById[d[0]].n.toLowerCase().includes(dq))));
-    o.innerHTML=`<p class="note">${list.length} monstre${list.length>1?'s':''}${list.length>150?' · 150 premiers affichés':''}. Chances de butin : base, puis avec ta prospection.</p><table><tr><th>Monstre</th><th>Zones</th><th>Butin</th></tr>${list.slice(0,150).map(m=>`<tr><td><strong>${esc(m.n)}</strong><div class="note">niv. ${m.lo}${m.hi!==m.lo?'-'+m.hi:''} · ${esc(m.race||'')}</div></td><td>${(m.z||[]).map(z=>zones[z]?esc(zones[z].n)+' <span class="dim">('+esc(zones[z].area)+')</span>':z).join('<br>')}</td><td>${(m.d||[]).map(d=>{const it=itemById[d[0]];return `${esc(it?it.n:'#'+d[0])} <span class="dim">${fmt(d[1],2)} % → <strong>${fmt(d[2],2)} %</strong></span>`}).join('<br>')||'<span class="muted">—</span>'}</td></tr>`).join('')}</table>`;
+    o.innerHTML=`<p class="note">${list.length} monstre${list.length>1?'s':''}${list.length>150?' · 150 premiers affichés':''}. Chances de butin : base, puis avec ta prospection.</p><table><tr><th>Monstre</th><th>Zones</th><th>Butin</th></tr>${list.slice(0,150).map(m=>`<tr><td>${monImg(m.gfx)}<strong>${esc(m.n)}</strong><div class="note">niv. ${m.lo}${m.hi!==m.lo?'-'+m.hi:''} · ${esc(m.race||'')}</div></td><td>${(m.z||[]).map(z=>zones[z]?esc(zones[z].n)+' <span class="dim">('+esc(zones[z].area)+')</span>':z).join('<br>')}</td><td>${(m.d||[]).map(d=>{const it=itemById[d[0]];return `${it?itemImg(it,1):''}${esc(it?it.n:'#'+d[0])} <span class="dim">${fmt(d[1],2)} % → <strong>${fmt(d[2],2)} %</strong></span>`}).join('<br>')||'<span class="muted">—</span>'}</td></tr>`).join('')}</table>`;
     return;
   }
   // objets
@@ -4520,7 +4627,7 @@ function renderBest(){
   const src={};for(const m of mons)for(const d of (m.d||[]))(src[d[0]]=src[d[0]]||[]).push({m,b:d[1],p:dropRate(d)});
   const list=items.filter(i=>(!q||i.n.toLowerCase().includes(q)||String(i.setName||'').toLowerCase().includes(q))&&(!sl||i.s===sl)&&(i.lvl||0)>=mi&&(i.lvl||0)<=ma&&(!miss||!owned.has(i.id)));
   const stTxt=st=>Object.entries(st||{}).map(([k,v])=>`${STAT_LABEL[k]||k} ${v>0?'+':''}${v}`).join(', ');
-  o.innerHTML=`<p class="note">${list.length} objet${list.length>1?'s':''}${list.length>150?' · 150 premiers affichés':''}.</p><table><tr><th>Objet</th><th>Caractéristiques</th><th>Où le trouver</th></tr>${list.slice(0,150).map(i=>{const s2=(src[i.id]||[]).sort((a,b)=>b.p-a.p);return `<tr><td><strong>${esc(i.n)}</strong> ${owned.has(i.id)?'<span class="pill in">possédé</span>':''}<div class="note">niv. ${i.lvl} · ${esc(i.s)}${i.setName?' · '+esc(i.setName):''}</div></td><td class="note">${esc(stTxt(i.st))}</td><td>${s2.slice(0,5).map(x=>`${esc(x.m.n)} <span class="dim">niv. ${x.m.lo}${x.m.hi!==x.m.lo?'-'+x.m.hi:''} · <strong>${fmt(x.p,2)} %</strong></span>`).join('<br>')||'<span class="muted">aucun monstre connu</span>'}${s2.length>5?`<div class="note">+${s2.length-5} autres</div>`:''}</td></tr>`}).join('')}</table>`;
+  o.innerHTML=`<p class="note">${list.length} objet${list.length>1?'s':''}${list.length>150?' · 150 premiers affichés':''}.</p><table><tr><th>Objet</th><th>Caractéristiques</th><th>Où le trouver</th></tr>${list.slice(0,150).map(i=>{const s2=(src[i.id]||[]).sort((a,b)=>b.p-a.p);return `<tr><td>${itemImg(i)}<strong>${esc(i.n)}</strong> ${owned.has(i.id)?'<span class="pill in">possédé</span>':''}<div class="note">niv. ${i.lvl} · ${esc(i.s)}${i.setName?' · '+esc(i.setName):''}</div></td><td class="note">${esc(stTxt(i.st))}</td><td>${s2.slice(0,5).map(x=>`${esc(x.m.n)} <span class="dim">niv. ${x.m.lo}${x.m.hi!==x.m.lo?'-'+x.m.hi:''} · <strong>${fmt(x.p,2)} %</strong></span>`).join('<br>')||'<span class="muted">aucun monstre connu</span>'}${s2.length>5?`<div class="note">+${s2.length-5} autres</div>`:''}</td></tr>`}).join('')}</table>`;
 }
 document.querySelectorAll('#bView button').forEach(b=>b.onclick=()=>{bView=b.dataset.v;document.querySelectorAll('#bView button').forEach(x=>x.setAttribute('aria-pressed',x===b?'true':'false'));$('#bFilters').dataset.v='';renderBest()});
 // Fichier allégé pour l'analyse : journal détaillé, tours, combats récents, builds, monstres croisés, deck et équipement (sans inventaire ni bestiaire complet)
@@ -4705,6 +4812,79 @@ function renderVitrines(){const el=$('#vitOut');if(!el)return;const V=vitrineDat
   const avgDeck=V.builds.reduce((a,b)=>a+b.deck.length,0)/V.builds.length;
   el.innerHTML=`<p class="note">${V.builds.length} vitrines lues le ${new Date(V.t).toLocaleDateString('fr-FR')} · decks de ${fmt(avgDeck,1)} sorts en moyenne.<br><strong>Objets les plus portés :</strong> ${top.map(([n,c])=>esc(n)+' ×'+c).join(', ')}<br><strong>Sorts les plus joués :</strong> ${topC.map(([n,c])=>esc(n)+' ×'+c).join(', ')}</p><table><tr><th>Joueur</th><th class="num">♥</th><th>Deck</th><th>Stuff</th><th></th></tr>${V.builds.map((b,i)=>`<tr><td><strong>${esc(b.head||'?')}</strong></td><td class="num">${b.likes||0}</td><td>${b.deck.map(id=>{const c=cards[id];return c?`<span class="${mine.has(id)?'':'dim'}" title="${esc((c.lines||[]).join(' · '))}">${esc(c.n)} <span class="dim">${c.ap}</span></span>`:'#'+id}).join(', ')}</td><td class="dim">${b.items.map(id=>esc((items[id]||{}).n||('#'+id))).join(', ')}</td><td><button class="btn ghost" data-vsim="${i}" type="button">Ouvrir</button></td></tr>`).join('')}</table><p class="note">Sorts grisés : absents de ta collection.</p>`;
   el.querySelectorAll('[data-vsim]').forEach(bt=>bt.onclick=()=>{const b=V.builds[+bt.dataset.vsim];mbFromCodes(b.codes,'Vitrine de '+b.head)})}
+// ---------- Images du jeu (monstres, objets, sorts) ----------
+const GAME='https://rpgmasters.houk.fr';
+function monImg(gfx,small){return gfx?`<img class="thumb${small?' s':''}" src="${GAME}/img/monsters/${gfx}.png" alt="" loading="lazy" onerror="this.remove()">`:''}
+function monThumb(name){const B=bestData();if(!monThumb.m||monThumb.b!==B){monThumb.m={};for(const m of ((B&&B.monsters)||[]))if(m.gfx&&!monThumb.m[m.n])monThumb.m[m.n]=m.gfx;monThumb.b=B}return monImg(monThumb.m[name])}
+function itemImg(it,small){const src=mbIcon(it);return src?`<img class="thumb${small?' s':''}" src="${src}" alt="" loading="lazy" data-tip="${it.id}:${it.f||0}" onerror="this.remove()">`:''}
+function cardImg(c){const v=c&&c.ic;if(!v)return '';const s=String(v);if(/^https?:/.test(s))return s;if(s[0]==='/')return GAME+s;const m=s.match(/sort_\d+/);if(m)return `${GAME}/img/spells/${m[0]}.png`;if(/^\d+$/.test(s))return `${GAME}/img/spells/sort_${s}.png`;return ''}
+function cardTile(c,extra){if(!c)return '';const src=cardImg(c),el=mainEl(c);const ph=`<span class="ph" style="background:${el!==null?EL_COL[el]:'var(--line2)'}">${esc(String(c.n).split(/[\s'’-]+/).filter(w=>w.length>2).slice(0,2).map(w=>w[0]).join('').toUpperCase())}</span>`;
+  return `<div class="ctile" title="${esc(c.n+' · '+c.ap+' PA'+(c.d?' — '+c.d:''))}">${src?`<img src="${src}" alt="" loading="lazy" onerror="this.outerHTML=this.dataset.ph" data-ph="${esc(ph)}">`:ph}<span class="ap">${c.ap}</span><span>${esc(c.n)}</span>${extra||''}</div>`}
+// ---------- Vue du personnage (onglet Mon personnage) ----------
+let PV_TAB='car';
+function dollHtml(gear,own,center){const big=s=>{const x=gear[s],it=x&&mbAll().m[x.id];const src=it&&mbIcon(it);return `<span class="mb-slot" style="cursor:default${it&&own&&!own.has(it.id)?';border-style:dashed':''}" ${it?`data-tip="${it.id}:${x.f||0}"`:`title="${esc(SLOT_LABEL[s]||s)}"`}>${it?(src?`<img src="${src}" alt="" loading="lazy">`:`<span class="mb-ini">${mbIni(it)}</span>`):esc((SLOT_LABEL[s]||s).slice(0,5))}${it&&x.f?`<span class="mb-f">${x.f>=2?'★'+(x.f>2?'+'+(x.f-2):''):'T'+(x.f+1)}</span>`:''}</span>`};
+  return `<div class="mb-doll"><div class="mb-col">${MB_LEFT.map(big).join('')}</div><div class="mb-center">${center||''}</div><div class="mb-col">${MB_RIGHT.map(big).join('')}</div></div><div class="mb-dofus">${MB_DOF.map(big).join('')}</div>`}
+function pvGearOpts(){const o=[['cur','Équipement porté']];(DATA.meta.presets||[]).forEach((p,i)=>{if(p&&p.gear&&Object.keys(p.gear).length)o.push(['p'+i,'Enregistré en jeu : '+p.name])});mbSavesL().forEach((x,i)=>o.push(['s'+i,'Build manuel : '+x.name]));return o}
+function pvGearBuild(v){if(v&&v[0]==='p'){const p=(DATA.meta.presets||[])[+v.slice(1)];if(p)return {gear:p.gear,alloc:p.alloc||null,name:p.name}}if(v&&v[0]==='s'){const x=mbSavesL()[+v.slice(1)];if(x)return {gear:x.gear,alloc:x.alloc,deck:x.deck,name:x.name}}const f=mbFresh();return {gear:f.gear,alloc:f.alloc,name:'Équipement porté'}}
+function renderPV(){if(!$('#pvPanel'))return;const gs=$('#pvGear'),ds=$('#pvDeck');const m=DATA.meta;
+  const go=pvGearOpts(),gv=gs.value||'cur';gs.innerHTML=go.map(([k,l])=>`<option value="${k}">${esc(l)}</option>`).join('');gs.value=go.some(o=>o[0]===gv)?gv:'cur';
+  const B=pvGearBuild(gs.value);const dOpts=(m.decks||[]).map((d,i)=>[String(i),(m.deckNames&&m.deckNames[i]||'Deck '+(i+1))+(i===m.active?' (en combat)':'')+' · '+(d||[]).length+' cartes',d]).filter(x=>x[2]&&x[2].length);if(B.deck)dOpts.unshift(['b','Deck du build manuel · '+B.deck.length+' cartes',B.deck]);
+  const dv=ds.dataset.touched?ds.value:(B.deck?'b':String(m.active));ds.innerHTML=dOpts.map(([k,l])=>`<option value="${k}">${esc(l)}</option>`).join('');ds.value=dOpts.some(o=>o[0]===dv)?dv:(dOpts[0]?dOpts[0][0]:'');
+  const deck=((dOpts.find(o=>o[0]===ds.value)||[])[2]||[]).filter(k=>cardsByKey[k]);const alloc=B.alloc||curAlloc||{};
+  const own=new Set(DATA.items.concat(DATA.worn||[]).map(i=>i.id));const full=mbGear(B.gear);let S=null;try{S=O.buildState(DATA,{gear:full,alloc,deck},ctx).S}catch(e){}
+  const names={1:'Féca',2:'Osamodas',3:'Enutrof',4:'Sram',5:'Xélor',6:'Ecaflip',7:'Eniripsa',8:'Iop',9:'Crâ',10:'Sadida',11:'Sacrieur',12:'Pandawa',13:'Roublard',14:'Zobal',15:'Steamer',16:'Eliotrope',17:'Huppermage',18:'Ouginak',20:'Forgelance'};
+  $('#pvDoll').innerHTML=dollHtml(B.gear,own,`<strong>${esc(B.name)}</strong><span class="note">${names[m.breedId]||'Personnage'} · niv. ${m.level} · prestige ${m.prestige||0}</span>${S?`<span><strong>${fmt(S._maxHp)}</strong> PV · <strong>${S._paTotal}</strong> PA · ${S.pm||0} PM</span>`:''}<span class="note">${Object.keys(B.gear).length} objets · bordure pointillée = pas dans ton inventaire</span>`);
+  $('#pvAlloc').innerHTML=`<strong>Points</strong> : ${esc(allocText(alloc)||'—')}${B.alloc?'':' <span class="dim">(tes points actuels : ce build enregistré n\'en contient pas)</span>'}`;
+  $('#pvStats').innerHTML=S?`<h3 style="margin:0 0 6px">Stats <span class="note">${gs.value==='cur'?'':'(écart avec ton stuff porté)'}</span></h3>`+mbStatsBlock(S,gs.value==='cur'?null:mbCurS(),full,PV_TAB,'pvTab'):'<p class="note">Calcul impossible.</p>';
+  document.querySelectorAll('#pvTab button').forEach(x=>x.onclick=()=>{PV_TAB=x.dataset.v;renderPV()});
+  $('#pvDeckN').textContent=`(${deck.length} cartes${deck.some(k=>cardImg(cardsByKey[k]))?'':' · images des sorts : script 2.11 requis'})`;
+  $('#pvCards').innerHTML=deck.map(k=>cardTile(cardsByKey[k])).join('')||'<span class="note">Deck vide.</span>';
+  if(!m.presets)$('#pvMsg').textContent='Tes équipements enregistrés en jeu apparaîtront ici avec le script 2.11 (renvoie tes données).';else if(!(m.presets||[]).some(p=>p&&p.gear&&Object.keys(p.gear).length))$('#pvMsg').textContent='Équipements enregistrés lus mais vides ou format inconnu : envoie ton export à Claude.';else $('#pvMsg').textContent='';
+  $('#pvToMb').onclick=()=>mbOpen({gear:JSON.parse(JSON.stringify(B.gear)),alloc:Object.assign({},alloc),deck:deck.slice()},B.name);
+  $('#pvToOpt').onclick=()=>{setOptStart({name:B.name,gear:full,alloc:Object.assign({},alloc),deck:deck.slice()});showTab('opt');try{window.scrollTo({top:0,behavior:'smooth'})}catch(e){}}}
+(function(){const g=document.getElementById('pvGear'),d=document.getElementById('pvDeck');if(g)g.addEventListener('change',()=>{d.dataset.touched='';renderPV()});if(d)d.addEventListener('change',()=>{d.dataset.touched='1';renderPV()})})();
+// ---------- Optimiseur : résumé du build et contrôle de composition ----------
+const EL_NAME=['Neutre','Terre','Feu','Eau','Air'];
+const OBJ_PRINC={equilibre:'Build à tout faire : assez de PV et de résistances pour ne pas mourir, assez de dégâts pour finir vite. Rien n\'est poussé à l\'extrême.',vitesse:'Farm rapide : tout dans les dégâts pour tuer les groupes en un minimum de tours ; la survie juste suffisante pour ne pas perdre.',survie:'Tank : PV, résistances et boucliers d\'abord ; les combats durent plus longtemps mais tu ne meurs pas.',sagesse:'XP : la Sagesse augmente l\'expérience gagnée ; le build garde des combats courts pour que le gain par heure monte vraiment.',pp:'Butin : la prospection (et la Chance, 10 Chance = 1 PP) augmente les chances de drop, en gardant assez de victoires.',multi:'Multi-élément : des dégâts sur plusieurs éléments pour contourner les résistances des monstres et les mécaniques du type Onde de choc ou Reflet.',ascension:'Ascension : survivre à des boss qui tapent fort et cumulent deux mécaniques, tout en les tuant avant leur Rage.','ascension-tank':'Ascension Tank : maximiser la survie (PV, résistances, boucliers) pour passer les étages durs, quitte à mettre plus de tours.','ascension-burst':'Ascension Burst : tuer les boss vite, avant que leurs mécaniques ne s\'enchaînent, avec juste ce qu\'il faut de survie.',kralamoure:'Kralamoure : cumuler un maximum de dégâts en 10 tours sur un boss qu\'on ne tue pas ; la survie ne sert qu\'à tenir jusqu\'au tour 10.'};
+function objKind(o){if(/^mono:/.test(o)||['vitesse','kralamoure','ascension-burst','multi'].includes(o))return 'dmg';if(['survie','ascension-tank'].includes(o))return 'tank';if(o==='pp')return 'pp';if(o==='sagesse')return 'xp';return 'mix'}
+function mainEls(S){const C=[[1,'force'],[2,'intelligence'],[3,'chance'],[4,'agilite']].map(([e,k])=>[e,S[k]||0]).sort((a,b)=>b[1]-a[1]);const top=C[0][1]||1;return C.filter(x=>x[1]>=top*0.7).map(x=>x[0])}
+function statW(o,S){const k=objKind(o),els=mainEls(S);const w={};const dm=k==='dmg'?1:k==='tank'?0.25:k==='pp'||k==='xp'?0.4:0.7,tk=k==='tank'?1:k==='dmg'?0.25:0.6;
+  Object.assign(w,{puissance:2.5*dm,dommages:8*dm,critique:6*dm,dommagesCritiques:3*dm,dmgPctSorts:15*dm,pa:250,vitalite:1*tk,_red:20*tk,resCritiques:1*tk,soins:2*tk,retraitPA:3,esquivePA:1*tk});
+  for(const e of els){w[R.CARAC_OF_EL[e]]=2.5*dm;w['dommages'+EL_NAME[e]]=8*dm}
+  for(const e of EL_NAME){w['resPct'+e]=22*tk;w['res'+e]=3*tk}
+  if(k==='pp'){w.prospection=4;w.chance=(w.chance||0)+0.4}if(k==='xp')w.sagesse=3;return w}
+function whyItem(it,f,w){const st=mbStats(it,f||0);const L=Object.entries(st).filter(([k,v])=>v>0&&w[k]&&MB_LBL[k]).sort((a,b)=>b[1]*w[b[0]]-a[1]*w[a[0]]).slice(0,3);return L.map(([k,v])=>`+${fmt(v)} ${MB_LBL[k]}`).join(', ')}
+function optSummary(st,Sb,b,opts,res){const o=opts.objective,lab=(O.ORIENT[o]||{}).label||o;const els=mainEls(Sb);const elTxt=els.length>=3?'multi-élément':els.map(e=>EL_NAME[e]).join(' / ');
+  const resAvg=Math.round(EL_NAME.reduce((a,e)=>a+Math.min(50,Sb['resPct'+e]||0),0)/5);const deck=st.deck.map(k=>cardsByKey[k]).filter(Boolean);
+  const per=Object.entries(b.perCard||{}).sort((p,q)=>q[1]-p[1]);const tot=per.reduce((a,x)=>a+x[1],0)||1;const topC=per.filter(([n])=>n!==(st.weapon&&st.weapon.n)).slice(0,2).map(x=>x[0]);
+  const sh=deck.filter(c=>(c.eff||[]).some(l=>l.k==='shieldHp'||l.k==='shieldLvl')).map(c=>c.n);
+  const res1=o==='kralamoure'?`${fmt(b.avgDmg||0)} dégâts en 10 tours`:`${fmt(b.winRate*100,0)} % de victoires en ${isFinite(b.avgRounds)?fmt(b.avgRounds,1):'—'} tours`;
+  const short=`${lab} ${elTxt} : ${fmt(Sb._maxHp)} PV, ${Sb._paTotal} PA, ${resAvg} % de résistance moyenne ; deck de ${deck.length} sorts porté par ${topC.join(' et ')||'l\'arme'}${sh.length?', avec '+sh.join(' et ')+' pour tenir':''}. ${res1}.`;
+  const w=statW(o,Sb);const SN={};for(const it of Object.values(st.gear||{}))if(it&&it.setId){const k=mbSetName(it);SN[k]=(SN[k]||0)+1}
+  const gearL=O.SLOTS.map(([s])=>[s,st.gear[s]]).filter(([,it])=>it).map(([s,it])=>{const why=whyItem(it,it.f,w);const set=it.setId&&SN[mbSetName(it)]>=2?` · bonus de ${esc(mbSetName(it))} (${SN[mbSetName(it)]} pièces)`:'';const fx=it.s==='dofus'?fxOf(it)[0]:'';return `<li><strong>${esc(it.n)}</strong> <span class="dim">(${esc(SLOT_LABEL[s]||s)}${it.f?', '+MB_FUS[it.f]:''})</span> : ${why?esc(why):'stats d\'appoint'}${set}${fx?' · effet : '+esc(fx):''}</li>`}).join('');
+  const cardsL=per.slice(0,5).map(([n,v])=>`${esc(n)} (${fmt(v/tot*100,0)} % des dégâts)`).join(', ');
+  const long=`<p><strong>Principe.</strong> ${OBJ_PRINC[o]||(/^mono:/.test(o)?'Mono-élément : toutes les stats de dégâts sur un seul élément, pour que chaque point compte.':'')} ${els.length>1?'Éléments principaux':'Élément principal'} : ${elTxt}.</p>
+  <p><strong>Chiffres.</strong> ${fmt(Sb._maxHp)} PV, ${Sb._paTotal} PA, ${Sb.pm||0} PM, Puissance ${fmt(Sb.puissance||0)}, ${fmt(Sb.critique||0)} % de critique, résistance moyenne ${resAvg} % (plafond 50 %). Résultat simulé : ${res1}.</p>
+  <p><strong>Pourquoi ces objets</strong> (les stats qui comptent le plus pour cet objectif) :</p><ul>${gearL}</ul>
+  <p><strong>Sorts.</strong> ${cardsL||'—'}.${sh.length?' Bouclier : '+sh.map(esc).join(', ')+'.':''}</p>
+  <p><strong>Points.</strong> ${esc(allocText(st.alloc||{})||'—')}.</p>`;
+  return {short,long}}
+function packMechs(pack){const L=[];for(const sc of (pack&&pack.scenarios)||[{monsters:(pack&&pack.defs)||[]}])for(const m of sc.monsters||[])if(m&&m.mech)L.push(m.mech);return L}
+function compoChecks(st,Sb,b,opts,pack){const o=opts.objective,asc=/^ascension/.test(o);const deck=st.deck.map(k=>cardsByKey[k]).filter(Boolean);const M=packMechs(pack);const has=k=>M.some(m=>m[k]);const out=[];
+  const add=(lvl,t)=>out.push(`<li><span class="${lvl}">${lvl==='ok'?'✓':lvl==='bad'?'✕':'!'}</span><span>${t}</span></li>`);
+  const isK=(c,ks)=>(c.eff||[]).some(l=>ks.includes(l.k));const dmgC=deck.filter(c=>isK(c,['dmg','steal']));
+  const sh=deck.filter(c=>isK(c,['shieldHp','shieldLvl']));
+  if(sh.length)add('ok',`Bouclier dans le deck (${sh.map(c=>esc(c.n)).join(', ')}).`);else add(asc||has('hardSkin')?'ko':'ok',asc||has('hardSkin')?'Aucun bouclier : contre Peau dure (seuls 40 à 60 % de tes dégâts passent sans bouclier) et en Ascension, il en faut un.':'Pas de bouclier : normal pour cet objectif.');
+  const els=new Set();let multi=0;for(const c of dmgC){const e=[...new Set((c.eff||[]).filter(l=>l.k==='dmg'||l.k==='steal').map(l=>l.el||0))];if(e.length>1)multi++;e.forEach(x=>els.add(x))}
+  if(els.size>=2||multi)add('ok',`Dégâts sur ${els.size} élément${els.size>1?'s':''}${multi?' (dont '+multi+' sort'+(multi>1?'s':'')+' multi-élément)':''} : Onde de choc et Reflet sont gérables.`);else add(asc||has('shockPct')?'ko':'ok',asc||has('shockPct')?'Un seul élément de dégâts : Onde de choc (deux sorts du même élément d\'affilée) et Reflet d\'élément te pénalisent. Garde un sort d\'un autre élément ou multi-élément.':'Un seul élément de dégâts : bien pour un build mono-élément.');
+  const heals=deck.filter(c=>isK(c,['heal','healPct','steal']));if(has('invertFrom')&&heals.length)add('ko',`Soins inversés possibles : ${heals.length} sort(s) de soin ou de vol de vie te blesseront (${heals.slice(0,3).map(c=>esc(c.n)).join(', ')}).`);
+  const fury=M.map(m=>m.furyCards).filter(Boolean);const avgAp=deck.length?deck.reduce((a,c)=>a+(c.ap||0),0)/deck.length:3;const cpt=Sb._paTotal/Math.max(1,avgAp);
+  if(fury.length||asc){const N=fury.length?Math.min(...fury):3;add(cpt>N+1?'ko':'ok',`Fureur : environ ${fmt(cpt,1)} cartes jouables par tour (${Sb._paTotal} PA, ${fmt(avgAp,1)} PA par carte en moyenne). ${cpt>N+1?'Au-delà de '+N+' cartes, le boss frappe plus fort : joue moins de cartes et garde des sorts chers.':'Raisonnable.'}`)}
+  const zoneOnly=dmgC.length&&dmgC.every(c=>(c.eff||[]).some(l=>(l.k==='dmg'||l.k==='steal')&&l.zone));if(has('reflectFrom')||asc)add(zoneOnly?'ko':'ok',zoneOnly?'Que des sorts de zone : pendant un Miroir, tu touches forcément le boss qui renvoie les coups. Garde un sort mono-cible.':'Sorts mono-cible disponibles pour les tours de Miroir.');
+  const over=EL_NAME.filter(e=>(Sb['resPct'+e]||0)>50);if(over.length)add('ko',`Résistances au-dessus du plafond de 50 % : ${over.map(e=>e+' '+Sb['resPct'+e]+' %').join(', ')}. Le surplus est perdu.`);else add('ok','Aucune résistance gaspillée au-dessus de 50 %.');
+  const slots=opts.deckSize||DATA.meta.deckSize||9;if(deck.length<7)add('bad',`Deck de ${deck.length} cartes : 7 minimum.`);else add('ok',`Deck de ${deck.length} cartes sur ${slots} emplacements${deck.length<slots?' (moins de cartes = tu pioches plus souvent tes meilleures)':''}.`);
+  if(o!=='kralamoure'){if(b.winRate<0.6)add('bad',`Seulement ${fmt(b.winRate*100,0)} % de victoires simulées : vise un étage plus bas ou une orientation plus tank.`);else if(b.winRate<0.9)add('ko',`${fmt(b.winRate*100,0)} % de victoires simulées : jouable, avec du risque.`);else add('ok',`${fmt(b.winRate*100,0)} % de victoires simulées.`)}
+  return `<ul class="ochecks">${out.join('')}</ul>`}
 // ---------- Build manuel (style éditeur de stuff : emplacements, liste d'objets filtrable, stats en direct) ----------
 const MB_KEY='labo-manual-v1',MB_SAVES='labo-manual-saves';
 const MB_LEFT=['chapeau','cape','amulette','anneau1','anneau2'],MB_RIGHT=['ceinture','bottes','arme','bouclier','familier'],MB_DOF=['dofus1','dofus2','dofus3','dofus4','dofus5','dofus6'];
@@ -4884,7 +5064,7 @@ function renderPreDetail(){const el=$('#preDetail');const b=PRE_SEL&&preList().f
 document.querySelectorAll('#preTier button').forEach(bt=>bt.addEventListener('click',()=>setTimeout(renderPrebuilds,0)));
 function renderItemsTab(){try{renderVitrines()}catch(e){$('#vitOut').textContent='Erreur : '+e.message}try{renderDofusFx()}catch(e){}try{renderBank2()}catch(e){$('#bank2Out').textContent='Erreur : '+e.message}try{renderTierList()}catch(e){$('#tlOut').textContent='Erreur : '+e.message}}
 ['tlFor','tlSlot','tlSrc','tlMin','tlMax','tlStyle','tlQ','bkStyle','tlSet'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener(id==='tlQ'||id==='tlMin'||id==='tlMax'||id==='bkLvl'?'input':'change',()=>{if(id.startsWith('tl')){if(id==='tlSet')TL=null;$('#tlOut').dataset.n=150;renderTierList()}else renderBank2()})});
-function init(){prepare();renderPerso();try{renderCardUse();renderFreePts();renderBank()}catch(e){}renderAscPanel();renderBest();packOptions($('#simPack'));packOptions($('#oPack'));try{optTargetNote()}catch(e){};{const o=document.createElement('option');o.value='poly';o.textContent='Polyvalent · tes adversaires habituels (conseillé)';$('#oPack').insertBefore(o,$('#oPack').firstChild);$('#oPack').value='poly'}deckOptions($('#simDeck'));deckOptions($('#oStart'));setTimeout(()=>{markReady($('#oPack'),'opt');markReady($('#aPack'),'asc')},400);}
+function init(){prepare();renderPerso();try{renderPV()}catch(e){const x=document.getElementById('pvMsg');if(x)x.textContent='Vue impossible : '+e.message}try{renderCardUse();renderFreePts();renderBank()}catch(e){}renderAscPanel();renderBest();packOptions($('#simPack'));packOptions($('#oPack'));try{optTargetNote()}catch(e){};{const o=document.createElement('option');o.value='poly';o.textContent='Polyvalent · tes adversaires habituels (conseillé)';$('#oPack').insertBefore(o,$('#oPack').firstChild);$('#oPack').value='poly'}deckOptions($('#simDeck'));deckOptions($('#oStart'));setTimeout(()=>{markReady($('#oPack'),'opt');markReady($('#aPack'),'asc')},400);}
 setupData();init();
 // imports stockés dans IndexedDB : on recharge dès qu'ils sont lus
 dsBoot().then(()=>{if(DS['labo-data']||DS['labo-data-saison']){loadProfile();init();try{const t=localStorage.getItem('labo-tab');if(t&&document.getElementById(t))showTab(t)}catch(e){}}});
