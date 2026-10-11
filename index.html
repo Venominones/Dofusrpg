@@ -99,6 +99,7 @@ tr.changed td{background:var(--gold-soft)}
 .mechl{margin:2px 0}
 .mechl b{color:var(--ink)}
 .dim{color:var(--muted)}
+.lockchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.lockchip{display:inline-flex;align-items:center;gap:6px;font-size:.8rem;padding:3px 4px 3px 4px;border-radius:999px;border:1px solid var(--line2);background:var(--bg2,transparent)}.lockchip img{width:20px;height:20px;object-fit:contain;border-radius:4px}.lockchip button{border:0;background:none;color:var(--muted);cursor:pointer;font-size:1rem;line-height:1;padding:0 4px}.lockrow{display:flex;gap:6px;margin-top:4px}.lockrow select{flex:1;min-width:0}
 .pill{display:inline-block;font-size:.75rem;font-weight:700;padding:1px 8px;border-radius:999px;border:1px solid var(--line2);color:var(--muted)}
 .tier{display:inline-block;min-width:1.6em;text-align:center;font-weight:700;border-radius:5px;padding:1px 5px;font-family:var(--f-display)} .tier.S{background:var(--gold);color:var(--panel)} .tier.A{background:var(--good);color:var(--panel)} .tier.B{background:var(--eau);color:var(--panel)} .tier.C{border:1px solid var(--line2);color:var(--muted)} .tier.D{color:var(--muted)}
 .pill.in{color:var(--good);border-color:var(--good)} .pill.out{color:var(--bad);border-color:var(--bad)}
@@ -353,12 +354,17 @@ th,td{border-bottom-color:var(--line)}
 <div class="field"><span class="lbl">Survie autorisée</span><label class="chk"><input type="checkbox" id="oHeal" checked>Soins</label><label class="chk"><input type="checkbox" id="oShield" checked>Boucliers</label><label class="chk"><input type="checkbox" id="oSteal" checked>Vol de vie (cartes et arme)</label></div>
         <div class="field" hidden><span class="lbl">Mécanique de boss</span><label class="chk"><input type="checkbox" id="oInv">Soins inversés à partir du tour <input type="number" id="oInvT" min="1" max="30" value="3" style="width:4.2em;padding:3px 6px"></label><label class="chk"><input type="checkbox" id="oInvS">Les boucliers blessent aussi</label><span class="note">Le vol de vie et les soins te retirent des PV au lieu d'en rendre.</span></div>
         <div class="field"><label for="oSpell">Type de sorts</label><select id="oSpell"><option value="">Tous</option><option value="zone">Zone</option><option value="mono">Mono-cible</option><option value="steal">Vol de vie</option><option value="sustain">Bouclier / Soin</option><option value="apremove">Retrait PA</option></select><div class="seg" id="oSpellMode" style="margin-top:4px"><button type="button" data-v="strict" aria-pressed="true">Strict</button><button type="button" data-v="pref" aria-pressed="false">Préférence</button></div><span class="note">Strict : tous les sorts de dégâts du deck sont de ce type (boucliers, PA… restent permis). Préférence : l'optimiseur en met le plus possible sans sacrifier le résultat.</span></div>
+        <div class="field"><span class="lbl">À inclure absolument</span>
+          <div class="lockrow"><select id="oLockCard" aria-label="Sort à inclure"><option value="">+ Sort…</option></select></div>
+          <div class="lockrow"><select id="oLockItem" aria-label="Équipement à inclure"><option value="">+ Équipement…</option></select></div>
+          <div class="lockchips" id="oLocks"></div>
+          <span class="note">Ces sorts et objets restent dans tous les builds testés ; l'optimiseur construit le reste autour.</span></div>
         <div class="field"><label for="oStart">Deck de départ</label><select id="oStart"></select><div class="alert" id="oStartNote" hidden style="margin-top:6px"></div></div>
         <div class="field"><label for="oSlots">Emplacements de deck</label><input type="number" id="oSlots" min="5" max="30" class="slots"><span class="note">Lu dans ton export. Corrige-le si tu viens de passer un Prestige.</span></div>
         <div class="field"><span class="lbl">Effort de recherche</span>
           <div class="seg" id="oEffort"><button type="button" data-v="1" aria-pressed="false">Rapide</button><button type="button" data-v="2" aria-pressed="true">Tous éléments</button><button type="button" data-v="3" aria-pressed="false">Approfondi</button></div><span class="note">Rapide : ajuste ton build actuel (20 s max). Tous éléments : un build complet par élément (Terre, Feu, Eau, Air, multi) puis comparaison (45 s max, en parallèle sur les cœurs de ton processeur). Approfondi : pareil avec deux passes stuff ↔ caracs ↔ sorts et une confirmation (1 min 30 max). Passé ce temps, le Labo garde le meilleur build trouvé.</span>
         </div>
-        <button class="btn" id="oRun">Lancer l'optimisation</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="oRun">Lancer l'optimisation</button><button class="btn ghost" id="oStop" type="button" hidden>Arrêter et voir le meilleur build</button></div>
         <div class="progress" aria-hidden="true"><div id="oBar"></div></div>
         <div class="toast muted" id="oStatus">Prêt. 20 s max (Rapide) à 1 min 30 max (Approfondi), plus la vérification finale.</div><div class="note" id="oReady"></div>
       </div>
@@ -1585,12 +1591,12 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   function evaluateRaw(data, st, ctx, monsters, n, objective, fight) {
     const b = buildState(data, st, ctx);
     if (monsters && monsters.scenarios) return evaluateMulti(b, ctx, monsters.scenarios, n, objective, fight);
-    const r = R.runMany(Object.assign({ S: b.S, deck: b.deck, weapon: b.weapon, monsters, level: ctx.level }, fight || {}), n);
+    const r = R.runMany(Object.assign({ S: b.S, deck: b.deck, weapon: b.weapon, monsters, level: ctx.level }, fight || {}), n < 0 ? Math.max(20, -n * 3) : n);
     return { r, S: b.S, score: score(r, b.S, objective) };
   }
   // Build polyvalent : moyenne pondérée sur plusieurs adversaires, en pénalisant le pire cas
   function evaluateMulti(b, ctx, scenarios, n, objective, fight) {
-    const per = Math.max(30, Math.round(n / scenarios.length));
+    const per = n < 0 ? -n : Math.max(30, Math.round(n / scenarios.length)); // n < 0 : tri rapide (|n| combats par adversaire)
     const rs = scenarios.map(sc => R.runMany(Object.assign({ S: b.S, deck: b.deck, weapon: b.weapon, monsters: sc.monsters, level: ctx.level }, fight || {}, sc.fo || {}), per));
     const W = scenarios.reduce((a, sc) => a + (sc.w || 1), 0) || 1;
     const wavg = f => scenarios.reduce((a, sc, i) => a + (sc.w || 1) * f(rs[i]), 0) / W;
@@ -1602,7 +1608,37 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     return { r, S: b.S, score: sc };
   }
 
-  // opts: {optGear, optAlloc, optDeck, objective, effort(1..3), monsters, ctx, start:{gear,alloc,deck}, onProgress}
+  // Éléments imposés (« à inclure absolument ») : cartes (clés) et objets (ids) toujours présents dans le build
+  function locksOf(opts) { return { cards: (opts.lockCards || []).map(String), items: (opts.lockItems || []).map(Number) }; }
+  function locksOk(st, L) {
+    if (L.cards.some(k => !st.deck.includes(k))) return false;
+    const ids = new Set(Object.values(st.gear || {}).filter(Boolean).map(it => Number(it.id)));
+    return L.items.every(id => ids.has(id));
+  }
+  function forceLocks(data, st, L, deckSize) {
+    if (!L.cards.length && !L.items.length) return st;
+    let deck = st.deck.slice(); const gear = Object.assign({}, st.gear);
+    for (const k of L.cards) {
+      if (deck.includes(k) || !data._cardsByKey[k]) continue;
+      if (deck.length < (deckSize || deck.length + 1)) { deck.push(k); continue; }
+      let i = deck.length - 1; while (i >= 0 && L.cards.includes(deck[i])) i--;
+      if (i >= 0) deck[i] = k;
+    }
+    const pool = data.items.concat(data.worn || []);
+    const locked = new Set();
+    for (const id of L.items) {
+      const cur = SLOTS.find(([s]) => gear[s] && Number(gear[s].id) === id);
+      if (cur) { locked.add(cur[0]); continue; }
+      const it = pool.filter(x => Number(x.id) === id && x.st).sort((a, b) => (b.f || 0) - (a.f || 0))[0]; if (!it) continue;
+      const cand = SLOTS.filter(([s, t]) => t === it.s && !locked.has(s));
+      const slot = (cand.find(([s]) => !gear[s]) || cand[cand.length - 1] || [])[0]; if (!slot) continue;
+      gear[slot] = it; locked.add(slot);
+      if (slot === 'arme' && it.w && it.w.twoHanded) delete gear.bouclier;
+      if (slot === 'bouclier' && gear.arme && gear.arme.w && gear.arme.w.twoHanded) delete gear.arme;
+    }
+    return Object.assign({}, st, { gear, deck });
+  }
+  // opts: {optGear, optAlloc, optDeck, objective, effort(1..3), monsters, ctx, start:{gear,alloc,deck}, onProgress, lockCards, lockItems}
   function optimize(data, opts) {
     data._cardsByKey = data._cardsByKey || Object.fromEntries(data.cards.map(c => [c.key, c]));
     const ctx = opts.ctx, mons = opts.monsters, obj = opts.objective || 'vitesse';
@@ -1611,8 +1647,10 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const budget = { gearIter: [120, 260, 500][effort - 1], deckIter: [40, 90, 160][effort - 1] };
     let cur = { gear: Object.assign({}, opts.start.gear), alloc: Object.assign({}, opts.start.alloc), deck: opts.start.deck.slice() };
     let ev = 0;
+    const LK = locksOf(opts), HASLK = LK.cards.length + LK.items.length > 0;
+    if (HASLK) cur = forceLocks(data, cur, LK, opts.deckSize);
     const total = R.pointsTotal(ctx.level);
-    const tick = (phase, done, of, best) => opts.onProgress && opts.onProgress({ phase, done, of, best, evals: ev });
+    const tick = (phase, done, of, best) => opts.onProgress && opts.onProgress({ phase, done, of, best, evals: ev, state: cur });
     const FO = { invertFrom: opts.invertFrom || 0, invertShields: !!opts.invertShields, auto: !!opts.auto, weaponMode: opts.weaponMode, plan: (opts.effort || 2) >= 3, seed: 1, maxRounds: opts.maxRounds || (obj === 'kralamoure' ? KRALA_TURNS : undefined) }; const SU = opts.sustain || 'all', NS = !normSus(opts.sustain, opts.noSteal).steal;
     const s0 = opts.start0 || opts.start; const start0 = { gear: Object.assign({}, s0.gear), deck: s0.deck.slice() };
     const changes = st => SLOTS.filter(([s]) => (st.gear[s] && st.gear[s].id) !== (start0.gear[s] && start0.gear[s].id)).length + st.deck.filter(k => !start0.deck.includes(k)).length;
@@ -1620,13 +1658,18 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     // Budget de temps : passé l'échéance, les candidats suivants sont rejetés sans simulation (on garde le meilleur trouvé)
     const deadline = opts.deadline || (opts.budgetMs ? Date.now() + opts.budgetMs : 0);
     const late = () => deadline && Date.now() > deadline;
-    const E = (st, n) => { ev++; if (ev > 1 && late()) return { score: -Infinity, r: start.r, S: start.S }; const e = evaluate(data, st, ctx, mons, n || N, obj, FO); e.score -= (String(obj).startsWith('ascension') ? 3 : 1.5) * changes(st); e.score += spellPref(data, st, opts.spellFilter); return e; };
+    // Tri rapide : un candidat est d'abord joué sur peu de combats (mêmes tirages que le build courant) ; s'il est nettement moins bon, on l'écarte sans la simulation complète
+    const QUICK = opts.quick === true ? -10 : 0; // désactivé par défaut : gain de vitesse modeste (×1,1 à ×1,6) et résultats moins stables sur l'orientation Équilibré
+    const E = (st, n) => { ev++; if (ev > 1 && late()) return { score: -Infinity, r: start.r, S: start.S };
+      if (HASLK && !locksOk(st, LK)) return { score: -Infinity, r: start.r, S: start.S };
+      if (QUICK && !n && ev > 2 && st !== cur) { const qc = evaluate(data, cur, ctx, mons, QUICK, obj, FO).score, qs = evaluate(data, st, ctx, mons, QUICK, obj, FO); if (qs.score < qc - (40 + 0.05 * Math.abs(qc))) return { score: -1e9, r: qs.r, S: qs.S }; }
+      const e = evaluate(data, st, ctx, mons, n || N, obj, FO); e.score -= (String(obj).startsWith('ascension') ? 3 : 1.5) * changes(st); e.score += spellPref(data, st, opts.spellFilter); return e; };
     const start = evaluate(data, cur, ctx, mons, NF, obj, FO);
     // Cible trop facile : tout est déjà gagné en un tour sans dégâts, les différences ne seraient que du bruit de simulation
     if ((['survie', 'vitesse', 'equilibre', 'mono', 'multi'].includes(obj) || String(obj).startsWith('ascension')) && opts.saturateCheck && start.r.winRate >= 0.999 && start.r.avgRounds <= 1.05 && start.r.avgHpLost / start.S._maxHp < 0.03 && !opts.noSaturate) { // désactivé : on optimise toujours, même contre un adversaire facile
       return { start, final: start, state: cur, evals: ev, saturated: true };
     }
-    if (NS && weaponSteals(cur.gear.arme)) {
+    if (NS && weaponSteals(cur.gear.arme) && !(cur.gear.arme && LK.items.includes(Number(cur.gear.arme.id)))) {
       // Arme à vol de vie interdite : on la remplace par la meilleure arme sans vol de vie du stock (jamais d'emplacement vide si une arme existe)
       const g = Object.assign({}, cur.gear); delete g.arme; cur = Object.assign({}, cur, { gear: g });
       const wType = (SLOTS.find(([s]) => s === 'arme') || [])[1];
@@ -1681,7 +1724,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       const pickU = util.filter(c => c.eff.some(l => l.k === 'shieldHp' || l.k === 'shieldLvl' || l.k === 'apGain')).slice(0, 2);
       const d2 = dmg.slice(0, Math.max(1, size - pickU.length)).map(c => c.key).concat(pickU.map(c => c.key));
       for (const c of dmg) { if (d2.length >= size) break; if (!d2.includes(c.key)) d2.push(c.key); }
-      cur = Object.assign({}, cur, { deck: d2.slice(0, size) }); best = E(cur);
+      cur = forceLocks(data, Object.assign({}, cur, { deck: d2.slice(0, size) }), LK, opts.deckSize); best = E(cur);
     }
     // Orientation à deck contraint (mono / multi) : on remplace d'abord les cartes interdites
     const needFix = !ARCH && cur.deck.some(k => !data._cardsByKey[k] || !allowed(data._cardsByKey[k]));
@@ -1689,7 +1732,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       const dmgPool = useful.filter(c => cardEls(c).length && !cur.deck.includes(c.key));
       const d2 = cur.deck.filter(k => data._cardsByKey[k] && allowed(data._cardsByKey[k]));
       while (d2.length < (opts.deckSize || cur.deck.length) && dmgPool.length) d2.push(dmgPool.splice(Math.floor(Math.random() * dmgPool.length), 1)[0].key);
-      cur = Object.assign({}, cur, { deck: d2 }); best = E(cur);
+      cur = forceLocks(data, Object.assign({}, cur, { deck: d2 }), LK, opts.deckSize); best = E(cur);
       deckPass(budget.deckIter);
     }
     // Emplacements libres (ex. après un Prestige) : on les remplit avec la meilleure carte disponible
@@ -1945,7 +1988,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     let evals = 0; let results = [];
     for (const p of parts) { evals += p.evals || 0; results = results.concat(p.results); }
     const sat = parts.find(p => p.saturated); if (sat) return Object.assign(sat.results[0], { evals });
-    results.sort((a, b) => (b.final.r.n >= 2000) - (a.final.r.n >= 2000) || (b.final.score + (b.prefB || 0)) - (a.final.score + (a.prefB || 0)));
+    results.sort((a, b) => (opts.stopped ? 0 : (b.final.r.n >= 2000) - (a.final.r.n >= 2000)) || (b.final.score + (b.prefB || 0)) - (a.final.score + (a.prefB || 0)));
     const best = results[0];
     opts.onProgress && opts.onProgress({ phase: 'Terminé', done: 1, of: 1, evals });
     return { state: best.state, start, final: best.final, evals, archetype: best.label,
@@ -4235,22 +4278,26 @@ function deepParallel(data,opts,statusEl,barEl,onDone,onErr){
     pworkers.forEach(w=>{try{w.terminate()}catch(e){}});if(worker){try{worker.terminate()}catch(e){}worker=null}
     const groups=Array.from({length:W},()=>[]);runs.forEach((id,i)=>groups[i%W].push(id));
     const jobs=groups.map(ids=>({mode:'part',ids})).concat([{mode:'start'}]);
-    const prog=jobs.map(()=>0);let evals=jobs.map(()=>0);const parts=[];let start=null,left=jobs.length,failed=false;
+    const prog=jobs.map(()=>0);let evals=jobs.map(()=>0);const parts=[];let start=null,left=jobs.length,failed=false,stopping=false;const bestW=jobs.map(()=>null),doneW=jobs.map(()=>false);const t0=Date.now();
+    const finishStop=()=>{try{const ps=parts.slice();bestW.forEach((b,k)=>{if(b&&!doneW[k])ps.push({evals:evals[k],results:[{id:'stop'+k,label:b.label+' (en cours)',state:b.state,final:b.final,prefB:0}]})});if(!ps.some(p=>p.results&&p.results.length)){onErr('arrêté trop tôt : aucun build complet testé pour l\'instant');return}const res=O.deepMerge(ps,start,Object.assign({},opts,{stopped:true,onProgress:null}));res.cores=W;res.stopped=true;onDone(res)}catch(err){onErr(err.message)}};
+    RUNCTL={stop(){if(stopping)return;stopping=true;pworkers.forEach((x,k)=>{if(k<W&&!doneW[k]){try{x.terminate()}catch(e){}}});if(start)finishStop();else statusEl.textContent='Arrêt : mesure de ton build actuel pour comparer…'},best(){return bestW.filter(Boolean).sort((a,b)=>b.final.score-a.final.score)[0]||null}};
     const slim=Object.assign({},data);delete slim._cardsByKey;
     statusEl.textContent=`Calcul réparti sur ${W} cœurs…`;
     pworkers=jobs.map((job,k)=>{const w=makeWorker();
       w.onmessage=e=>{const m=e.data;
-        if(m.type==='progress'){const p=m.p;prog[k]=p.phase==='Terminé'?1:Math.min(0.99,(p.done||0)/Math.max(1,p.of||1));evals[k]=p.evals||evals[k];const f=prog.slice(0,W).reduce((a,b)=>a+b,0)/W;barEl.style.width=Math.max(2,Math.round(f*100))+'%';statusEl.textContent=`Calcul réparti sur ${W} cœurs · ${evals.reduce((a,b)=>a+b,0)} essais`;return}
-        if(m.type==='part')parts.push(m.res);if(m.type==='start')start=m.res;
+        if(m.type==='best'){if(!bestW[k]||m.b.final.score>bestW[k].final.score)bestW[k]=m.b;return}
+        if(m.type==='progress'){if(stopping)return;const p=m.p;prog[k]=p.phase==='Terminé'?1:Math.min(0.99,(p.done||0)/Math.max(1,p.of||1));evals[k]=p.evals||evals[k];const f=prog.slice(0,W).reduce((a,b)=>a+b,0)/W;progressUI(barEl,statusEl,f,t0,opts.budgetMs,evals.reduce((a,b)=>a+b,0),`${W} cœurs`,RUNCTL.best());return}
+        if(m.type==='part'){parts.push(m.res);doneW[k]=true}if(m.type==='start')start=m.res;
         try{w.terminate()}catch(e){}
+        if(stopping){if(start)finishStop();return}
         if(--left===0&&!failed){try{const res=O.deepMerge(parts,start,opts);res.cores=W;onDone(res)}catch(err){onErr(err.message)}}};
-      w.onerror=ev=>{if(failed)return;failed=true;pworkers.forEach(x=>{try{x.terminate()}catch(e){}});onErr((ev&&ev.message)||'erreur du calcul réparti')};
+      w.onerror=ev=>{if(failed||stopping)return;failed=true;pworkers.forEach(x=>{try{x.terminate()}catch(e){}});onErr((ev&&ev.message)||'erreur du calcul réparti')};
       w.postMessage(Object.assign({data:slim,opts},job));return w});
     return true;
   }catch(e){try{console.warn('calcul réparti indisponible :',e&&e.message)}catch(_){}return false}
 }
 function makeWorker(){
-  const src=engineSrc+'\n'+optSrc+`\nself.onmessage=function(e){const a=e.data;a.data._cardsByKey=null;if(a.mode){const prog=function(p){self.postMessage({type:'progress',p:{phase:p.phase,done:p.done,of:p.of,evals:p.evals}})};const o=Object.assign({},a.opts,{onProgress:prog});if(a.mode==='start'){const r=OPT.deepStart(a.data,o);self.postMessage({type:'start',res:{r:r.r,score:r.score,S:r.S}});return}const part=OPT.deepPart(a.data,o,a.ids,2);self.postMessage({type:'part',res:{evals:part.evals,saturated:part.saturated,results:part.results.map(function(r){return {id:r.id,label:r.label,state:r.state,confirmed:r.confirmed,saturated:r.saturated,start:r.start&&{r:r.start.r,score:r.start.score,S:r.start.S},final:{r:r.final.r,score:r.final.score,S:r.final.S},evals:r.evals}})}});return}const res=OPT.optimizeDeep(a.data,Object.assign({},a.opts,{onProgress:function(p){self.postMessage({type:'progress',p:{phase:p.phase,done:p.done,of:p.of,evals:p.evals,score:p.best&&p.best.score,rounds:p.best&&p.best.r.avgRounds}})}}));self.postMessage({type:'done',res:{state:res.state,start:{r:res.start.r,score:res.start.score,S:res.start.S},final:{r:res.final.r,score:res.final.score,S:res.final.S},evals:res.evals,archs:res.archs,archetype:res.archetype,saturated:res.saturated}})};`;
+  const src=engineSrc+'\n'+optSrc+`\nvar BS=-Infinity,BT=0,BP=null;function bestOf(p){if(p.best&&p.state&&isFinite(p.best.score)&&p.best.score>BS){BS=p.best.score;BP={label:String(p.phase||'').split(' (')[0].replace(/^Confirmation · /,''),state:p.state,final:{r:p.best.r,score:p.best.score,S:p.best.S}}}if(BP&&Date.now()-BT>700){BT=Date.now();self.postMessage({type:'best',b:BP});BP=null}}\nself.onmessage=function(e){const a=e.data;a.data._cardsByKey=null;if(a.mode){const prog=function(p){bestOf(p);self.postMessage({type:'progress',p:{phase:p.phase,done:p.done,of:p.of,evals:p.evals}})};const o=Object.assign({},a.opts,{onProgress:prog});if(a.mode==='start'){const r=OPT.deepStart(a.data,o);self.postMessage({type:'start',res:{r:r.r,score:r.score,S:r.S}});return}const part=OPT.deepPart(a.data,o,a.ids,2);self.postMessage({type:'part',res:{evals:part.evals,saturated:part.saturated,results:part.results.map(function(r){return {id:r.id,label:r.label,state:r.state,confirmed:r.confirmed,saturated:r.saturated,start:r.start&&{r:r.start.r,score:r.start.score,S:r.start.S},final:{r:r.final.r,score:r.final.score,S:r.final.S},evals:r.evals}})}});return}const res=OPT.optimizeDeep(a.data,Object.assign({},a.opts,{onProgress:function(p){bestOf(p);self.postMessage({type:'progress',p:{phase:p.phase,done:p.done,of:p.of,evals:p.evals,score:p.best&&p.best.score,rounds:p.best&&p.best.r.avgRounds}})}}));self.postMessage({type:'done',res:{state:res.state,start:{r:res.start.r,score:res.start.score,S:res.start.S},final:{r:res.final.r,score:res.final.score,S:res.final.S},evals:res.evals,archs:res.archs,archetype:res.archetype,saturated:res.saturated}})};`;
   return new Worker(URL.createObjectURL(new Blob([src],{type:'text/javascript'})));
 }
 function segVal(id){const b=document.querySelector(`#${id} [aria-pressed="true"]`);return b?b.dataset.v:null}
@@ -4280,13 +4327,36 @@ function memoNote(el,t,rerun){el.innerHTML=`Résultat mémorisé du ${new Date(t
 // Adversaire choisi selon l'orientation (plus de « groupe de monstres » à régler) : Kralamoure, Ascension (prochain étage) ou tes adversaires habituels
 function optAutoPack(){const o=$('#oObj').value;if(o==='kralamoure')return kralaPack();if(/^ascension/.test(o)){try{return ascPolyPack()}catch(e){}}return polyPack()}
 function optOptsFor(v){const pack=optAutoPack();if(!pack)return null;const mult=1;const deckIdx=+$('#oStart').value;
-  const opts={optGear:$('#oGear').checked,optAlloc:$('#oAlloc').checked,optDeck:$('#oDeck').checked,deckSize:deckSlots(),objective:$('#oObj').value,spellFilter:spellF('o'),sustain:susOf('o'),noSteal:!!$('#oInv').checked,...fightOpts('o'),effort:+segVal('oEffort'),budgetMs:[20,45,90][(+segVal('oEffort')||2)-1]*1000,monsters:monstersFor(pack,mult),ctx,start:OPT_START?{gear:OPT_START.gear,alloc:OPT_START.alloc,deck:OPT_START.deck}:{gear:curGear,alloc:curAlloc,deck:DATA.meta.decks[deckIdx]}};return {pack,mult,deckIdx,opts}}
+  const opts={optGear:$('#oGear').checked,optAlloc:$('#oAlloc').checked,optDeck:$('#oDeck').checked,deckSize:deckSlots(),objective:$('#oObj').value,spellFilter:spellF('o'),sustain:susOf('o'),noSteal:!!$('#oInv').checked,...fightOpts('o'),effort:+segVal('oEffort'),budgetMs:[20,45,90][(+segVal('oEffort')||2)-1]*1000,...lockOpts(),monsters:monstersFor(pack,mult),ctx,start:OPT_START?{gear:OPT_START.gear,alloc:OPT_START.alloc,deck:OPT_START.deck}:{gear:curGear,alloc:curAlloc,deck:DATA.meta.decks[deckIdx]}};return {pack,mult,deckIdx,opts}}
 // Kralamoure de la Faille : boss à ~100 M de PV qu'on ne tue pas ; on cumule un maximum de dégâts en 10 tours.
 // Stats relevées en combat (monstre 423) ; si le perso ne l'a jamais croisé, on prend ces valeurs.
 const KRALA_REF={name:'Kralamoure Géant',grade:1,level:200,hpMin:99999458,hpMax:99999458,atk:383,element:3,pattern:['attack','attack','heavy','rage','attack','heavy'],stats:{resPctNeutre:20,resPctTerre:20,resPctFeu:20,resPctEau:30,resPctAir:20},isBoss:true};
 function kralaPack(){const seen=(DATA.monsters||[]).filter(m=>/^Kralamoure G/i.test(m.name)).sort((a,b)=>(b.seen||0)-(a.seen||0))[0];const def=Object.assign({},seen||KRALA_REF,{fixedStart:false});
   const fights=(DATA.fights||[]).filter(f=>(f.mons||[]).some(x=>/^Kralamoure G/i.test(x)));
   return {key:'krala',label:'Kralamoure de la Faille · 10 tours',defs:[def],fights,krala:true}}
+/* ---------- Avancement, arrêt et éléments imposés ---------- */
+let RUNCTL=null;
+let PROG_LAST=null,PROG_TIMER=null;
+function progressUI(barEl,statusEl,f,t0,budget,ev,how,best){PROG_LAST=[barEl,statusEl,f,t0,budget,ev,how,best];const el=(Date.now()-t0)/1000,B=(budget||0)/1000;let pct=f;if(B)pct=Math.max(f,Math.min(1,el/B));pct=Math.min(0.99,pct);barEl.style.width=Math.max(2,Math.round(pct*100))+'%';
+  const rest=B?Math.max(0,Math.round(B-el)):null;const bw=best?' · un build est déjà prêt si tu arrêtes':'';
+  statusEl.innerHTML=`<strong>${Math.round(pct*100)} %</strong>${rest!==null?(rest>0?` · ~${rest} s restantes`:' · vérification finale…'):''} · ${ev} essais${how?' · '+how:''}${bw}`}
+function runUI(on){const st=$('#oStop');if(st){st.hidden=!on;st.disabled=false}clearInterval(PROG_TIMER);PROG_LAST=null;if(on)PROG_TIMER=setInterval(()=>{if(PROG_LAST){const a=PROG_LAST.slice();if(RUNCTL&&RUNCTL.best)a[7]=RUNCTL.best()||a[7];progressUI(...a)}},1000);else RUNCTL=null}
+function locksKey(){return 'labo-locks-'+LPROF}
+function locksGet(){try{const x=JSON.parse(localStorage.getItem(locksKey())||'null');if(x&&Array.isArray(x.cards)&&Array.isArray(x.items))return x}catch(e){}return {cards:[],items:[]}}
+function locksSet(x){try{localStorage.setItem(locksKey(),JSON.stringify(x))}catch(e){}renderLocks()}
+function lockPool(){const d=optData();const by={};for(const it of (d.items||[]).concat(d.worn||[])){if(!it||!it.st||!it.s)continue;const p=by[it.id];if(!p||(it.f||0)>(p.f||0))by[it.id]=it}return Object.values(by)}
+function lockOpts(){const L=locksGet();const cards=L.cards.filter(k=>(DATA.cards||[]).some(c=>c.key===k));const ids=new Set(lockPool().map(i=>Number(i.id)));const items=L.items.map(Number).filter(i=>ids.has(i));const o={};if(cards.length)o.lockCards=cards;if(items.length)o.lockItems=items;return o}
+function renderLocks(){const cs=$('#oLockCard'),is=$('#oLockItem'),box=$('#oLocks');if(!cs||!is||!box)return;const L=locksGet();
+  const cards=(DATA.cards||[]).filter(c=>c.eff&&c.eff.length).sort((a,b)=>String(a.n).localeCompare(String(b.n),'fr'));
+  cs.innerHTML='<option value="">+ Sort…</option>'+cards.filter(c=>!L.cards.includes(c.key)).map(c=>`<option value="${esc(c.key)}">${esc(c.n)} · ${c.ap} PA</option>`).join('');
+  const pool=lockPool();const types=[...new Set(O.SLOTS.map(x=>x[1]))];const TL={chapeau:'Chapeau',cape:'Cape',amulette:'Amulette',anneau:'Anneau',ceinture:'Ceinture',bottes:'Bottes',arme:'Arme',bouclier:'Bouclier',familier:'Familier',dofus:'Dofus / Trophée'};
+  is.innerHTML='<option value="">+ Équipement…</option>'+types.map(t=>{const l=pool.filter(i=>i.s===t&&!L.items.map(Number).includes(Number(i.id))).sort((a,b)=>(b.lvl||0)-(a.lvl||0)||String(a.n).localeCompare(String(b.n),'fr'));return l.length?`<optgroup label="${TL[t]||t}">${l.map(i=>`<option value="${i.id}">${esc(i.n)} · niv. ${i.lvl||'?'}</option>`).join('')}</optgroup>`:''}).join('');
+  const byK=Object.fromEntries((DATA.cards||[]).map(c=>[c.key,c]));const byI=Object.fromEntries(pool.map(i=>[i.id,i]));
+  const chips=L.cards.filter(k=>byK[k]).map(k=>{const c=byK[k],src=cardImg(c);return `<span class="lockchip">${src?`<img src="${src}" alt="" onerror="this.remove()">`:''}${esc(c.n)}<button type="button" data-c="${esc(k)}" aria-label="Retirer">×</button></span>`}).concat(L.items.filter(i=>byI[i]).map(i=>{const it=byI[i],src=mbIcon(it);return `<span class="lockchip">${src?`<img src="${src}" alt="" onerror="this.remove()">`:''}${esc(it.n)}<button type="button" data-i="${i}" aria-label="Retirer">×</button></span>`}));
+  box.innerHTML=chips.join('')||'<span class="note">Aucun pour l\'instant.</span>';
+  box.querySelectorAll('button').forEach(b=>b.onclick=()=>{const x=locksGet();if(b.dataset.c)x.cards=x.cards.filter(k=>k!==b.dataset.c);if(b.dataset.i)x.items=x.items.filter(i=>String(i)!==b.dataset.i);locksSet(x)});
+  cs.onchange=()=>{if(!cs.value)return;const x=locksGet();if(!x.cards.includes(cs.value))x.cards.push(cs.value);locksSet(x)};
+  is.onchange=()=>{if(!is.value)return;const x=locksGet();const id=Number(is.value);const it=byI[id];const same=x.items.map(Number).filter(j=>byI[j]&&byI[j].s===it.s);const max=O.SLOTS.filter(z=>z[1]===it.s).length;if(same.length>=max){flash(`Déjà ${max} objet${max>1?'s':''} imposé${max>1?'s':''} pour cet emplacement : retire-en un d'abord.`);renderLocks();return}if(!x.items.map(Number).includes(id))x.items.push(id);locksSet(x)}}
 function runOpt(force){
   const B=optOptsFor($('#oPack').value);if(!B)return;const {pack,mult,deckIdx,opts}=B;opts._pv=$('#oPack').value;
   if(!opts.optGear&&!opts.optAlloc&&!opts.optDeck){$('#oStatus').textContent='Coche au moins une chose à optimiser.';return}
@@ -4295,16 +4365,21 @@ function runOpt(force){
   if(window.__forceSat){opts.noSaturate=true;window.__forceSat=false}
   if(MEM.seed)opts.seed=MEM.seed;
   const renderOpt0=renderOpt;const renderOpt1=(res,...a)=>{memoPut('opt',MEM.key,opts,res);renderOpt0(res,...a)};
-  const btn=$('#oRun');btn.disabled=true;$('#oBar').style.width='2%';$('#oStatus').textContent='Démarrage…';
+  const btn=$('#oRun');btn.disabled=true;$('#oBar').style.width='2%';$('#oStatus').textContent='Démarrage…';runUI(true);const T0=Date.now();
+  const stopMsg=res=>`Recherche arrêtée à ta demande après ${res.evals} essais : meilleur build trouvé jusque-là. Les chiffres « après » sont estimés sur moins de combats que d'habitude.`;
   const phases=['Points de caractéristiques','Équipement','Deck'];
-  const runHere=()=>{$('#oStatus').textContent='Calcul en cours dans la page (elle peut se figer quelques secondes)…';setTimeout(()=>{try{const slim=optData();const res=O.optimizeDeep(slim,opts);btn.disabled=false;$('#oBar').style.width='100%';$('#oStatus').textContent=`Terminé en ${res.evals} essais. Résultats vérifiés sur 2 500 combats.`;renderOpt1(res,opts,pack,mult,deckIdx)}catch(err){btn.disabled=false;$('#oStatus').textContent='Le calcul a échoué : '+err.message}},50)};
-  if(deepParallel(optData(),opts,$('#oStatus'),$('#oBar'),res=>{btn.disabled=false;$('#oBar').style.width='100%';$('#oStatus').textContent=`Terminé en ${res.evals} essais, réparti sur ${res.cores} cœurs. Résultats vérifiés sur 2 500 combats.`;renderOpt1(res,opts,pack,mult,deckIdx)},err=>{btn.disabled=false;$('#oStatus').textContent='Le calcul a échoué : '+err}))return;
+  const runHere=()=>{runUI(false);$('#oStatus').textContent='Calcul en cours dans la page (elle peut se figer quelques secondes)…';setTimeout(()=>{try{const slim=optData();const res=O.optimizeDeep(slim,opts);btn.disabled=false;$('#oBar').style.width='100%';$('#oStatus').textContent=`Terminé en ${res.evals} essais. Résultats vérifiés sur 2 500 combats.`;renderOpt1(res,opts,pack,mult,deckIdx)}catch(err){btn.disabled=false;$('#oStatus').textContent='Le calcul a échoué : '+err.message}},50)};
+  if(deepParallel(optData(),opts,$('#oStatus'),$('#oBar'),res=>{runUI(false);btn.disabled=false;$('#oBar').style.width='100%';if(res.stopped){$('#oStatus').textContent=stopMsg(res);memoPut('opt',MEM.key+'|stop',opts,res);renderOpt0(res,opts,pack,mult,deckIdx);return}$('#oStatus').textContent=`Terminé en ${res.evals} essais, réparti sur ${res.cores} cœurs. Résultats vérifiés sur 2 500 combats.`;renderOpt1(res,opts,pack,mult,deckIdx)},err=>{runUI(false);btn.disabled=false;$('#oStatus').textContent='Le calcul a échoué : '+err}))return;
   let w;try{if(worker)worker.terminate();w=worker=makeWorker();}catch(e){runHere();return}
-  w.onmessage=e=>{const m=e.data;
-    if(m.type==='progress'){const p=m.p;const pi=Math.max(0,phases.indexOf(p.phase));const frac=p.phase==='Terminé'?1:/\(\d+\/\d+\)/.test(p.phase)?Math.min(1,p.done/Math.max(1,p.of)):(pi+Math.min(1,p.done/Math.max(1,p.of)))/3;$('#oBar').style.width=Math.round(frac*100)+'%';$('#oStatus').textContent=`${p.phase} · ${p.evals} essais`}
-    if(m.type==='done'){btn.disabled=false;$('#oBar').style.width='100%';$('#oStatus').textContent=`Terminé en ${m.res.evals} essais. Résultats vérifiés sur 2 500 combats.`;renderOpt1(m.res,opts,pack,mult,deckIdx)}};
+  let sBest=null,sEv=0,sStop=false,sBase=0,sLast=0;
+  RUNCTL={best:()=>sBest,stop(){if(sStop)return;sStop=true;try{w.terminate()}catch(e){}if(!sBest){runUI(false);btn.disabled=false;$('#oStatus').textContent='Arrêté trop tôt : aucun build complet testé pour l\'instant.';return}$('#oStatus').textContent='Arrêt : mesure de ton build actuel pour comparer…';
+    let w2;try{w2=makeWorker()}catch(e){runUI(false);btn.disabled=false;return}w2.onmessage=ev=>{if(ev.data.type!=='start')return;try{w2.terminate()}catch(_){}const res=O.deepMerge([{evals:sEv,results:[{id:'stop',label:sBest.label+' (en cours)',state:sBest.state,final:sBest.final,prefB:0}]}],ev.data.res,Object.assign({},opts,{stopped:true,onProgress:null}));res.stopped=true;runUI(false);btn.disabled=false;$('#oBar').style.width='100%';$('#oStatus').textContent=stopMsg(res);memoPut('opt',MEM.key+'|stop',opts,res);renderOpt0(res,opts,pack,mult,deckIdx)};w2.postMessage({data:optData(),opts,mode:'start'})}};
+  w.onmessage=e=>{const m=e.data;if(sStop)return;
+    if(m.type==='best'){if(!sBest||m.b.final.score>sBest.final.score)sBest=m.b;return}
+    if(m.type==='progress'){const p=m.p;const pe=p.evals||0;if(pe<sLast)sBase+=sLast;sLast=pe;sEv=sBase+pe;const pi=Math.max(0,phases.indexOf(p.phase));const frac=p.phase==='Terminé'?1:/\(\d+\/\d+\)/.test(p.phase)?Math.min(1,p.done/Math.max(1,p.of)):(pi+Math.min(1,p.done/Math.max(1,p.of)))/3;progressUI($('#oBar'),$('#oStatus'),frac,T0,opts.budgetMs,sEv,'',sBest)}
+    if(m.type==='done'){runUI(false);btn.disabled=false;$('#oBar').style.width='100%';$('#oStatus').textContent=`Terminé en ${m.res.evals} essais. Résultats vérifiés sur 2 500 combats.`;renderOpt1(m.res,opts,pack,mult,deckIdx)}};
   let gotMsg=false;const prevOn=w.onmessage;w.onmessage=e=>{gotMsg=true;prevOn(e)};
-  w.onerror=()=>{if(!gotMsg){w.terminate();runHere();return}btn.disabled=false;$('#oStatus').textContent='Le calcul a échoué. Réessaie avec l\'effort Rapide.'};
+  w.onerror=()=>{if(sStop)return;if(!gotMsg){w.terminate();runHere();return}runUI(false);btn.disabled=false;$('#oStatus').textContent='Le calcul a échoué. Réessaie avec l\'effort Rapide.'};
   const slim=optData();
   w.postMessage({data:slim,opts});
 }
@@ -4395,7 +4470,7 @@ document.querySelectorAll('.seg:not(#playMode):not(#bView):not(#profMode)').forE
 const dv=v=>'×'+Number(v).toLocaleString('fr-FR',{minimumFractionDigits:1,maximumFractionDigits:2});
 $('#simDiff').oninput=e=>$('#simDiffV').textContent=dv(e.target.value);
 $('#oDiff').oninput=e=>$('#oDiffV').textContent=dv(e.target.value);
-$('#simRun').onclick=runSim;$('#oRun').onclick=runOpt;
+$('#simRun').onclick=runSim;$('#oRun').onclick=runOpt;$('#oStop').onclick=()=>{if(RUNCTL){$('#oStop').disabled=true;clearInterval(PROG_TIMER);PROG_LAST=null;RUNCTL.stop()}};
 $('#simCodeLoad').onclick=()=>{const msg=$('#simCodeMsg');try{const d=O.decodeCode($('#simCode').value);
   if(d.kind==='E'){const byId={};for(const it of DATA.items.concat(DATA.worn))(byId[it.id]=byId[it.id]||[]).push(it);const ext={};for(const it of ((DATA.bestiary&&DATA.bestiary.items)||[]).concat(vitrineData().items||[]))ext[it.id]=it;const g={},miss=[],notMine=[];
     for(const x of d.items){const c=(byId[x.id]||[]);let it=c.find(i=>(i.f||0)===x.f)||c[0];if(!it&&ext[x.id]){it=Object.assign({},ext[x.id]);notMine.push(it.n)}if(it&&x.slot)g[x.slot]=Object.assign({},it,{f:x.f});else miss.push('#'+x.id)}
@@ -5231,7 +5306,7 @@ function renderPreDetail(){const el=$('#preDetail');const b=PRE_SEL&&preList().f
 document.querySelectorAll('#preTier button').forEach(bt=>bt.addEventListener('click',()=>setTimeout(renderPrebuilds,0)));
 function renderItemsTab(){try{renderVitrines()}catch(e){$('#vitOut').textContent='Erreur : '+e.message}try{renderDofusFx()}catch(e){}try{renderBank2()}catch(e){$('#bank2Out').textContent='Erreur : '+e.message}try{renderTierList()}catch(e){$('#tlOut').textContent='Erreur : '+e.message}}
 ['tlFor','tlSlot','tlSrc','tlMin','tlMax','tlStyle','tlQ','bkStyle','tlSet'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener(id==='tlQ'||id==='tlMin'||id==='tlMax'||id==='bkLvl'?'input':'change',()=>{if(id.startsWith('tl')){if(id==='tlSet')TL=null;$('#tlOut').dataset.n=150;renderTierList()}else renderBank2()})});
-function init(){prepare();renderPerso();try{renderPV()}catch(e){const x=document.getElementById('pvMsg');if(x)x.textContent='Vue impossible : '+e.message}try{renderCardUse();renderFreePts();renderBank()}catch(e){}renderAscPanel();renderBest();packOptions($('#simPack'));packOptions($('#oPack'));try{optTargetNote()}catch(e){};{const o=document.createElement('option');o.value='poly';o.textContent='Polyvalent · tes adversaires habituels (conseillé)';$('#oPack').insertBefore(o,$('#oPack').firstChild);$('#oPack').value='poly'}deckOptions($('#simDeck'));deckOptions($('#oStart'));setTimeout(()=>{markReady($('#oPack'),'opt');markReady($('#aPack'),'asc')},400);}
+function init(){prepare();renderPerso();try{renderPV()}catch(e){const x=document.getElementById('pvMsg');if(x)x.textContent='Vue impossible : '+e.message}try{renderCardUse();renderFreePts();renderBank()}catch(e){}renderAscPanel();renderBest();packOptions($('#simPack'));packOptions($('#oPack'));try{optTargetNote()}catch(e){};{const o=document.createElement('option');o.value='poly';o.textContent='Polyvalent · tes adversaires habituels (conseillé)';$('#oPack').insertBefore(o,$('#oPack').firstChild);$('#oPack').value='poly'}deckOptions($('#simDeck'));deckOptions($('#oStart'));try{renderLocks()}catch(e){}setTimeout(()=>{markReady($('#oPack'),'opt');markReady($('#aPack'),'asc')},400);}
 (function(){const set=v=>{if(v==='light')document.documentElement.setAttribute('data-theme','light');else document.documentElement.removeAttribute('data-theme');const b=document.getElementById('themeTg');if(b)b.textContent=v==='light'?'Thème sombre':'Thème clair'};let v='dark';try{v=localStorage.getItem('labo-theme2')||'dark'}catch(e){}set(v);const b=document.getElementById('themeTg');if(b)b.onclick=()=>{v=v==='light'?'dark':'light';set(v);try{localStorage.setItem('labo-theme2',v)}catch(e){}}})();
 setupData();init();
 // imports stockés dans IndexedDB : on recharge dès qu'ils sont lus
