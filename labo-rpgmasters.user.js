@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.11.4
+// @version      2.11.5
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -1380,7 +1380,8 @@
       const req = args[0], init = args[1] || {};
       const method = (init.method || (req && req.method) || 'GET').toUpperCase();
       if (method === 'POST') res.clone().text().then(t => { detectProfile(t); onPayload(t); try { if (/\/bestiaire/.test(location.pathname)) { const L = JSON.parse(localStorage.getItem('labo-sniff') || '[]'); const h = {}; try { const H = init.headers || {}; for (const k in H) if (/^next-|^rsc|content-type/i.test(k)) h[k] = String(H[k]).slice(0, 300); } catch (e) {} L.unshift({ t: Date.now(), url: String(req && req.url || req).slice(0, 300), body: typeof init.body === 'string' ? init.body.slice(0, 600) : null, headers: h, resp: t.slice(0, 1500) }); localStorage.setItem('labo-sniff', JSON.stringify(L.slice(0, 4))); } } catch (e) {} }).catch(() => {});
-      else if (/x-component/.test(res.headers && res.headers.get ? (res.headers.get('content-type') || '') : '')) res.clone().text().then(t => { detectProfile(t); onPayload(t); }).catch(() => {}); // rafraîchissements (ex. Auto AFK après rechargement)
+      else if (/x-component/.test(res.headers && res.headers.get ? (res.headers.get('content-type') || '') : '')) res.clone().text().then(t => { detectProfile(t); onPayload(t); }).catch(() => {});
+      if (method !== 'POST' && /\/bestiaire/.test(location.pathname)) res.clone().text().then(t => { try { const L = JSON.parse(localStorage.getItem('labo-sniff') || '[]'); L.unshift({ t: Date.now(), m: method, url: String(req && req.url || req).slice(0, 300), ct: res.headers.get('content-type'), resp: t.slice(0, 1500) }); localStorage.setItem('labo-sniff', JSON.stringify(L.slice(0, 6))); } catch (e) {} }).catch(() => {}); // rafraîchissements (ex. Auto AFK après rechargement)
     } catch (e) {}
     return res;
   };
@@ -1525,7 +1526,7 @@
       const found = [];
       const walk = (v, d) => { if (d > 16 || !v || typeof v !== 'object') return; if (Array.isArray(v) && v[0] === '$' && v[3] && typeof v[3] === 'object') found.push(v[3]); (Array.isArray(v) ? v : Object.values(v)).forEach(x => walk(x, d + 1)); };
       Object.values(rows).forEach(v => walk(v, 0));
-      return { find: (pred) => { const p = found.find(pred); return p ? deep(p) : null; } };
+      return { find: (pred) => { const p = found.find(pred); return p ? deep(p) : null; }, all: () => found.map(p => deep(p)), size: h.length };
     }
 
   // ---------- Bestiaire (lecture seule, comme une page vue) ----------
@@ -1574,8 +1575,8 @@
     const got = new Map(); const diag = [];
     for (const url of ['/bestiaire?onglet=objets', '/bestiaire?onglet=items', '/bestiaire?tab=objets', '/bestiaire?vue=objets', '/bestiaire/objets']) {
       let rows; try { rows = await rsc(url); } catch (e) { diag.push({ url, err: String(e).slice(0, 100) }); continue; }
-      const arrs = itemArrays(rows, []).sort((a, b) => b.length - a.length);
-      diag.push({ url, arrays: arrs.slice(0, 4).map(a => ({ len: a.length, keys: Object.keys(a[0] || {}).slice(0, 30), item: looksItem(a), sample: JSON.stringify(a[0]).slice(0, 400) })) });
+      const arrs = itemArrays(rows.all(), []).sort((a, b) => b.length - a.length);
+      diag.push({ url, html: rows.size, props: rows.all().slice(0, 12).map(o => Object.keys(o || {}).slice(0, 15)), arrays: arrs.slice(0, 4).map(a => ({ len: a.length, keys: Object.keys(a[0] || {}).slice(0, 30), item: looksItem(a), sample: JSON.stringify(a[0]).slice(0, 400) })) });
       for (const a of arrs) if (looksItem(a)) for (const x of a) { const s = slimItem(x); if (s.id != null && !got.has(s.id)) got.set(s.id, s); }
       if (got.size > 1000) break;
     }
