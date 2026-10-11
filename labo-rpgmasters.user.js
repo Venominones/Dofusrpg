@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.9.8
+// @version      2.9.9
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -1681,7 +1681,8 @@
     if (a === 'send') {
       const url = laboUrl(); if (!url) { view = 'labourl'; render(); return; }
       // la fenêtre s'ouvre tout de suite (sinon le navigateur la bloque), les données suivent dès que le Labo est prêt
-      const origin = new URL(url).origin; const w = window.open(url, 'labo-rpgmasters');
+      const origin = new URL(url).origin; const fresh = (() => { try { const u = new URL(url); u.searchParams.set('v', Date.now().toString(36)); return u.toString(); } catch (e) { return url; } })(); // paramètre unique : le navigateur recharge toujours la dernière version du Labo
+      const w = window.open(fresh, 'labo-rpgmasters');
       if (!w) { msg().textContent = 'Fenêtre bloquée par le navigateur : autorise les pop-ups pour ce site.'; return; }
       let json = null, ready = false, sent = false;
       const trySend = () => { if (json && ready && !sent) { sent = true; w.postMessage({ type: 'labo-export', json }, origin); msg().textContent = 'Envoyé au Labo ✓'; window.removeEventListener('message', onMsg); } };
