@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.11.8
+// @version      2.11.9
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -1618,20 +1618,32 @@
     if (s && s.length !== harvestDocument.len) { harvestDocument.len = s.length; harvestItems('<x>' + s + '</x>', 'page ' + location.search); }
   }
   setInterval(harvestDocument, 4000);
+  // Le serveur plafonne n à 200 objets par réponse : on découpe par emplacement, puis par tranche de niveau (bisection),
+  // puis par rareté, jusqu'à ce que chaque réponse contienne tout ce qu'elle annonce (« shown »).
   async function fetchAllItems() {
-    try { const c = JSON.parse(localStorage.getItem(ALLITEMS_KEY) || 'null'); if (c && c.items && c.items.length > 1000 && Date.now() - c.t < 864e5) return c.items; } catch (e) {}
-    const diag = []; let items = [];
+    try { const c = JSON.parse(localStorage.getItem(ALLITEMS_KEY) || 'null'); if (c && c.items && c.items.length > 3000 && Date.now() - c.t < 864e5) return c.items; } catch (e) {}
+    const got = new Map(); const diag = []; let calls = 0;
+    const ask = async (q) => { calls++; const h = await origFetch('/bestiaire?onglet=objets&n=200' + q, { credentials: 'include', headers: { RSC: '1' } }).then(r => r.text()); const g = extractItems(h); for (const [id, x] of g) got.set(id, x); const shown = +((h.match(/"shown":(\d+)/) || [])[1] || 0), total = +((h.match(/"total":(\d+)/) || [])[1] || 0); return { found: g.size, shown, total }; };
     try {
-      const h = await origFetch('/bestiaire?onglet=objets&n=5000', { credentials: 'include', headers: { RSC: '1' } }).then(r => r.text());
-      const got = extractItems(h); const total = +((h.match(/"total":(\d+)/) || [])[1] || 0); diag.push({ url: 'n=5000', len: h.length, found: got.size, total });
-      // si le serveur plafonne n, on découpe par emplacement (le plus gros, Arme, fait ~725 objets)
-      if (total && got.size < total) for (const s of ['arme', 'amulette', 'anneau', 'bottes', 'ceinture', 'chapeau', 'cape', 'dofus', 'familier', 'bouclier', 'parchemin']) {
-        try { const h2 = await origFetch('/bestiaire?onglet=objets&emplacement=' + s + '&n=2000', { credentials: 'include', headers: { RSC: '1' } }).then(r => r.text()); const g2 = extractItems(h2); for (const [id, x] of g2) got.set(id, x); diag.push({ url: s, found: g2.size }); } catch (e) {}
+      const first = await ask(''); diag.push(Object.assign({ q: 'tout' }, first));
+      const queue = [];
+      const capped = r => r.shown ? r.shown > r.found : r.found >= 200;
+      if (capped(first)) for (const s of ['arme', 'amulette', 'anneau', 'bottes', 'ceinture', 'chapeau', 'cape', 'dofus', 'familier', 'bouclier', 'parchemin']) queue.push({ s, lo: 1, hi: 200, r: null });
+      while (queue.length && calls < 150) {
+        const x = queue.shift(); const q = '&emplacement=' + x.s + (x.lo > 1 || x.hi < 200 ? '&min=' + x.lo + '&max=' + x.hi : '') + (x.r != null ? '&rarete=' + x.r : '');
+        const r = await ask(q); diag.push(Object.assign({ q }, r));
+        if (capped(r)) {
+          if (x.hi > x.lo) { const m = Math.floor((x.lo + x.hi) / 2); queue.push({ s: x.s, lo: x.lo, hi: m, r: x.r }, { s: x.s, lo: m + 1, hi: x.hi, r: x.r }); }
+          else if (x.r == null) for (let k = 0; k <= 5; k++) queue.push({ s: x.s, lo: x.lo, hi: x.hi, r: k });
+          else { const r2 = await ask(q + '&tri=level-desc'); diag.push(Object.assign({ q: q + '&tri=level-desc' }, r2)); }
+        }
+        await new Promise(res => setTimeout(res, 120));
       }
-      items = [...got.values()];
     } catch (e) { diag.push({ err: String(e).slice(0, 200) }); }
+    let items = [...got.values()];
     if (items.length < 1000) { try { const L = JSON.parse(localStorage.getItem('labo-allitems-live') || 'null'); if (L && L.items && L.items.length > items.length) items = L.items; } catch (e) {} }
-    try { localStorage.setItem('labo-allitems-diag', JSON.stringify(diag)); } catch (e) {}
+    diag.unshift({ calls, items: items.length });
+    try { localStorage.setItem('labo-allitems-diag', JSON.stringify(diag).slice(0, 20000)); } catch (e) {}
     if (items.length > 1000) { try { localStorage.setItem(ALLITEMS_KEY, JSON.stringify({ t: Date.now(), items })); } catch (e) {} }
     return items;
   }
