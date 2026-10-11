@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.11.5
+// @version      2.11.6
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -1516,17 +1516,17 @@
     return f.v.map((x, i) => x ? { i, name: preName(x) || ('Équipement ' + (i + 1)), gear: preGear(x), alloc: preAlloc(x) } : { i, name: 'Équipement ' + (i + 1), gear: {}, alloc: null });
   }
   function presetsRaw(perso) { const f = presetArrays(perso)[0]; if (f) return JSON.stringify(f.v).slice(0, 40000); const s = JSON.stringify(perso); const m = s.match(/.{0,200}(preset|loadout|enregistr|saved|equipSet)[^]{0,3000}/i); return m ? m[0].slice(0, 6000) : null; }
-  async function rsc(path) {
-      const h = await origFetch(path, { credentials: 'include' }).then(r => r.text());
-      const txt = [...h.matchAll(/self\.__next_f\.push\(\[1,"((?:[^"\\]|\\.)*)"\]\)/g)].map(m => { try { return JSON.parse('"' + m[1] + '"'); } catch (e) { return ''; } }).join('');
+  async function rsc(path, asRsc) {
+      const h = await origFetch(path, asRsc ? { credentials: 'include', headers: { RSC: '1' } } : { credentials: 'include' }).then(r => r.text());
+      const txt = !/self\.__next_f/.test(h) ? h : [...h.matchAll(/self\.__next_f\.push\(\[1,"((?:[^"\\]|\\.)*)"\]\)/g)].map(m => { try { return JSON.parse('"' + m[1] + '"'); } catch (e) { return ''; } }).join('');
       const rows = {};
       for (const l of txt.split('\n')) { const m = l.match(/^([0-9a-f]+):([\[{].*)$/); if (m) { try { rows[m[1]] = JSON.parse(m[2]); } catch (e) {} } }
-      const res = (v) => { if (typeof v === 'string' && /^\$[0-9a-f]+:/.test(v)) { const p = v.slice(1).split(':'); let c = rows[p[0]]; for (const k of p.slice(1)) c = (Array.isArray(c) && c[0] === '$' && k === 'props') ? c[3] : (c ? c[k] : c); return c; } return v; };
+      const res = (v) => { if (typeof v === 'string' && /^\$[@L][0-9a-f]+$/.test(v)) return rows[v.slice(2)]; if (typeof v === 'string' && /^\$[0-9a-f]+:/.test(v)) { const p = v.slice(1).split(':'); let c = rows[p[0]]; for (const k of p.slice(1)) c = (Array.isArray(c) && c[0] === '$' && k === 'props') ? c[3] : (c ? c[k] : c); return c; } return v; };
       const deep = (v, d = 0) => { v = res(v); if (d > 9 || !v || typeof v !== 'object') return v; if (Array.isArray(v)) return v.map(x => deep(x, d + 1)); const o = {}; for (const k in v) o[k] = deep(v[k], d + 1); return o; };
       const found = [];
       const walk = (v, d) => { if (d > 16 || !v || typeof v !== 'object') return; if (Array.isArray(v) && v[0] === '$' && v[3] && typeof v[3] === 'object') found.push(v[3]); (Array.isArray(v) ? v : Object.values(v)).forEach(x => walk(x, d + 1)); };
       Object.values(rows).forEach(v => walk(v, 0));
-      return { find: (pred) => { const p = found.find(pred); return p ? deep(p) : null; }, all: () => found.map(p => deep(p)), size: h.length };
+      return { find: (pred) => { const p = found.find(pred); return p ? deep(p) : null; }, all: () => found.map(p => deep(p)), raw: () => Object.values(rows).map(v => deep(v)), size: h.length };
     }
 
   // ---------- Bestiaire (lecture seule, comme une page vue) ----------
@@ -1573,10 +1573,10 @@
   async function fetchAllItems() {
     try { const c = JSON.parse(localStorage.getItem(ALLITEMS_KEY) || 'null'); if (c && c.items && c.items.length > 1000 && Date.now() - c.t < 864e5) return c.items; } catch (e) {}
     const got = new Map(); const diag = [];
-    for (const url of ['/bestiaire?onglet=objets', '/bestiaire?onglet=items', '/bestiaire?tab=objets', '/bestiaire?vue=objets', '/bestiaire/objets']) {
-      let rows; try { rows = await rsc(url); } catch (e) { diag.push({ url, err: String(e).slice(0, 100) }); continue; }
-      const arrs = itemArrays(rows.all(), []).sort((a, b) => b.length - a.length);
-      diag.push({ url, html: rows.size, props: rows.all().slice(0, 12).map(o => Object.keys(o || {}).slice(0, 15)), arrays: arrs.slice(0, 4).map(a => ({ len: a.length, keys: Object.keys(a[0] || {}).slice(0, 30), item: looksItem(a), sample: JSON.stringify(a[0]).slice(0, 400) })) });
+    for (const [url, asRsc] of [['/bestiaire?onglet=objets', true], ['/bestiaire?onglet=objets', false]]) {
+      let rows; try { rows = await rsc(url, asRsc); } catch (e) { diag.push({ url, err: String(e).slice(0, 100) }); continue; }
+      const arrs = itemArrays(rows.all().concat(rows.raw()), []).sort((a, b) => b.length - a.length);
+      diag.push({ url, rsc: asRsc, html: rows.size, props: rows.all().slice(0, 12).map(o => Object.keys(o || {}).slice(0, 15)), arrays: arrs.slice(0, 4).map(a => ({ len: a.length, keys: Object.keys(a[0] || {}).slice(0, 30), item: looksItem(a), sample: JSON.stringify(a[0]).slice(0, 400) })) });
       for (const a of arrs) if (looksItem(a)) for (const x of a) { const s = slimItem(x); if (s.id != null && !got.has(s.id)) got.set(s.id, s); }
       if (got.size > 1000) break;
     }

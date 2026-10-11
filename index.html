@@ -2087,7 +2087,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
 <script type="text/plain" id="src-userscript">// ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.11.3
+// @version      2.11.6
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -3465,8 +3465,9 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     try {
       const req = args[0], init = args[1] || {};
       const method = (init.method || (req && req.method) || 'GET').toUpperCase();
-      if (method === 'POST') res.clone().text().then(t => { detectProfile(t); onPayload(t); }).catch(() => {});
-      else if (/x-component/.test(res.headers && res.headers.get ? (res.headers.get('content-type') || '') : '')) res.clone().text().then(t => { detectProfile(t); onPayload(t); }).catch(() => {}); // rafraîchissements (ex. Auto AFK après rechargement)
+      if (method === 'POST') res.clone().text().then(t => { detectProfile(t); onPayload(t); try { if (/\/bestiaire/.test(location.pathname)) { const L = JSON.parse(localStorage.getItem('labo-sniff') || '[]'); const h = {}; try { const H = init.headers || {}; for (const k in H) if (/^next-|^rsc|content-type/i.test(k)) h[k] = String(H[k]).slice(0, 300); } catch (e) {} L.unshift({ t: Date.now(), url: String(req && req.url || req).slice(0, 300), body: typeof init.body === 'string' ? init.body.slice(0, 600) : null, headers: h, resp: t.slice(0, 1500) }); localStorage.setItem('labo-sniff', JSON.stringify(L.slice(0, 4))); } } catch (e) {} }).catch(() => {});
+      else if (/x-component/.test(res.headers && res.headers.get ? (res.headers.get('content-type') || '') : '')) res.clone().text().then(t => { detectProfile(t); onPayload(t); }).catch(() => {});
+      if (method !== 'POST' && /\/bestiaire/.test(location.pathname)) res.clone().text().then(t => { try { const L = JSON.parse(localStorage.getItem('labo-sniff') || '[]'); L.unshift({ t: Date.now(), m: method, url: String(req && req.url || req).slice(0, 300), ct: res.headers.get('content-type'), resp: t.slice(0, 1500) }); localStorage.setItem('labo-sniff', JSON.stringify(L.slice(0, 6))); } catch (e) {} }).catch(() => {}); // rafraîchissements (ex. Auto AFK après rechargement)
     } catch (e) {}
     return res;
   };
@@ -3503,7 +3504,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     let dofusSets = null; try { const ids = ((best && best.items) || []).map(x => x.setId).concat((I.sets || []).map(x => x.id)).concat((I.entries || []).map(e => e.item && e.item.setId).concat((I.slots || []).map(e => e.item && e.item.setId))); dofusSets = await fetchDofusSets(ids.filter(Boolean)); } catch (e) {}
     const it = (x) => ({ id: x.item.id, n: x.item.n, lvl: x.item.lvl, s: x.item.s, r: x.item.r, setId: x.item.setId || null, st: x.item.st, w: x.item.w || null, icon: x.item.icon || x.item.gfx || null });
     return {
-      meta: { profile: PROFILE, forge, companion, level: I.level || 200, prestige: H.prestige || 0, breedId: D.breedId, deckSize: D.deckSize, discordBonus: 5, scrolls: I.scrollValues || {}, rows: Pp.rows.map(r => ({ key: r.key, base: r.base, bonus: r.bonus, tiers: r.tiers })), pointsFree: Pp.pointsFree, decks: D.initialDecks, deckNames: D.initialNames, active: D.initialActive, ranked: D.initialRanked || null, presets: (() => { try { return findPresets(perso) || presetsFromDom(I, best); } catch (e) { return null; } })(), presetsRaw: (() => { try { return presetsRaw(perso); } catch (e) { return null; } })(), diag: (() => { try { const s = Object.values(db.bossSamples || {})[0]; const o = s ? JSON.parse(s) : null; let pd = null; try { pd = JSON.parse(localStorage.getItem('labo-presets-dom') || 'null'); } catch (e) {} return { fighterKeys: o ? Object.keys(o) : null, mech: best && best.diag || null, presetsDom: pd ? { t: pd.t, n: (pd.presets || []).length } : null }; } catch (e) { return null; } })() },
+      meta: { profile: PROFILE, forge, companion, level: I.level || 200, prestige: H.prestige || 0, breedId: D.breedId, deckSize: D.deckSize, discordBonus: 5, scrolls: I.scrollValues || {}, rows: Pp.rows.map(r => ({ key: r.key, base: r.base, bonus: r.bonus, tiers: r.tiers })), pointsFree: Pp.pointsFree, decks: D.initialDecks, deckNames: D.initialNames, active: D.initialActive, ranked: D.initialRanked || null, presets: (() => { try { return findPresets(perso) || presetsFromDom(I, best); } catch (e) { return null; } })(), presetsRaw: (() => { try { return presetsRaw(perso); } catch (e) { return null; } })(), diag: (() => { try { const s = Object.values(db.bossSamples || {})[0]; const o = s ? JSON.parse(s) : null; let pd = null; try { pd = JSON.parse(localStorage.getItem('labo-presets-dom') || 'null'); } catch (e) {} let ai = null; try { ai = JSON.parse(localStorage.getItem('labo-allitems-diag') || 'null'); } catch (e) {} let sn = null; try { sn = JSON.parse(localStorage.getItem('labo-sniff') || 'null'); } catch (e) {} return { allItems: ai, sniff: sn, fighterKeys: o ? Object.keys(o) : null, mech: best && best.diag || null, presetsDom: pd ? { t: pd.t, n: (pd.presets || []).length } : null }; } catch (e) { return null; } })() },
       worn: I.slots.filter(s => s.item).map(s => Object.assign(it(s), { slot: s.slot, f: s.fusion })),
       items: I.entries.map(e => Object.assign(it(e), { f: e.fusion, q: e.qty })),
       cards: D.collection.map(c => ({ key: c.key, id: c.card.id, n: c.card.n, ap: c.card.ap, cc: c.card.cc, cls: c.card.cls, r: c.card.r, f: c.card.f, eff: c.card.eff, crit: c.card.crit || null, sig: !!c.card.sig, d: (c.card.d || '').slice(0, 180), ic: cardIcon(c.card) })),
@@ -3601,17 +3602,17 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     return f.v.map((x, i) => x ? { i, name: preName(x) || ('Équipement ' + (i + 1)), gear: preGear(x), alloc: preAlloc(x) } : { i, name: 'Équipement ' + (i + 1), gear: {}, alloc: null });
   }
   function presetsRaw(perso) { const f = presetArrays(perso)[0]; if (f) return JSON.stringify(f.v).slice(0, 40000); const s = JSON.stringify(perso); const m = s.match(/.{0,200}(preset|loadout|enregistr|saved|equipSet)[^]{0,3000}/i); return m ? m[0].slice(0, 6000) : null; }
-  async function rsc(path) {
-      const h = await origFetch(path, { credentials: 'include' }).then(r => r.text());
-      const txt = [...h.matchAll(/self\.__next_f\.push\(\[1,"((?:[^"\\]|\\.)*)"\]\)/g)].map(m => { try { return JSON.parse('"' + m[1] + '"'); } catch (e) { return ''; } }).join('');
+  async function rsc(path, asRsc) {
+      const h = await origFetch(path, asRsc ? { credentials: 'include', headers: { RSC: '1' } } : { credentials: 'include' }).then(r => r.text());
+      const txt = !/self\.__next_f/.test(h) ? h : [...h.matchAll(/self\.__next_f\.push\(\[1,"((?:[^"\\]|\\.)*)"\]\)/g)].map(m => { try { return JSON.parse('"' + m[1] + '"'); } catch (e) { return ''; } }).join('');
       const rows = {};
       for (const l of txt.split('\n')) { const m = l.match(/^([0-9a-f]+):([\[{].*)$/); if (m) { try { rows[m[1]] = JSON.parse(m[2]); } catch (e) {} } }
-      const res = (v) => { if (typeof v === 'string' && /^\$[0-9a-f]+:/.test(v)) { const p = v.slice(1).split(':'); let c = rows[p[0]]; for (const k of p.slice(1)) c = (Array.isArray(c) && c[0] === '$' && k === 'props') ? c[3] : (c ? c[k] : c); return c; } return v; };
+      const res = (v) => { if (typeof v === 'string' && /^\$[@L][0-9a-f]+$/.test(v)) return rows[v.slice(2)]; if (typeof v === 'string' && /^\$[0-9a-f]+:/.test(v)) { const p = v.slice(1).split(':'); let c = rows[p[0]]; for (const k of p.slice(1)) c = (Array.isArray(c) && c[0] === '$' && k === 'props') ? c[3] : (c ? c[k] : c); return c; } return v; };
       const deep = (v, d = 0) => { v = res(v); if (d > 9 || !v || typeof v !== 'object') return v; if (Array.isArray(v)) return v.map(x => deep(x, d + 1)); const o = {}; for (const k in v) o[k] = deep(v[k], d + 1); return o; };
       const found = [];
       const walk = (v, d) => { if (d > 16 || !v || typeof v !== 'object') return; if (Array.isArray(v) && v[0] === '$' && v[3] && typeof v[3] === 'object') found.push(v[3]); (Array.isArray(v) ? v : Object.values(v)).forEach(x => walk(x, d + 1)); };
       Object.values(rows).forEach(v => walk(v, 0));
-      return { find: (pred) => { const p = found.find(pred); return p ? deep(p) : null; } };
+      return { find: (pred) => { const p = found.find(pred); return p ? deep(p) : null; }, all: () => found.map(p => deep(p)), raw: () => Object.values(rows).map(v => deep(v)), size: h.length };
     }
 
   // ---------- Bestiaire (lecture seule, comme une page vue) ----------
@@ -3649,23 +3650,24 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   // v2.11.3 : catalogue complet des objets (onglet Objets du bestiaire, ~3 300 objets), lu page par page si besoin ; gardé 24 h
   const ALLITEMS_KEY = 'labo-allitems';
   function itemArrays(v, out, d = 0) {
-    if (!v || typeof v !== 'object' || d > 10) return out;
-    if (Array.isArray(v)) { if (v.length && v.filter(x => x && typeof x === 'object' && x.id != null && typeof x.n === 'string' && typeof x.s === 'string' && (x.st || x.stats)).length >= Math.min(5, v.length)) out.push(v); for (const x of v) itemArrays(x, out, d + 1); return out; }
+    if (!v || typeof v !== 'object' || d > 12) return out;
+    if (Array.isArray(v)) { if (v.length >= 20 && v.filter(x => x && typeof x === 'object' && x.id != null && typeof (x.n || x.name) === 'string').length >= v.length * 0.8) out.push(v); for (const x of v) itemArrays(x, out, d + 1); return out; }
     for (const k in v) itemArrays(v[k], out, d + 1); return out;
   }
-  const slimItem = x => ({ id: x.id, n: x.n, lvl: x.lvl ?? x.level, s: x.s, icon: x.icon ?? x.gfx ?? null, r: x.r ?? x.rarity ?? 0, st: x.st || x.stats || {}, setName: x.setName || null, setId: x.setId || null, w: x.w || null, src: typeof x.src === 'string' ? x.src.slice(0, 200) : undefined });
+  const slimItem = x => { const it = x.item && typeof x.item === 'object' ? Object.assign({}, x.item, x) : x; return { id: it.id, n: it.n || it.name, lvl: it.lvl ?? it.level ?? it.l, s: it.s || it.slot || it.type || it.cat || null, icon: it.icon ?? it.gfx ?? it.img ?? null, r: it.r ?? it.rarity ?? 0, st: it.st || it.stats || it.carac || {}, setName: it.setName || null, setId: it.setId || null, w: it.w || null, src: typeof (it.src || it.source || it.how) === 'string' ? (it.src || it.source || it.how).slice(0, 200) : undefined }; };
+  const looksItem = a => a.some(x => x && (x.s || x.slot) && (x.lvl != null || x.level != null)) || a.some(x => x && x.item && x.item.s);
   async function fetchAllItems() {
-    try { const c = JSON.parse(localStorage.getItem(ALLITEMS_KEY) || 'null'); if (c && c.items && Date.now() - c.t < 864e5) return c.items; } catch (e) {}
-    const got = new Map(); const take = rows => { let n = 0; for (const arr of itemArrays(rows, [])) for (const x of arr) if (!got.has(x.id)) { got.set(x.id, slimItem(x)); n++; } return n; };
-    take(await rsc('/bestiaire?onglet=objets'));
-    // si la page n'en donne qu'une partie, on essaie les paramètres de pagination usuels
-    if (got.size < 1000) {
-      for (const q of ['&limit=10000', '&n=10000', '&take=10000', '&perPage=10000', '&size=10000']) { if (take(await rsc('/bestiaire?onglet=objets' + q)) > 50) break; }
-    }
-    if (got.size < 1000) {
-      for (const key of ['page', 'p']) { let added = 0; for (let k = 2; k <= 200; k++) { const n = take(await rsc('/bestiaire?onglet=objets&' + key + '=' + k)); if (!n) break; added += n; await new Promise(r => setTimeout(r, 150)); } if (added) break; }
+    try { const c = JSON.parse(localStorage.getItem(ALLITEMS_KEY) || 'null'); if (c && c.items && c.items.length > 1000 && Date.now() - c.t < 864e5) return c.items; } catch (e) {}
+    const got = new Map(); const diag = [];
+    for (const [url, asRsc] of [['/bestiaire?onglet=objets', true], ['/bestiaire?onglet=objets', false]]) {
+      let rows; try { rows = await rsc(url, asRsc); } catch (e) { diag.push({ url, err: String(e).slice(0, 100) }); continue; }
+      const arrs = itemArrays(rows.all().concat(rows.raw()), []).sort((a, b) => b.length - a.length);
+      diag.push({ url, rsc: asRsc, html: rows.size, props: rows.all().slice(0, 12).map(o => Object.keys(o || {}).slice(0, 15)), arrays: arrs.slice(0, 4).map(a => ({ len: a.length, keys: Object.keys(a[0] || {}).slice(0, 30), item: looksItem(a), sample: JSON.stringify(a[0]).slice(0, 400) })) });
+      for (const a of arrs) if (looksItem(a)) for (const x of a) { const s = slimItem(x); if (s.id != null && !got.has(s.id)) got.set(s.id, s); }
+      if (got.size > 1000) break;
     }
     const items = [...got.values()];
+    try { localStorage.setItem('labo-allitems-diag', JSON.stringify(diag).slice(0, 20000)); } catch (e) {}
     try { localStorage.setItem(ALLITEMS_KEY, JSON.stringify({ t: Date.now(), items })); } catch (e) {}
     return items;
   }
@@ -4603,7 +4605,7 @@ $('#aExpDiscord').onclick=()=>copyText(ascBuilds.map(b=>`**${b.label}** · ${b.t
 /* ---------- Bestiaire ---------- */
 const DIFF_L={I:'Initiation',F:'Facile',N:'Normale',D:'Difficile',C:'Cauchemar'};
 const TYPE_L={chemin:'Chemin',zone:'Boss de zone',ascension:'Ascension',faille:'Abysses / Faille'};
-function bestData(){return DATA.bestiary||null}
+function bestData(){const a=DATA.bestiary;if(a&&a.allItems&&a.mech)return a;let p=null;try{if(LPROF!=='principal'){if(bestData.d!==DATA){bestData.c=(profData('principal')||{}).bestiary||null;bestData.d=DATA}p=bestData.c}}catch(e){}if(!a)return p;if(!p)return a;return Object.assign({},p,a,{allItems:a.allItems||p.allItems,mech:a.mech||p.mech,monsters:(a.monsters&&a.monsters.length)?a.monsters:p.monsters,items:(a.items&&a.items.length)?a.items:p.items})}
 function entryCtx(e){const p=[];if(e.asc)p.push(`Ascension ét. ${e.asc[0]}-${e.asc[1]}`);if(e.ch)p.push(`Chemin boss n°${e.ch}`);if(e.beyond)p.push(`au-delà du n°${e.beyond}`);if(e.zone)p.push('boss de zone');if(e.second)p.push('2e mécanique');if(e.faille)p.push('Abysses');return p.join(', ')}
 function entryDiff(e){return String(e.d||'').split('').map(c=>DIFF_L[c]||c).join(' / ')}
 let bView='mech';
@@ -4672,7 +4674,7 @@ function bItems(B){if(!B)return [];if(bItems.b===B)return bItems.c;const ids=new
 function renderBest(){
   const B=bestData();const f=$('#bFilters'),o=$('#bOut');
   if(!B||!B.mech){$('#bInfo').textContent='';f.innerHTML='';f.dataset.v='';o.innerHTML='<p class="muted">Pas encore de bestiaire. Mets à jour le script (v1.6 ou plus), clique « Exporter pour le Labo » dans le jeu, puis colle le résultat dans Mes données : le script lit le bestiaire en plus de ton personnage.</p>';return}
-  $('#bInfo').textContent=`${B.mech.length} boss à mécanique (${B.mech.filter(b=>b.u).length} débloqués) · ${(B.monsters||[]).length} monstres · ${bItems(B).length} objets${B.allItems?' (catalogue complet)':''} · prospection ${B.pp?fmt(B.pp,0):'?'}${B.t?' · lu le '+new Date(B.t).toLocaleDateString('fr-FR'):''}`;
+  $('#bInfo').textContent=`${B.mech.length} boss à mécanique (${B.mech.filter(b=>b.u).length} débloqués) · ${(B.monsters||[]).length} monstres · ${bItems(B).length} objets${B.allItems&&B.allItems.length>(B.items||[]).length+100?' (catalogue complet)':''} · prospection ${B.pp?fmt(B.pp,0):'?'}${B.t?' · lu le '+new Date(B.t).toLocaleDateString('fr-FR'):''}`;
   if(bView==='mech'){
     if(f.dataset.v!=='mech'||!$('#bQ')){f.dataset.v='mech';f.innerHTML=`<div class="field"><label for="bQ">Boss</label><input type="text" id="bQ" placeholder="Nom du boss"></div><div class="field"><label for="bType">Où on le croise</label><select id="bType"><option value="">Tous les types</option>${Object.entries(TYPE_L).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div><div class="field"><label for="bDiff">Difficulté</label><select id="bDiff"><option value="">Toutes</option>${['F','N','D','C'].map(k=>`<option value="${k}">${DIFF_L[k]}</option>`).join('')}</select></div><div class="field"><label for="bFloor">Étage d'Ascension</label><input type="number" id="bFloor" min="1" max="200" placeholder="ex. 23"></div><div class="field"><label for="bMech">Mécanique</label><select id="bMech"><option value="">Toutes</option>${[...new Set(B.mech.flatMap(b=>(b.m||[]).map(e=>e.mn)))].sort().map(n=>`<option>${esc(n)}</option>`).join('')}</select></div>`;f.querySelectorAll('input,select').forEach(x=>x.oninput=renderBest)}
     const q=($('#bQ').value||'').toLowerCase(),ty=$('#bType').value,df=$('#bDiff').value,fl=+$('#bFloor').value||0,mn=$('#bMech').value;
@@ -4709,7 +4711,7 @@ function renderBest(){
   const list=[...all.values()].filter(i=>(!q||String(i.n).toLowerCase().includes(q)||String(i.setName||'').toLowerCase().includes(q))&&(!sl||i.s===sl)&&(i.lvl||0)>=mi&&(i.lvl||0)<=ma&&(!ow||(ow==='y')===own.has(i.id))).sort((a,b)=>(b.lvl||0)-(a.lvl||0)||String(a.n).localeCompare(b.n));
   const stTxt=st=>Object.entries(st||{}).filter(([,v])=>v).map(([k,v])=>`${STAT_LABEL[k]||MB_LBL[k]||k} ${v>0?'+':''}${v}`).join(', ');
   const nOwn=list.filter(i=>own.has(i.id)).length;
-  o.innerHTML=`<p class="note">${list.length} objet${list.length>1?'s':''} · ${nOwn} possédé${nOwn>1?'s':''}${list.length>150?' · 150 premiers affichés, affine la recherche':''}${B.allItems?'':' · catalogue partiel : avec le script 2.11.3, « Envoyer au Labo » charge les ~3 300 objets du jeu'}.</p><table class="btab"><tr><th>Objet</th><th>Caractéristiques</th><th>Où l'obtenir</th><th>Possédé</th></tr>${list.slice(0,150).map(i=>{const s2=(src[i.id]||[]).sort((a,b)=>b.p-a.p);const ob=own.get(i.id);
+  o.innerHTML=`<p class="note">${list.length} objet${list.length>1?'s':''} · ${nOwn} possédé${nOwn>1?'s':''}${list.length>150?' · 150 premiers affichés, affine la recherche':''}${B.allItems&&B.allItems.length>(B.items||[]).length+100?'':' · catalogue partiel : avec le script 2.11.6, « Envoyer au Labo » charge les ~3 300 objets du jeu'}.</p><table class="btab"><tr><th>Objet</th><th>Caractéristiques</th><th>Où l'obtenir</th><th>Possédé</th></tr>${list.slice(0,150).map(i=>{const s2=(src[i.id]||[]).sort((a,b)=>b.p-a.p);const ob=own.get(i.id);
     const where=s2.slice(0,4).map(x=>`${monImg(x.m.gfx,1)}${esc(x.m.n)} <span class="dim">niv. ${x.m.lo}${x.m.hi!==x.m.lo?'-'+x.m.hi:''}${(x.m.z||[]).length&&zones[x.m.z[0]]?' · '+esc(zones[x.m.z[0]].n):''} · <strong>${fmt(x.p,2)} %</strong></span>`).join('<br>')+(s2.length>4?`<div class="note">+${s2.length-4} autres monstres</div>`:'');
     return `<tr><td>${itemImg(i)}<strong>${esc(i.n)}</strong><div class="note">niv. ${i.lvl||'?'} · ${i.s==='dofus'?'Dofus / Trophée':esc(SLOT_FR[i.s]||i.s)}${i.setName?' · '+esc(i.setName):''}</div></td><td class="note">${esc(stTxt(i.st))}${fxOf(i).map(x=>`<div style="color:var(--gold)">${esc(x)}</div>`).join('')}</td><td>${where||(i.src?`<span class="dim">${esc(i.src)}</span>`:'<span class="muted">aucun monstre connu (coffres, HDV, boss, Ascension)</span>')}</td><td>${ob?`<span class="own y">✓ ${[...ob.labs].map(esc).join(', ')}</span>`:'<span class="own n">✗ pas encore</span>'}</td></tr>`}).join('')}</table>`;
 }
@@ -4979,10 +4981,10 @@ const MB_STATS=[['vitalite','Vitalité'],['sagesse','Sagesse'],['force','Force']
 const MB_LBL=Object.fromEntries(MB_STATS);
 let MB=null,MB_SEL='chapeau',MB_TAB='car';
 function mbAll(){if(mbAll.c&&mbAll.d===DATA)return mbAll.c;const m={},icon={};
-  for(const i of ((DATA.bestiary&&DATA.bestiary.items)||[]))if(i&&i.icon)icon[i.id]=i.icon;
+  const BB=bestData()||{};for(const i of (BB.items||[]).concat(BB.allItems||[]))if(i&&i.icon)icon[i.id]=i.icon;
   for(const pr of ['principal','saison']){let PD=null;try{PD=profData(pr)}catch(e){}if(PD)for(const i of (PD.items||[]).concat(PD.worn||[]))if(i&&i.icon&&!icon[i.id])icon[i.id]=i.icon}
   let V={};try{V=vitrineData()||{}}catch(e){}
-  for(const i of [...((DATA.bestiary&&DATA.bestiary.items)||[]),...((DATA.bestiary&&DATA.bestiary.allItems)||[]),...((V.items)||[]),...DATA.items,...(DATA.worn||[])]){if(!i||!i.st||!i.s)continue;if(i.icon)icon[i.id]=i.icon;if(!m[i.id])m[i.id]=Object.assign({},i)}
+  for(const i of [...(BB.items||[]),...(BB.allItems||[]),...((V.items)||[]),...DATA.items,...(DATA.worn||[])]){if(!i||!i.st||!i.s)continue;if(i.icon)icon[i.id]=i.icon;if(!m[i.id])m[i.id]=Object.assign({},i)}
   const own={};for(const i of DATA.items.concat(DATA.worn||[])){const o=own[i.id];own[i.id]={q:(o?o.q:0)+(i.q||1),f:Math.max(o?o.f:0,i.f||0)}}
   mbAll.c={m,icon,own};mbAll.d=DATA;return mbAll.c}
 function mbIcon(it){const ic=it&&(it.icon||mbAll().icon[it.id]);return ic?`https://rpgmasters.houk.fr/img/items/${ic}.png`:''}
