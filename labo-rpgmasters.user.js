@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.9.6
+// @version      2.9.8
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -74,6 +74,7 @@
   const BREED_KEY = { 1: 'feca', 2: 'osamodas', 3: 'enutrof', 4: 'sram', 5: 'xelor', 6: 'ecaflip', 7: 'eniripsa', 8: 'iop', 9: 'cra', 10: 'sadida', 11: 'sacrieur', 12: 'pandawa', 13: 'roublard', 14: 'zobal', 15: 'steamer', 16: 'eliotrope', 17: 'huppermage', 18: 'ouginak', 20: 'forgelance' };
   const BREED_NAME = { 1: 'Féca', 2: 'Osamodas', 3: 'Enutrof', 4: 'Sram', 5: 'Xélor', 6: 'Ecaflip', 7: 'Eniripsa', 8: 'Iop', 9: 'Crâ', 10: 'Sadida', 11: 'Sacrieur', 12: 'Pandawa', 13: 'Roublard', 14: 'Zobal', 15: 'Steamer', 16: 'Eliotrope', 17: 'Huppermage', 18: 'Ouginak', 20: 'Forgelance' }; const CHAIN_MAX = 3; const CARACS_ALL = ['force', 'intelligence', 'chance', 'agilite'];
   const SPECTRAL_PER_PO = 0.4, SPECTRAL_MAX = 60;
+  const DOFAWA_P = 0.001; // Dofawa : 0,1 % par coup
   const POINTS_PER_LEVEL = 5;
   const CARAC_TIERS = [[0, 1], [100, 2], [200, 3], [300, 4]];
   const STAT_TIERS = { vitalite: [[0, 1]], sagesse: [[0, 3]], force: CARAC_TIERS, intelligence: CARAC_TIERS, chance: CARAC_TIERS, agilite: CARAC_TIERS };
@@ -257,7 +258,7 @@
   // ---------- Combat ----------
   function makeMonster(m, i) {
     const hp = Math.round((m.hpMin + m.hpMax) / 2);
-    return { mech: m.mech || null, id: 'm' + i, name: m.name, hp, maxHp: hp, cap: hp, atk: m.atk, el: m.element, pattern: m.pattern, idx: (m.pattern && m.pattern.length > 1 && !m.fixedStart) ? Math.floor(RND() * m.pattern.length) : 0, /* le cycle d'intentions ne commence pas toujours au début (observé : 15 combats sur 18) */ res: m.stats || {}, rage: 0, weaken: 0, shield: 0, alive: true, isBoss: !!m.isBoss, bombs: [] };
+    return { mech: m.mech || null, id: 'm' + i, name: m.name, hp, maxHp: hp, cap: hp, atk: m.atk, el: m.element, pattern: m.pattern, idx: (m.pattern && m.pattern.length > 1 && !m.fixedStart) ? Math.floor(RND() * m.pattern.length) : 0, /* le cycle d'intentions ne commence pas toujours au début (observé : 15 combats sur 18) */ res: m.stats || {}, rage: 0, weaken: 0, shield: 0, alive: true, isBoss: !!m.isBoss, bombs: [], noOS: !!m.noOneShot || hp > 5e6 };
   }
 
   // opts: {S, deck:[cards], weapon, monsters:[defs], maxRounds}
@@ -583,6 +584,8 @@
       if (opt.sec) d = Math.floor(d * ZONE_SEC);
       if (opt.x2) d *= 2;
       if (m.mech && m.mech.hardSkin && shieldTotal() <= 0) d = Math.floor(d * m.mech.hardSkin / 100);
+      // Dofawa : chaque coup a 0,1 % de chances de tuer net la cible (effet caché rapporté par les joueurs ; le Kralamoure de la Faille est supposé immunisé)
+      if (DF.dofawa && d > 0 && !opt.bomb && !m.noOS && RND() < DOFAWA_P) d = m.hp + m.shield;
       if (reflects(m)) {
         // « renvoie le coup » : le monstre ne prend rien et te renvoie les dégâts (tes boucliers absorbent)
         let back = d; for (const s of P.shields) { const a = Math.min(s.value, back); s.value -= a; back -= a; if (!back) break; }
@@ -1072,7 +1075,7 @@
   function maybeWarn(st, root) {
     if (st.status && st.status !== 'active' && st.status !== 'ongoing') return;
     const mons = Object.values(st.fighters).filter(f => f && f.kind === 'monster');
-    const sig = mons.map(f => f.id + f.maxHp).join(',');
+    const sig = mons.map(f => f.id).join(','); // pas les PV max : l'érosion les baisse à chaque coup (le calcul se relançait en boucle)
     if (!mons.length || sig === lastWarnSig) return;
     lastWarnSig = sig;
     const keys = [...new Set(mons.map(monsterKey))];
@@ -1094,7 +1097,7 @@
   function showBanner(known, builds, fl, hidden, flN, isAuto, preview, guard) {
     hidden = hidden || [];
     if (!document.documentElement) return;
-    if (banner) banner.remove();
+    const prevBanner = banner;
     banner = document.createElement('div');
     banner.setAttribute('role', 'status');
     banner.setAttribute('style', 'position:fixed;top:72px;right:12px;z-index:2147483001;width:min(400px,94vw);max-height:72vh;overflow:auto;font:13px/1.45 system-ui,sans-serif;color:#efe6d6;background:rgba(21,18,13,.97);border:1px solid #e0b04f;border-radius:10px;padding:8px 12px;box-shadow:0 6px 20px rgba(0,0,0,.5)');
@@ -1140,6 +1143,9 @@
       if (t.dataset.x !== undefined) { banner.remove(); banner = null; return; }
       if (t.dataset.copy) { try { await navigator.clipboard.writeText(t.dataset.copy); banner.querySelector('[data-msg]').textContent = 'Copié. Colle-le dans le jeu.'; } catch (e) { banner.querySelector('[data-msg]').textContent = t.dataset.copy; } }
     });
+    // même contenu qu'affiché : on garde la fenêtre telle quelle (pas de clignotement)
+    if (prevBanner && prevBanner.isConnected && prevBanner._html === banner.innerHTML) { banner = prevBanner; return; }
+    banner._html = banner.innerHTML; if (prevBanner) prevBanner.remove();
     document.documentElement.appendChild(banner);
   }
 
@@ -1176,7 +1182,7 @@
       const P = st.fighters && st.fighters.p; if (!P) return null;
       const mons = Object.values(st.fighters).filter(f => f && f.kind === 'monster' && f.alive !== false);
       if (!mons.length || !(mons.some(m => m.isBoss) || st.kind === 'boss' || st.ascension)) return null;
-      const sig = PROFILE + '|' + mons.map(m => m.id + ':' + m.maxHp).join(',');
+      const sig = PROFILE + '|' + mons.map(m => m.id).join(','); // recalcul seulement quand un monstre meurt, pas à chaque coup
       if (sig === guardSig) return guardRes;
       guardSig = sig; guardRes = { pending: true };
       (async () => {
