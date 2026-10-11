@@ -2087,7 +2087,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
 <script type="text/plain" id="src-userscript">// ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.11.7
+// @version      2.11.8
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -3660,16 +3660,41 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   }
   const slimItem = x => { const it = x.item && typeof x.item === 'object' ? Object.assign({}, x.item, x) : x; return { id: it.id, n: it.n || it.name, lvl: it.lvl ?? it.level ?? it.l, s: it.s || it.slot || it.type || it.cat || null, icon: it.icon ?? it.gfx ?? it.img ?? null, r: it.r ?? it.rarity ?? 0, st: it.st || it.stats || it.carac || {}, setName: it.setName || null, setId: it.setId || null, w: it.w || null, src: typeof (it.src || it.source || it.how) === 'string' ? (it.src || it.source || it.how).slice(0, 200) : undefined }; };
   const looksItem = a => a.some(x => x && (x.s || x.slot) && (x.lvl != null || x.level != null)) || a.some(x => x && x.item && x.item.s);
+  // v2.11.8 : l'onglet Objets du jeu envoie une carte par objet ({item:{id,n,lvl,s,icon,r,st}} + texte « où le trouver »),
+  // paginée par le paramètre n (20, 40, 60…). On demande tout d'un coup (n=5000) au format RSC, comme le fait le jeu.
+  function rscRows(h) {
+    const txt = !/self\.__next_f/.test(h) ? h : [...h.matchAll(/self\.__next_f\.push\(\[1,"((?:[^"\\]|\\.)*)"\]\)/g)].map(m => { try { return JSON.parse('"' + m[1] + '"'); } catch (e) { return ''; } }).join('');
+    const rows = []; for (const l of txt.split('\n')) { const m = l.match(/^([0-9a-f]+):([\[{].*)$/); if (m) { try { rows.push(JSON.parse(m[2])); } catch (e) {} } } return rows;
+  }
+  function flatText(v, out) { if (v == null || v === false) return out; if (typeof v === 'string') { if (!/^\$/.test(v)) out.push(v); return out; } if (typeof v === 'number') { out.push(String(v)); return out; } if (Array.isArray(v)) { if (v[0] === '$' && v[3] && typeof v[3] === 'object') return flatText(v[3].children, out); for (const x of v) flatText(x, out); } return out; }
+  function extractItems(h) {
+    const out = new Map(); const rows = rscRows(h);
+    const visit = (v, d, card) => {
+      if (!v || typeof v !== 'object' || d > 80) return;
+      if (Array.isArray(v)) {
+        if (v[0] === '$' && v[3] && typeof v[3] === 'object') {
+          const p = v[3]; let c = card;
+          if (typeof p.className === 'string' && /__card/.test(p.className)) { c = { item: null, src: [] }; visit(p.children, d + 1, c); if (c.item) { const s = slimItem(c.item); if (c.src.length) s.src = c.src.join(' · ').slice(0, 300); if (s.id != null) out.set(s.id, s); } return; }
+          if (p.item && typeof p.item === 'object' && p.item.id != null && p.item.n) { if (c) c.item = c.item || p.item; else { const s = slimItem(p.item); out.set(s.id, s); } }
+          if (c && v[1] === 'li') { const ch = Array.isArray(p.children) ? p.children : [p.children]; const head = ch[0] && Array.isArray(ch[0]) && ch[0][0] === '$' ? flatText(ch[0], []).join('').trim() : ''; const body = flatText(head ? ch.slice(1) : ch, []).join('').replace(/\s+/g, ' ').trim(); const tx = (head ? head + ' : ' : '') + body; if (tx.trim()) c.src.push(tx.trim()); return; }
+          visit(p.children, d + 1, c); return;
+        }
+        for (const x of v) visit(x, d + 1, card); return;
+      }
+      for (const k in v) visit(v[k], d + 1, card);
+    };
+    for (const r of rows) visit(r, 0, null);
+    return out;
+  }
   function harvestItems(text, how) {
     try {
       if (!text || text.length < 2000 || !/lvl/.test(text)) return 0;
-      let arrs; if (/^\s*[\[{]/.test(text)) { try { arrs = itemArrays(JSON.parse(text), []); } catch (e) {} } if (!arrs || !arrs.length) { const rows = parseRsc(text); arrs = itemArrays(rows.all().concat(rows.raw()), []); }
+      const got = extractItems(text);
       let st = null; try { st = JSON.parse(localStorage.getItem('labo-allitems-live') || 'null'); } catch (e) {}
       const m = new Map(((st && st.items) || []).map(x => [x.id, x])); let n = 0;
-      for (const a of arrs) if (looksItem(a)) for (const x of a) { const s = slimItem(x); if (s.id != null && !m.has(s.id)) { m.set(s.id, s); n++; } }
-      const lg = ((st && st.log) || []).slice(0, 9); lg.unshift({ t: Date.now(), how, len: text.length, arrays: arrs.map(a => a.length), added: n });
-      if (n || !st) localStorage.setItem('labo-allitems-live', JSON.stringify({ t: Date.now(), items: [...m.values()], log: lg }));
-      else { st.log = lg; localStorage.setItem('labo-allitems-live', JSON.stringify(st)); }
+      for (const [id, s] of got) { if (!m.has(id)) n++; m.set(id, Object.assign({}, m.get(id) || {}, s)); }
+      const lg = ((st && st.log) || []).slice(0, 9); lg.unshift({ t: Date.now(), how, len: text.length, found: got.size, added: n });
+      localStorage.setItem('labo-allitems-live', JSON.stringify({ t: Date.now(), items: [...m.values()], log: lg }));
       return n;
     } catch (e) { return 0; }
   }
@@ -3680,20 +3705,20 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   }
   setInterval(harvestDocument, 4000);
   async function fetchAllItems() {
-    try { const L = JSON.parse(localStorage.getItem('labo-allitems-live') || 'null'); if (L && L.items && L.items.length > 1000) return L.items; } catch (e) {}
     try { const c = JSON.parse(localStorage.getItem(ALLITEMS_KEY) || 'null'); if (c && c.items && c.items.length > 1000 && Date.now() - c.t < 864e5) return c.items; } catch (e) {}
-    const got = new Map(); const diag = [];
-    for (const [url, asRsc] of [['/bestiaire?onglet=objets', true], ['/bestiaire?onglet=objets', false]]) {
-      let rows; try { rows = await rsc(url, asRsc); } catch (e) { diag.push({ url, err: String(e).slice(0, 100) }); continue; }
-      const arrs = itemArrays(rows.all().concat(rows.raw()), []).sort((a, b) => b.length - a.length);
-      if (asRsc) { try { localStorage.setItem('labo-objets-raw', (await origFetch(url, { credentials: 'include', headers: { RSC: '1' } }).then(r => r.text())).slice(0, 40000)); } catch (e) {} }
-      diag.push({ url, rsc: asRsc, html: rows.size, props: rows.all().slice(0, 12).map(o => Object.keys(o || {}).slice(0, 15)), arrays: arrs.slice(0, 4).map(a => ({ len: a.length, keys: Object.keys(a[0] || {}).slice(0, 30), item: looksItem(a), sample: JSON.stringify(a[0]).slice(0, 400) })) });
-      for (const a of arrs) if (looksItem(a)) for (const x of a) { const s = slimItem(x); if (s.id != null && !got.has(s.id)) got.set(s.id, s); }
-      if (got.size > 1000) break;
-    }
-    const items = [...got.values()];
-    try { localStorage.setItem('labo-allitems-diag', JSON.stringify(diag).slice(0, 20000)); } catch (e) {}
-    try { localStorage.setItem(ALLITEMS_KEY, JSON.stringify({ t: Date.now(), items })); } catch (e) {}
+    const diag = []; let items = [];
+    try {
+      const h = await origFetch('/bestiaire?onglet=objets&n=5000', { credentials: 'include', headers: { RSC: '1' } }).then(r => r.text());
+      const got = extractItems(h); const total = +((h.match(/"total":(\d+)/) || [])[1] || 0); diag.push({ url: 'n=5000', len: h.length, found: got.size, total });
+      // si le serveur plafonne n, on découpe par emplacement (le plus gros, Arme, fait ~725 objets)
+      if (total && got.size < total) for (const s of ['arme', 'amulette', 'anneau', 'bottes', 'ceinture', 'chapeau', 'cape', 'dofus', 'familier', 'bouclier', 'parchemin']) {
+        try { const h2 = await origFetch('/bestiaire?onglet=objets&emplacement=' + s + '&n=2000', { credentials: 'include', headers: { RSC: '1' } }).then(r => r.text()); const g2 = extractItems(h2); for (const [id, x] of g2) got.set(id, x); diag.push({ url: s, found: g2.size }); } catch (e) {}
+      }
+      items = [...got.values()];
+    } catch (e) { diag.push({ err: String(e).slice(0, 200) }); }
+    if (items.length < 1000) { try { const L = JSON.parse(localStorage.getItem('labo-allitems-live') || 'null'); if (L && L.items && L.items.length > items.length) items = L.items; } catch (e) {} }
+    try { localStorage.setItem('labo-allitems-diag', JSON.stringify(diag)); } catch (e) {}
+    if (items.length > 1000) { try { localStorage.setItem(ALLITEMS_KEY, JSON.stringify({ t: Date.now(), items })); } catch (e) {} }
     return items;
   }
   async function fetchBestiary(full) {
@@ -4336,7 +4361,7 @@ function importText(txt){
 }
 
 /* ---------- Onglets & réglages ---------- */
-function showTab(id){if(id==='sim')id='mb';if(id==='asc')id='opt';if(id==='farm'||id==='items')id='perso';document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===id?'true':'false'));document.querySelectorAll('section.tab').forEach(s=>s.hidden=s.id!==id);try{localStorage.setItem('labo-tab',id)}catch(e){}if(id==='perso'){try{renderPV()}catch(e){}}if(id==='mb'){try{setupMB();renderMB()}catch(e){$('#mbMsg').textContent='Erreur : '+e.message}}if(id==='pre'){try{renderPrebuilds()}catch(e){$('#preOut').textContent='Erreur : '+e.message}}if(id==='farm'){try{renderFarm()}catch(e){$('#fZones').textContent='Erreur : '+e.message}try{renderPredict()}catch(e){$('#fPredict').textContent='Erreur : '+e.message}}if(id==='data'){try{renderChanges()}catch(e){}try{healthCheck(false)}catch(e){$('#healthOut').textContent='Erreur : '+e.message}}if(id==='items'){TL=null;if(LPROF==='saison')$('#tlFor').value='principal';renderItemsTab()}}
+function showTab(id){if(id==='sim')id='mb';{const pm=document.querySelector('.playmode');if(pm)pm.hidden=(id==='best'||id==='wip'||id==='form');}if(id==='asc')id='opt';if(id==='farm'||id==='items')id='perso';document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===id?'true':'false'));document.querySelectorAll('section.tab').forEach(s=>s.hidden=s.id!==id);try{localStorage.setItem('labo-tab',id)}catch(e){}if(id==='perso'){try{renderPV()}catch(e){}}if(id==='mb'){try{setupMB();renderMB()}catch(e){$('#mbMsg').textContent='Erreur : '+e.message}}if(id==='pre'){try{renderPrebuilds()}catch(e){$('#preOut').textContent='Erreur : '+e.message}}if(id==='farm'){try{renderFarm()}catch(e){$('#fZones').textContent='Erreur : '+e.message}try{renderPredict()}catch(e){$('#fPredict').textContent='Erreur : '+e.message}}if(id==='data'){try{renderChanges()}catch(e){}try{healthCheck(false)}catch(e){$('#healthOut').textContent='Erreur : '+e.message}}if(id==='items'){TL=null;if(LPROF==='saison')$('#tlFor').value='principal';renderItemsTab()}}
 document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
 document.querySelectorAll('.seg:not(#playMode):not(#bView):not(#profMode)').forEach(g=>g.querySelectorAll('button').forEach(b=>b.onclick=()=>{g.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b?'true':'false'))}));
 const dv=v=>'×'+Number(v).toLocaleString('fr-FR',{minimumFractionDigits:1,maximumFractionDigits:2});
@@ -4736,7 +4761,7 @@ function renderBest(){
   const list=[...all.values()].filter(i=>(!q||String(i.n).toLowerCase().includes(q)||String(i.setName||'').toLowerCase().includes(q))&&(!sl||i.s===sl)&&(i.lvl||0)>=mi&&(i.lvl||0)<=ma&&(!ow||(ow==='y')===own.has(i.id))).sort((a,b)=>(b.lvl||0)-(a.lvl||0)||String(a.n).localeCompare(b.n));
   const stTxt=st=>Object.entries(st||{}).filter(([,v])=>v).map(([k,v])=>`${STAT_LABEL[k]||MB_LBL[k]||k} ${v>0?'+':''}${v}`).join(', ');
   const nOwn=list.filter(i=>own.has(i.id)).length;
-  o.innerHTML=`<p class="note">${list.length} objet${list.length>1?'s':''} · ${nOwn} possédé${nOwn>1?'s':''}${list.length>150?' · 150 premiers affichés, affine la recherche':''}${B.allItems&&B.allItems.length>(B.items||[]).length+100?'':' · catalogue partiel : avec le script 2.11.6, « Envoyer au Labo » charge les ~3 300 objets du jeu'}.</p><table class="btab"><tr><th>Objet</th><th>Caractéristiques</th><th>Où l'obtenir</th><th>Possédé</th></tr>${list.slice(0,150).map(i=>{const s2=(src[i.id]||[]).sort((a,b)=>b.p-a.p);const ob=own.get(i.id);
+  o.innerHTML=`<p class="note">${list.length} objet${list.length>1?'s':''} · ${nOwn} possédé${nOwn>1?'s':''}${list.length>150?' · 150 premiers affichés, affine la recherche':''}${B.allItems&&B.allItems.length>(B.items||[]).length+100?'':' · catalogue partiel : avec le script 2.11.8, « Envoyer au Labo » charge les 3 336 objets du jeu'}.</p><table class="btab"><tr><th>Objet</th><th>Caractéristiques</th><th>Où l'obtenir</th><th>Possédé</th></tr>${list.slice(0,150).map(i=>{const s2=(src[i.id]||[]).sort((a,b)=>b.p-a.p);const ob=own.get(i.id);
     const where=s2.slice(0,4).map(x=>`${monImg(x.m.gfx,1)}${esc(x.m.n)} <span class="dim">niv. ${x.m.lo}${x.m.hi!==x.m.lo?'-'+x.m.hi:''}${(x.m.z||[]).length&&zones[x.m.z[0]]?' · '+esc(zones[x.m.z[0]].n):''} · <strong>${fmt(x.p,2)} %</strong></span>`).join('<br>')+(s2.length>4?`<div class="note">+${s2.length-4} autres monstres</div>`:'');
     return `<tr><td>${itemImg(i)}<strong>${esc(i.n)}</strong><div class="note">niv. ${i.lvl||'?'} · ${i.s==='dofus'?'Dofus / Trophée':esc(SLOT_FR[i.s]||i.s)}${i.setName?' · '+esc(i.setName):''}</div></td><td class="note">${esc(stTxt(i.st))}${fxOf(i).map(x=>`<div style="color:var(--gold)">${esc(x)}</div>`).join('')}</td><td>${where||(i.src?`<span class="dim">${esc(i.src)}</span>`:'<span class="muted">aucun monstre connu (coffres, HDV, boss, Ascension)</span>')}</td><td>${ob?`<span class="own y">✓ ${[...ob.labs].map(esc).join(', ')}</span>`:'<span class="own n">✗ pas encore</span>'}</td></tr>`}).join('')}</table>`;
 }

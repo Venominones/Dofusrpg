@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.11.7
+// @version      2.11.8
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -1574,16 +1574,41 @@
   }
   const slimItem = x => { const it = x.item && typeof x.item === 'object' ? Object.assign({}, x.item, x) : x; return { id: it.id, n: it.n || it.name, lvl: it.lvl ?? it.level ?? it.l, s: it.s || it.slot || it.type || it.cat || null, icon: it.icon ?? it.gfx ?? it.img ?? null, r: it.r ?? it.rarity ?? 0, st: it.st || it.stats || it.carac || {}, setName: it.setName || null, setId: it.setId || null, w: it.w || null, src: typeof (it.src || it.source || it.how) === 'string' ? (it.src || it.source || it.how).slice(0, 200) : undefined }; };
   const looksItem = a => a.some(x => x && (x.s || x.slot) && (x.lvl != null || x.level != null)) || a.some(x => x && x.item && x.item.s);
+  // v2.11.8 : l'onglet Objets du jeu envoie une carte par objet ({item:{id,n,lvl,s,icon,r,st}} + texte « où le trouver »),
+  // paginée par le paramètre n (20, 40, 60…). On demande tout d'un coup (n=5000) au format RSC, comme le fait le jeu.
+  function rscRows(h) {
+    const txt = !/self\.__next_f/.test(h) ? h : [...h.matchAll(/self\.__next_f\.push\(\[1,"((?:[^"\\]|\\.)*)"\]\)/g)].map(m => { try { return JSON.parse('"' + m[1] + '"'); } catch (e) { return ''; } }).join('');
+    const rows = []; for (const l of txt.split('\n')) { const m = l.match(/^([0-9a-f]+):([\[{].*)$/); if (m) { try { rows.push(JSON.parse(m[2])); } catch (e) {} } } return rows;
+  }
+  function flatText(v, out) { if (v == null || v === false) return out; if (typeof v === 'string') { if (!/^\$/.test(v)) out.push(v); return out; } if (typeof v === 'number') { out.push(String(v)); return out; } if (Array.isArray(v)) { if (v[0] === '$' && v[3] && typeof v[3] === 'object') return flatText(v[3].children, out); for (const x of v) flatText(x, out); } return out; }
+  function extractItems(h) {
+    const out = new Map(); const rows = rscRows(h);
+    const visit = (v, d, card) => {
+      if (!v || typeof v !== 'object' || d > 80) return;
+      if (Array.isArray(v)) {
+        if (v[0] === '$' && v[3] && typeof v[3] === 'object') {
+          const p = v[3]; let c = card;
+          if (typeof p.className === 'string' && /__card/.test(p.className)) { c = { item: null, src: [] }; visit(p.children, d + 1, c); if (c.item) { const s = slimItem(c.item); if (c.src.length) s.src = c.src.join(' · ').slice(0, 300); if (s.id != null) out.set(s.id, s); } return; }
+          if (p.item && typeof p.item === 'object' && p.item.id != null && p.item.n) { if (c) c.item = c.item || p.item; else { const s = slimItem(p.item); out.set(s.id, s); } }
+          if (c && v[1] === 'li') { const ch = Array.isArray(p.children) ? p.children : [p.children]; const head = ch[0] && Array.isArray(ch[0]) && ch[0][0] === '$' ? flatText(ch[0], []).join('').trim() : ''; const body = flatText(head ? ch.slice(1) : ch, []).join('').replace(/\s+/g, ' ').trim(); const tx = (head ? head + ' : ' : '') + body; if (tx.trim()) c.src.push(tx.trim()); return; }
+          visit(p.children, d + 1, c); return;
+        }
+        for (const x of v) visit(x, d + 1, card); return;
+      }
+      for (const k in v) visit(v[k], d + 1, card);
+    };
+    for (const r of rows) visit(r, 0, null);
+    return out;
+  }
   function harvestItems(text, how) {
     try {
       if (!text || text.length < 2000 || !/lvl/.test(text)) return 0;
-      let arrs; if (/^\s*[\[{]/.test(text)) { try { arrs = itemArrays(JSON.parse(text), []); } catch (e) {} } if (!arrs || !arrs.length) { const rows = parseRsc(text); arrs = itemArrays(rows.all().concat(rows.raw()), []); }
+      const got = extractItems(text);
       let st = null; try { st = JSON.parse(localStorage.getItem('labo-allitems-live') || 'null'); } catch (e) {}
       const m = new Map(((st && st.items) || []).map(x => [x.id, x])); let n = 0;
-      for (const a of arrs) if (looksItem(a)) for (const x of a) { const s = slimItem(x); if (s.id != null && !m.has(s.id)) { m.set(s.id, s); n++; } }
-      const lg = ((st && st.log) || []).slice(0, 9); lg.unshift({ t: Date.now(), how, len: text.length, arrays: arrs.map(a => a.length), added: n });
-      if (n || !st) localStorage.setItem('labo-allitems-live', JSON.stringify({ t: Date.now(), items: [...m.values()], log: lg }));
-      else { st.log = lg; localStorage.setItem('labo-allitems-live', JSON.stringify(st)); }
+      for (const [id, s] of got) { if (!m.has(id)) n++; m.set(id, Object.assign({}, m.get(id) || {}, s)); }
+      const lg = ((st && st.log) || []).slice(0, 9); lg.unshift({ t: Date.now(), how, len: text.length, found: got.size, added: n });
+      localStorage.setItem('labo-allitems-live', JSON.stringify({ t: Date.now(), items: [...m.values()], log: lg }));
       return n;
     } catch (e) { return 0; }
   }
@@ -1594,20 +1619,20 @@
   }
   setInterval(harvestDocument, 4000);
   async function fetchAllItems() {
-    try { const L = JSON.parse(localStorage.getItem('labo-allitems-live') || 'null'); if (L && L.items && L.items.length > 1000) return L.items; } catch (e) {}
     try { const c = JSON.parse(localStorage.getItem(ALLITEMS_KEY) || 'null'); if (c && c.items && c.items.length > 1000 && Date.now() - c.t < 864e5) return c.items; } catch (e) {}
-    const got = new Map(); const diag = [];
-    for (const [url, asRsc] of [['/bestiaire?onglet=objets', true], ['/bestiaire?onglet=objets', false]]) {
-      let rows; try { rows = await rsc(url, asRsc); } catch (e) { diag.push({ url, err: String(e).slice(0, 100) }); continue; }
-      const arrs = itemArrays(rows.all().concat(rows.raw()), []).sort((a, b) => b.length - a.length);
-      if (asRsc) { try { localStorage.setItem('labo-objets-raw', (await origFetch(url, { credentials: 'include', headers: { RSC: '1' } }).then(r => r.text())).slice(0, 40000)); } catch (e) {} }
-      diag.push({ url, rsc: asRsc, html: rows.size, props: rows.all().slice(0, 12).map(o => Object.keys(o || {}).slice(0, 15)), arrays: arrs.slice(0, 4).map(a => ({ len: a.length, keys: Object.keys(a[0] || {}).slice(0, 30), item: looksItem(a), sample: JSON.stringify(a[0]).slice(0, 400) })) });
-      for (const a of arrs) if (looksItem(a)) for (const x of a) { const s = slimItem(x); if (s.id != null && !got.has(s.id)) got.set(s.id, s); }
-      if (got.size > 1000) break;
-    }
-    const items = [...got.values()];
-    try { localStorage.setItem('labo-allitems-diag', JSON.stringify(diag).slice(0, 20000)); } catch (e) {}
-    try { localStorage.setItem(ALLITEMS_KEY, JSON.stringify({ t: Date.now(), items })); } catch (e) {}
+    const diag = []; let items = [];
+    try {
+      const h = await origFetch('/bestiaire?onglet=objets&n=5000', { credentials: 'include', headers: { RSC: '1' } }).then(r => r.text());
+      const got = extractItems(h); const total = +((h.match(/"total":(\d+)/) || [])[1] || 0); diag.push({ url: 'n=5000', len: h.length, found: got.size, total });
+      // si le serveur plafonne n, on découpe par emplacement (le plus gros, Arme, fait ~725 objets)
+      if (total && got.size < total) for (const s of ['arme', 'amulette', 'anneau', 'bottes', 'ceinture', 'chapeau', 'cape', 'dofus', 'familier', 'bouclier', 'parchemin']) {
+        try { const h2 = await origFetch('/bestiaire?onglet=objets&emplacement=' + s + '&n=2000', { credentials: 'include', headers: { RSC: '1' } }).then(r => r.text()); const g2 = extractItems(h2); for (const [id, x] of g2) got.set(id, x); diag.push({ url: s, found: g2.size }); } catch (e) {}
+      }
+      items = [...got.values()];
+    } catch (e) { diag.push({ err: String(e).slice(0, 200) }); }
+    if (items.length < 1000) { try { const L = JSON.parse(localStorage.getItem('labo-allitems-live') || 'null'); if (L && L.items && L.items.length > items.length) items = L.items; } catch (e) {} }
+    try { localStorage.setItem('labo-allitems-diag', JSON.stringify(diag)); } catch (e) {}
+    if (items.length > 1000) { try { localStorage.setItem(ALLITEMS_KEY, JSON.stringify({ t: Date.now(), items })); } catch (e) {} }
     return items;
   }
   async function fetchBestiary(full) {
