@@ -2087,7 +2087,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
 <script type="text/plain" id="src-userscript">// ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.12.0
+// @version      2.12.1
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -3219,7 +3219,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     banner = document.createElement('div');
     banner.setAttribute('role', 'status');
     banner.setAttribute('style', 'position:fixed;top:72px;right:12px;z-index:2147483001;width:min(400px,94vw);max-height:72vh;overflow:auto;font:13px/1.45 system-ui,sans-serif;color:#efe6d6;background:rgba(21,18,13,.97);border:1px solid #e0b04f;border-radius:10px;padding:8px 12px;box-shadow:0 6px 20px rgba(0,0,0,.5)');
-    const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     let folded = true; try { folded = localStorage.getItem('labo-banner-open') !== '1'; } catch (e) {}
     const title = `Labo · ${fl ? 'Ascension étage ' + fl.floor : flN ? 'Ascension étage ' + flN : 'adversaire connu'}${preview ? ' · avant le combat' : ''}`;
     // résumé court (toujours visible)
@@ -3820,7 +3820,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     } catch (e) { cmp = { status: 'err', msg: e.message }; render(); }
   }
   function compareHtml() {
-    const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const L = { chapeau: 'chapeau', cape: 'cape', amulette: 'amulette', anneau1: 'anneau 1', anneau2: 'anneau 2', ceinture: 'ceinture', bottes: 'bottes', arme: 'arme', bouclier: 'bouclier', familier: 'familier' };
     const head = `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px"><strong style="color:#e0b04f">Comparer mon inventaire</strong><button data-a="back" style="${btn()}">Retour</button></div>`;
     if (cmp.status === 'idle') return head + `<div style="color:#a89a85">Teste chaque objet de ton inventaire à la place de ce que tu portes, contre tes adversaires habituels, et liste les échanges qui améliorent ton build. Calcul local, rien n'est équipé.</div><div style="margin-top:6px"><button data-a="cmprun" style="${btn(true)}">Lancer la comparaison</button></div>`;
@@ -4035,7 +4035,7 @@ const SLOT_LABEL={chapeau:'Chapeau',cape:'Cape',amulette:'Amulette',anneau1:'Ann
 function emptyLbl(s){return /^dofus/.test(s)?'<span style="font-size:10px;line-height:1.15;text-align:center">Dofus<br>ou<br>Trophée</span>':esc((SLOT_LABEL[s]||s).slice(0,5))};
 const STAT_LABEL={vitalite:'Vitalité',sagesse:'Sagesse',force:'Force',intelligence:'Intelligence',chance:'Chance',agilite:'Agilité',puissance:'Puissance',dommages:'Dommages',critique:'% Critique',dommagesCritiques:'Dommages crit.',dommagesNeutre:'Do Neutre',dommagesTerre:'Do Terre',dommagesFeu:'Do Feu',dommagesEau:'Do Eau',dommagesAir:'Do Air',resPctNeutre:'Rés. % Neutre',resPctTerre:'Rés. % Terre',resPctFeu:'Rés. % Feu',resPctEau:'Rés. % Eau',resPctAir:'Rés. % Air',soins:'Soins',po:'PO',pm:'PM'};
 const tierLabel=f=>!f?'':f<2?'T'+(f+1):f===2?'★':'★+'+(f-2);
-function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 
 let ctx,curGear,curAlloc,cardsByKey,packs;
 function isAscFight(f){const c=f.ctx||{};return !!(f.kind==='boss'||f.floor||c.onAscension||Object.keys(c).some(k=>/asc/i.test(k)&&c[k]))}
