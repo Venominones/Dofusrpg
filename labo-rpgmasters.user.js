@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.11.6
+// @version      2.11.7
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -1381,7 +1381,8 @@
       const method = (init.method || (req && req.method) || 'GET').toUpperCase();
       if (method === 'POST') res.clone().text().then(t => { detectProfile(t); onPayload(t); try { if (/\/bestiaire/.test(location.pathname)) { const L = JSON.parse(localStorage.getItem('labo-sniff') || '[]'); const h = {}; try { const H = init.headers || {}; for (const k in H) if (/^next-|^rsc|content-type/i.test(k)) h[k] = String(H[k]).slice(0, 300); } catch (e) {} L.unshift({ t: Date.now(), url: String(req && req.url || req).slice(0, 300), body: typeof init.body === 'string' ? init.body.slice(0, 600) : null, headers: h, resp: t.slice(0, 1500) }); localStorage.setItem('labo-sniff', JSON.stringify(L.slice(0, 4))); } } catch (e) {} }).catch(() => {});
       else if (/x-component/.test(res.headers && res.headers.get ? (res.headers.get('content-type') || '') : '')) res.clone().text().then(t => { detectProfile(t); onPayload(t); }).catch(() => {});
-      if (method !== 'POST' && /\/bestiaire/.test(location.pathname)) res.clone().text().then(t => { try { const L = JSON.parse(localStorage.getItem('labo-sniff') || '[]'); L.unshift({ t: Date.now(), m: method, url: String(req && req.url || req).slice(0, 300), ct: res.headers.get('content-type'), resp: t.slice(0, 1500) }); localStorage.setItem('labo-sniff', JSON.stringify(L.slice(0, 6))); } catch (e) {} }).catch(() => {}); // rafraîchissements (ex. Auto AFK après rechargement)
+      const u0 = String(req && req.url || req);
+      if (/\/bestiaire/.test(location.pathname) && !/\/api\/(chat|file)/.test(u0)) res.clone().text().then(t => { const got = harvestItems(t, method + ' ' + u0.slice(0, 120)); try { const L = JSON.parse(localStorage.getItem('labo-sniff') || '[]'); L.unshift({ t: Date.now(), m: method, url: u0.slice(0, 300), ct: res.headers.get('content-type'), len: t.length, lvl: (t.match(/"lvl"/g) || []).length, got, body: typeof init.body === 'string' ? init.body.slice(0, 400) : null, resp: t.slice(0, 800) }); localStorage.setItem('labo-sniff', JSON.stringify(L.slice(0, 15))); } catch (e) {} }).catch(() => {}); // rafraîchissements (ex. Auto AFK après rechargement)
     } catch (e) {}
     return res;
   };
@@ -1418,7 +1419,7 @@
     let dofusSets = null; try { const ids = ((best && best.items) || []).map(x => x.setId).concat((I.sets || []).map(x => x.id)).concat((I.entries || []).map(e => e.item && e.item.setId).concat((I.slots || []).map(e => e.item && e.item.setId))); dofusSets = await fetchDofusSets(ids.filter(Boolean)); } catch (e) {}
     const it = (x) => ({ id: x.item.id, n: x.item.n, lvl: x.item.lvl, s: x.item.s, r: x.item.r, setId: x.item.setId || null, st: x.item.st, w: x.item.w || null, icon: x.item.icon || x.item.gfx || null });
     return {
-      meta: { profile: PROFILE, forge, companion, level: I.level || 200, prestige: H.prestige || 0, breedId: D.breedId, deckSize: D.deckSize, discordBonus: 5, scrolls: I.scrollValues || {}, rows: Pp.rows.map(r => ({ key: r.key, base: r.base, bonus: r.bonus, tiers: r.tiers })), pointsFree: Pp.pointsFree, decks: D.initialDecks, deckNames: D.initialNames, active: D.initialActive, ranked: D.initialRanked || null, presets: (() => { try { return findPresets(perso) || presetsFromDom(I, best); } catch (e) { return null; } })(), presetsRaw: (() => { try { return presetsRaw(perso); } catch (e) { return null; } })(), diag: (() => { try { const s = Object.values(db.bossSamples || {})[0]; const o = s ? JSON.parse(s) : null; let pd = null; try { pd = JSON.parse(localStorage.getItem('labo-presets-dom') || 'null'); } catch (e) {} let ai = null; try { ai = JSON.parse(localStorage.getItem('labo-allitems-diag') || 'null'); } catch (e) {} let sn = null; try { sn = JSON.parse(localStorage.getItem('labo-sniff') || 'null'); } catch (e) {} return { allItems: ai, sniff: sn, fighterKeys: o ? Object.keys(o) : null, mech: best && best.diag || null, presetsDom: pd ? { t: pd.t, n: (pd.presets || []).length } : null }; } catch (e) { return null; } })() },
+      meta: { profile: PROFILE, forge, companion, level: I.level || 200, prestige: H.prestige || 0, breedId: D.breedId, deckSize: D.deckSize, discordBonus: 5, scrolls: I.scrollValues || {}, rows: Pp.rows.map(r => ({ key: r.key, base: r.base, bonus: r.bonus, tiers: r.tiers })), pointsFree: Pp.pointsFree, decks: D.initialDecks, deckNames: D.initialNames, active: D.initialActive, ranked: D.initialRanked || null, presets: (() => { try { return findPresets(perso) || presetsFromDom(I, best); } catch (e) { return null; } })(), presetsRaw: (() => { try { return presetsRaw(perso); } catch (e) { return null; } })(), diag: (() => { try { const s = Object.values(db.bossSamples || {})[0]; const o = s ? JSON.parse(s) : null; let pd = null; try { pd = JSON.parse(localStorage.getItem('labo-presets-dom') || 'null'); } catch (e) {} let ai = null; try { ai = JSON.parse(localStorage.getItem('labo-allitems-diag') || 'null'); } catch (e) {} let live = null; try { const L = JSON.parse(localStorage.getItem('labo-allitems-live') || 'null'); live = L ? { n: (L.items || []).length, log: L.log } : null; } catch (e) {} const objRaw = localStorage.getItem('labo-objets-raw'); let sn = null; try { sn = JSON.parse(localStorage.getItem('labo-sniff') || 'null'); } catch (e) {} return { allItems: ai, live, objRaw, sniff: sn, fighterKeys: o ? Object.keys(o) : null, mech: best && best.diag || null, presetsDom: pd ? { t: pd.t, n: (pd.presets || []).length } : null }; } catch (e) { return null; } })() },
       worn: I.slots.filter(s => s.item).map(s => Object.assign(it(s), { slot: s.slot, f: s.fusion })),
       items: I.entries.map(e => Object.assign(it(e), { f: e.fusion, q: e.qty })),
       cards: D.collection.map(c => ({ key: c.key, id: c.card.id, n: c.card.n, ap: c.card.ap, cc: c.card.cc, cls: c.card.cls, r: c.card.r, f: c.card.f, eff: c.card.eff, crit: c.card.crit || null, sig: !!c.card.sig, d: (c.card.d || '').slice(0, 180), ic: cardIcon(c.card) })),
@@ -1518,6 +1519,9 @@
   function presetsRaw(perso) { const f = presetArrays(perso)[0]; if (f) return JSON.stringify(f.v).slice(0, 40000); const s = JSON.stringify(perso); const m = s.match(/.{0,200}(preset|loadout|enregistr|saved|equipSet)[^]{0,3000}/i); return m ? m[0].slice(0, 6000) : null; }
   async function rsc(path, asRsc) {
       const h = await origFetch(path, asRsc ? { credentials: 'include', headers: { RSC: '1' } } : { credentials: 'include' }).then(r => r.text());
+      return parseRsc(h);
+  }
+  function parseRsc(h) {
       const txt = !/self\.__next_f/.test(h) ? h : [...h.matchAll(/self\.__next_f\.push\(\[1,"((?:[^"\\]|\\.)*)"\]\)/g)].map(m => { try { return JSON.parse('"' + m[1] + '"'); } catch (e) { return ''; } }).join('');
       const rows = {};
       for (const l of txt.split('\n')) { const m = l.match(/^([0-9a-f]+):([\[{].*)$/); if (m) { try { rows[m[1]] = JSON.parse(m[2]); } catch (e) {} } }
@@ -1570,12 +1574,33 @@
   }
   const slimItem = x => { const it = x.item && typeof x.item === 'object' ? Object.assign({}, x.item, x) : x; return { id: it.id, n: it.n || it.name, lvl: it.lvl ?? it.level ?? it.l, s: it.s || it.slot || it.type || it.cat || null, icon: it.icon ?? it.gfx ?? it.img ?? null, r: it.r ?? it.rarity ?? 0, st: it.st || it.stats || it.carac || {}, setName: it.setName || null, setId: it.setId || null, w: it.w || null, src: typeof (it.src || it.source || it.how) === 'string' ? (it.src || it.source || it.how).slice(0, 200) : undefined }; };
   const looksItem = a => a.some(x => x && (x.s || x.slot) && (x.lvl != null || x.level != null)) || a.some(x => x && x.item && x.item.s);
+  function harvestItems(text, how) {
+    try {
+      if (!text || text.length < 2000 || !/lvl/.test(text)) return 0;
+      let arrs; if (/^\s*[\[{]/.test(text)) { try { arrs = itemArrays(JSON.parse(text), []); } catch (e) {} } if (!arrs || !arrs.length) { const rows = parseRsc(text); arrs = itemArrays(rows.all().concat(rows.raw()), []); }
+      let st = null; try { st = JSON.parse(localStorage.getItem('labo-allitems-live') || 'null'); } catch (e) {}
+      const m = new Map(((st && st.items) || []).map(x => [x.id, x])); let n = 0;
+      for (const a of arrs) if (looksItem(a)) for (const x of a) { const s = slimItem(x); if (s.id != null && !m.has(s.id)) { m.set(s.id, s); n++; } }
+      const lg = ((st && st.log) || []).slice(0, 9); lg.unshift({ t: Date.now(), how, len: text.length, arrays: arrs.map(a => a.length), added: n });
+      if (n || !st) localStorage.setItem('labo-allitems-live', JSON.stringify({ t: Date.now(), items: [...m.values()], log: lg }));
+      else { st.log = lg; localStorage.setItem('labo-allitems-live', JSON.stringify(st)); }
+      return n;
+    } catch (e) { return 0; }
+  }
+  function harvestDocument() {
+    if (!/\/bestiaire/.test(location.pathname) || !document.documentElement) return;
+    const s = [...document.querySelectorAll('script')].map(x => x.textContent || '').filter(x => x.includes('__next_f')).join('\n');
+    if (s && s.length !== harvestDocument.len) { harvestDocument.len = s.length; harvestItems('<x>' + s + '</x>', 'page ' + location.search); }
+  }
+  setInterval(harvestDocument, 4000);
   async function fetchAllItems() {
+    try { const L = JSON.parse(localStorage.getItem('labo-allitems-live') || 'null'); if (L && L.items && L.items.length > 1000) return L.items; } catch (e) {}
     try { const c = JSON.parse(localStorage.getItem(ALLITEMS_KEY) || 'null'); if (c && c.items && c.items.length > 1000 && Date.now() - c.t < 864e5) return c.items; } catch (e) {}
     const got = new Map(); const diag = [];
     for (const [url, asRsc] of [['/bestiaire?onglet=objets', true], ['/bestiaire?onglet=objets', false]]) {
       let rows; try { rows = await rsc(url, asRsc); } catch (e) { diag.push({ url, err: String(e).slice(0, 100) }); continue; }
       const arrs = itemArrays(rows.all().concat(rows.raw()), []).sort((a, b) => b.length - a.length);
+      if (asRsc) { try { localStorage.setItem('labo-objets-raw', (await origFetch(url, { credentials: 'include', headers: { RSC: '1' } }).then(r => r.text())).slice(0, 40000)); } catch (e) {} }
       diag.push({ url, rsc: asRsc, html: rows.size, props: rows.all().slice(0, 12).map(o => Object.keys(o || {}).slice(0, 15)), arrays: arrs.slice(0, 4).map(a => ({ len: a.length, keys: Object.keys(a[0] || {}).slice(0, 30), item: looksItem(a), sample: JSON.stringify(a[0]).slice(0, 400) })) });
       for (const a of arrs) if (looksItem(a)) for (const x of a) { const s = slimItem(x); if (s.id != null && !got.has(s.id)) got.set(s.id, s); }
       if (got.size > 1000) break;
