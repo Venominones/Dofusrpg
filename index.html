@@ -99,7 +99,7 @@ tr.changed td{background:var(--gold-soft)}
 .mechl{margin:2px 0}
 .mechl b{color:var(--ink)}
 .dim{color:var(--muted)}
-.lockchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.lockchip{display:inline-flex;align-items:center;gap:6px;font-size:.8rem;padding:3px 4px 3px 4px;border-radius:999px;border:1px solid var(--line2);background:var(--bg2,transparent)}.lockchip img{width:20px;height:20px;object-fit:contain;border-radius:4px}.lockchip button{border:0;background:none;color:var(--muted);cursor:pointer;font-size:1rem;line-height:1;padding:0 4px}.lockrow{position:relative;margin-top:4px}.lockrow input{width:100%;box-sizing:border-box}.lockdd{position:absolute;z-index:40;left:0;right:0;top:calc(100% + 2px);max-height:300px;overflow:auto;background:var(--panel);border:1px solid var(--line2);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.3);padding:4px}.lockdd .gh{font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;padding:6px 8px 2px}.lockdd button{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:none;border:0;color:var(--ink);padding:5px 8px;border-radius:6px;cursor:pointer;font:inherit;font-size:.88rem}.lockdd button:hover,.lockdd button.on{background:var(--bg)}.lockdd button img{width:24px;height:24px;object-fit:contain;flex:none}.lockdd button .m{margin-left:auto;color:var(--muted);font-size:.78rem;white-space:nowrap}.lockdd .none{padding:8px;color:var(--muted);font-size:.85rem}
+.lockchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.lockchip{display:inline-flex;align-items:center;gap:6px;font-size:.8rem;padding:3px 4px 3px 4px;border-radius:999px;border:1px solid var(--line2);background:var(--bg2,transparent)}.lockchip img{width:20px;height:20px;object-fit:contain;border-radius:4px}.lockchip button{border:0;background:none;color:var(--muted);cursor:pointer;font-size:1rem;line-height:1;padding:0 4px}.lockrow{position:relative;margin-top:4px}.lockrow input{width:100%;box-sizing:border-box;font:inherit;padding:8px 10px;min-height:38px}.lockdd{position:absolute;z-index:40;left:0;right:0;top:calc(100% + 2px);max-height:300px;overflow:auto;background:var(--panel);border:1px solid var(--line2);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.3);padding:4px}.lockdd .gh{font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;padding:6px 8px 2px}.lockdd button{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:none;border:0;color:var(--ink);padding:5px 8px;border-radius:6px;cursor:pointer;font:inherit;font-size:.88rem}.lockdd button:hover,.lockdd button.on{background:var(--bg)}.lockdd button img{width:24px;height:24px;object-fit:contain;flex:none}.lockdd button .m{margin-left:auto;color:var(--muted);font-size:.78rem;white-space:nowrap}.lockdd .none{padding:8px;color:var(--muted);font-size:.85rem}
 .pill{display:inline-block;font-size:.75rem;font-weight:700;padding:1px 8px;border-radius:999px;border:1px solid var(--line2);color:var(--muted)}
 .tier{display:inline-block;min-width:1.6em;text-align:center;font-weight:700;border-radius:5px;padding:1px 5px;font-family:var(--f-display)} .tier.S{background:var(--gold);color:var(--panel)} .tier.A{background:var(--good);color:var(--panel)} .tier.B{background:var(--eau);color:var(--panel)} .tier.C{border:1px solid var(--line2);color:var(--muted)} .tier.D{color:var(--muted)}
 .pill.in{color:var(--good);border-color:var(--good)} .pill.out{color:var(--bad);border-color:var(--bad)}
@@ -1704,7 +1704,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       for (let round = 0; round < 12; round++) {
         if (cur.deck.length <= (opts.minDeck || MIN_DECK)) return;
         let bi = -1, be = best;
-        for (let i = 0; i < cur.deck.length; i++) { const d2 = cur.deck.slice(0, i).concat(cur.deck.slice(i + 1)); const e = E(Object.assign({}, cur, { deck: d2 })); if (e.score > be.score + 0.5) { be = e; bi = i; } }
+        for (let i = 0; i < cur.deck.length; i++) { const d2 = cur.deck.slice(0, i).concat(cur.deck.slice(i + 1)); const e = E(Object.assign({}, cur, { deck: d2 })); if (bi < 0 ? e.score >= best.score - 0.5 : e.score > be.score) { be = e; bi = i; } } // à résultat égal, on préfère le deck le plus court (on pioche plus souvent ses meilleurs sorts)
         if (bi < 0) return;
         cur = Object.assign({}, cur, { deck: cur.deck.slice(0, bi).concat(cur.deck.slice(bi + 1)) }); best = be; tick('Deck plus court', round, 12, best);
       }
@@ -1746,6 +1746,9 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         for (const c of sample) { const cand = Object.assign({}, cur, { deck: cur.deck.concat([c.key]) }); const e = E(cand, nF); if (!be || e.score > be.score) { be = e; bc = cand; } }
         // une carte de plus dilue la pioche : on ne l'ajoute que si elle améliore vraiment le combat (le deck n'a pas à être plein)
         if (!bc || be.score <= baseF + 0.5) break;
+        // le meilleur de 14 tirages bruités est presque toujours « meilleur » par chance : on le confirme sur plus de combats, avec une vraie marge
+        const nC = N * 2, eB = E(bc, nC).score, eC = E(cur, nC).score;
+        if (eB <= eC + Math.max(2, 0.002 * Math.abs(eC))) break;
         cur = bc; baseF = be.score;
       }
       best = E(cur);
