@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.9.5
+// @version      2.9.6
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -18,6 +18,24 @@
   const keyFor = p => p === 'saison' ? 'labo-rec-v1-saison' : 'labo-rec-v1';
   const floorKey = () => PROFILE === 'saison' ? 'labo-floor-saison' : 'labo-floor';
   const MAX_FIGHTS = 3000;
+  // ---------- Stockage : IndexedDB (le localStorage du site est limité à ~5 Mo et partagé avec le jeu) ----------
+  // Copie en mémoire (REC) pour une lecture synchrone ; écriture asynchrone dans IndexedDB ; l'ancienne clé localStorage est migrée puis libérée.
+  const REC = {}; let idbP = null;
+  function idb() { if (idbP) return idbP; idbP = new Promise((res, rej) => { try { const rq = indexedDB.open('labo-rpgmasters-rec', 1); rq.onupgradeneeded = () => rq.result.createObjectStore('kv'); rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error); } catch (e) { rej(e); } }); return idbP; }
+  function idbGet(k) { return idb().then(d => new Promise((res, rej) => { const rq = d.transaction('kv').objectStore('kv').get(k); rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error); })); }
+  function idbPut(k, v) { return idb().then(d => new Promise((res, rej) => { const tx = d.transaction('kv', 'readwrite'); tx.objectStore('kv').put(v, k); tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); })); }
+  function recGet(k) { if (REC[k] != null) return REC[k]; try { return localStorage.getItem(k); } catch (e) { return null; } }
+  let recOk = true;
+  function recSet(k, str) { REC[k] = str; return idbPut(k, str).then(() => { recOk = true; try { localStorage.removeItem(k); } catch (e) {} }).catch(e => { recOk = false; try { localStorage.setItem(k, str); } catch (e2) {} }); }
+  const REC_KEYS = ['labo-rec-v1', 'labo-rec-v1-saison', 'labo-vitrines'];
+  const recReady = Promise.all(REC_KEYS.map(k => idbGet(k).then(v => { if (typeof v === 'string') REC[k] = v; }).catch(() => {}))).catch(() => {});
+  // fusion de deux historiques (combats dédoublonnés par date)
+  function mergeRec(a, b) {
+    if (!a) return b; if (!b) return a;
+    const seen = new Set(a.fights.map(f => f.t)); const fights = a.fights.concat(b.fights.filter(f => !seen.has(f.t))).sort((x, y) => (x.t || 0) - (y.t || 0));
+    const bl = new Set((a.bossLogs || []).map(x => x.t)); const bossLogs = (a.bossLogs || []).concat((b.bossLogs || []).filter(x => !bl.has(x.t)));
+    return Object.assign({}, a, b, { fights, bossLogs, monsters: Object.assign({}, a.monsters, b.monsters), floors: Object.assign({}, a.floors, b.floors), seen: [...new Set((a.seen || []).concat(b.seen || []))], bossSamples: Object.assign({}, a.bossSamples, b.bossSamples) });
+  }
   const started = Date.now();
   const KNOWN_LOG = new Set(['round', 'turn', 'play', 'dmg', 'heal', 'shield', 'buff', 'draw', 'intent', 'death', 'end', 'evade', 'rage', 'weaken', 'ap', 'mechanic']);
   const KNOWN_INTENT = new Set(['attack', 'heavy', 'guard', 'rage', 'drain']);
@@ -725,7 +743,14 @@
   return __labo.RPG; })(); /*__ENGINE_END__*/
 
   // ---------- Stockage local (navigateur uniquement) ----------
-  let db = load();
+  let db = load(); let recLoaded = false;
+  // relecture de l'historique complet dans IndexedDB, puis fusion avec ce qui a été enregistré entre-temps
+  recReady.then(() => {
+    for (const k of ['labo-rec-v1', 'labo-rec-v1-saison']) { if (REC[k] == null) { let l = null; try { l = localStorage.getItem(k); } catch (e) {} if (l) recSet(k, l); } else { try { const l = localStorage.getItem(k); if (l) { const a = JSON.parse(REC[k]), b = JSON.parse(l); if (a && b && a.fights && b.fights) recSet(k, JSON.stringify(mergeRec(a, b))); else localStorage.removeItem(k); } } catch (e) {} } }
+    try { const v = localStorage.getItem('labo-vitrines'); if (v && REC['labo-vitrines'] == null) recSet('labo-vitrines', v); else if (v) localStorage.removeItem('labo-vitrines'); } catch (e) {}
+    const stored = load(); db = (stored.fights.length || Object.keys(stored.monsters).length) ? mergeRec(stored, db) : db; recLoaded = true; save();
+    try { render(); } catch (e) {}
+  });
   // relecture des textes déjà vus avec les nouvelles règles (ex. « renvoie le coup »)
   try {
     for (const m of Object.values(db.monsters)) if (m.mech && m.mech.texts) {
@@ -758,7 +783,7 @@
   try { for (const b of db.bossLogs || []) if (b.floor && db.floors[b.floor] && !db.floors[b.floor].bossStats && b.mons) db.floors[b.floor].bossStats = b.mons.map(m => ({ k: m.k, maxHp: m.maxHp, atk: m.atk })); } catch (e) {}
   setTimeout(() => { try { save(); } catch (e) {} }, 1500);
   function load() {
-    try { const d = JSON.parse(localStorage.getItem(keyFor(PROFILE)) || 'null'); if (d && d.fights && d.monsters) { d.bossSamples = d.bossSamples || {}; d.seen = d.seen || []; d.floors = d.floors || {}; d.bossLogs = d.bossLogs || []; return d; } } catch (e) {}
+    try { const d = JSON.parse(recGet(keyFor(PROFILE)) || 'null'); if (d && d.fights && d.monsters) { d.bossSamples = d.bossSamples || {}; d.seen = d.seen || []; d.floors = d.floors || {}; d.bossLogs = d.bossLogs || []; return d; } } catch (e) {}
     return { fights: [], monsters: {}, seen: [], bossSamples: {}, floors: {}, bossLogs: [] };
   }
   function loadBuilds() { try { return JSON.parse(localStorage.getItem(BUILDS_KEY) || 'null') || { builds: [] }; } catch (e) { return { builds: [] }; } }
@@ -768,13 +793,9 @@
     saveTimer = setTimeout(() => {
       if (db.fights.length > MAX_FIGHTS) db.fights.splice(0, db.fights.length - MAX_FIGHTS);
       if (db.seen.length > 500) db.seen.splice(0, db.seen.length - 500);
-      try { localStorage.setItem(keyFor(PROFILE), JSON.stringify(db)); }
-      catch (e) {
-        // stockage du site plein : on allège (échantillons de boss, puis les combats les plus anciens) plutôt que de ne plus rien enregistrer
-        db.bossSamples = {}; let ok = false;
-        for (let k = 0; k < 4 && !ok; k++) { try { localStorage.setItem(keyFor(PROFILE), JSON.stringify(db)); ok = true; } catch (e2) { db.fights.splice(0, Math.ceil(db.fights.length / 4)); db.storageTrim = (db.storageTrim || 0) + 1; } }
-        if (!ok) console.warn('[Labo] stockage plein');
-      }
+      // IndexedDB : pas de plafond de 5 Mo, rien n'est plus supprimé pour faire de la place (v2.9.6)
+      if (!recLoaded) return; // tant que l'historique complet n'est pas relu, on n'écrase pas IndexedDB avec la version partielle
+      recSet(keyFor(PROFILE), JSON.stringify(db));
     }, 400);
   }
 
@@ -1292,7 +1313,7 @@
     if (p !== 'saison') p = 'principal';
     if (manual) { try { localStorage.setItem('labo-profile-lock', '1'); } catch (e) {} }
     if (p === PROFILE) return;
-    try { localStorage.setItem(keyFor(PROFILE), JSON.stringify(db)); } catch (e) {}
+    if (recLoaded) recSet(keyFor(PROFILE), JSON.stringify(db));
     PROFILE = p; try { localStorage.setItem('labo-profile', p); } catch (e) {}
     context = {}; // le contexte (zone, niveau, étage) de l'autre perso ne doit pas être réutilisé
     db = load(); lastWarnSig = ''; lastPreview = '';
@@ -1385,7 +1406,7 @@
   function jsonAt(t, i) { let d = 0, inS = false; for (let k = i; k < t.length; k++) { const c = t[k]; if (inS) { if (c === '\\') { k++; continue; } if (c === '"') inS = false; continue; } if (c === '"') { inS = true; continue; } if (c === '{') d++; else if (c === '}') { d--; if (!d) return t.slice(i, k + 1); } } return null; }
   async function fetchVitrines(force) {
     const KEY = 'labo-vitrines';
-    try { const c = JSON.parse(localStorage.getItem(KEY) || 'null'); if (!force && c && Date.now() - c.t < 864e5) return c; } catch (e) {}
+    await recReady; try { const c = JSON.parse(recGet(KEY) || 'null'); if (!force && c && Date.now() - c.t < 864e5) return c; } catch (e) {}
     const lst = await rawRsc('/vitrines?tri=meilleures');
     const ids = [...new Set([...lst.matchAll(/\/vitrines\/([0-9a-f-]{36})/g)].map(m => m[1]))].slice(0, 30);
     const items = {}, cards = {}, builds = [];
@@ -1404,7 +1425,7 @@
       await new Promise(r => setTimeout(r, 300)); // poli avec le serveur
     }
     const out = { t: Date.now(), items: Object.values(items), cards: Object.values(cards), builds };
-    try { localStorage.setItem(KEY, JSON.stringify(out)); } catch (e) {}
+    recSet(KEY, JSON.stringify(out));
     return out;
   }
   async function rsc(path) {
@@ -1623,12 +1644,13 @@
   function makeBackup() {
     save();
     const data = {}; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (/^labo/.test(k) && k !== 'labo-backup-at') data[k] = localStorage.getItem(k); }
+    if (recLoaded) data[keyFor(PROFILE)] = JSON.stringify(db); for (const k of REC_KEYS) if (REC[k] != null && !data[k]) data[k] = REC[k];
     return JSON.stringify({ kind: 'labo-sauvegarde', v: 1, t: Date.now(), origin: location.origin, data });
   }
   function restoreBackup(txt) {
     const b = JSON.parse(txt); if (!b || b.kind !== 'labo-sauvegarde' || !b.data) throw new Error('ce n’est pas une sauvegarde du Labo');
-    let n = 0; for (const [k, v] of Object.entries(b.data)) if (/^labo/.test(k) && typeof v === 'string') { localStorage.setItem(k, v); n++; }
-    try { const d = JSON.parse(localStorage.getItem(keyFor(PROFILE)) || 'null'); if (d && d.fights) Object.assign(db, d); } catch (e) {}
+    let n = 0; for (const [k, v] of Object.entries(b.data)) if (/^labo/.test(k) && typeof v === 'string') { if (REC_KEYS.includes(k)) recSet(k, v); else localStorage.setItem(k, v); n++; }
+    try { const d = JSON.parse(recGet(keyFor(PROFILE)) || 'null'); if (d && d.fights) { Object.assign(db, mergeRec(d, db)); recLoaded = true; } } catch (e) {}
     return n;
   }
   function downloadText(name, txt) {
