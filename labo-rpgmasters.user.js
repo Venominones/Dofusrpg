@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.11.2
+// @version      2.11.3
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -1560,6 +1560,29 @@
     o.x = x;
     return o;
   }
+  // v2.11.3 : catalogue complet des objets (onglet Objets du bestiaire, ~3 300 objets), lu page par page si besoin ; gardé 24 h
+  const ALLITEMS_KEY = 'labo-allitems';
+  function itemArrays(v, out, d = 0) {
+    if (!v || typeof v !== 'object' || d > 10) return out;
+    if (Array.isArray(v)) { if (v.length && v.filter(x => x && typeof x === 'object' && x.id != null && typeof x.n === 'string' && typeof x.s === 'string' && (x.st || x.stats)).length >= Math.min(5, v.length)) out.push(v); for (const x of v) itemArrays(x, out, d + 1); return out; }
+    for (const k in v) itemArrays(v[k], out, d + 1); return out;
+  }
+  const slimItem = x => ({ id: x.id, n: x.n, lvl: x.lvl ?? x.level, s: x.s, icon: x.icon ?? x.gfx ?? null, r: x.r ?? x.rarity ?? 0, st: x.st || x.stats || {}, setName: x.setName || null, setId: x.setId || null, w: x.w || null, src: typeof x.src === 'string' ? x.src.slice(0, 200) : undefined });
+  async function fetchAllItems() {
+    try { const c = JSON.parse(localStorage.getItem(ALLITEMS_KEY) || 'null'); if (c && c.items && Date.now() - c.t < 864e5) return c.items; } catch (e) {}
+    const got = new Map(); const take = rows => { let n = 0; for (const arr of itemArrays(rows, [])) for (const x of arr) if (!got.has(x.id)) { got.set(x.id, slimItem(x)); n++; } return n; };
+    take(await rsc('/bestiaire?onglet=objets'));
+    // si la page n'en donne qu'une partie, on essaie les paramètres de pagination usuels
+    if (got.size < 1000) {
+      for (const q of ['&limit=10000', '&n=10000', '&take=10000', '&perPage=10000', '&size=10000']) { if (take(await rsc('/bestiaire?onglet=objets' + q)) > 50) break; }
+    }
+    if (got.size < 1000) {
+      for (const key of ['page', 'p']) { let added = 0; for (let k = 2; k <= 200; k++) { const n = take(await rsc('/bestiaire?onglet=objets&' + key + '=' + k)); if (!n) break; added += n; await new Promise(r => setTimeout(r, 150)); } if (added) break; }
+    }
+    const items = [...got.values()];
+    try { localStorage.setItem(ALLITEMS_KEY, JSON.stringify({ t: Date.now(), items })); } catch (e) {}
+    return items;
+  }
   async function fetchBestiary(full) {
     const out = loadBest() || {};
     const mp = await rsc('/bestiaire?onglet=mecaniques');
@@ -1567,15 +1590,16 @@
     if (C) {
       // les mécaniques ne sont révélées qu'aux persos qui ont battu le boss : on garde celles déjà connues (perso principal)
       const prev = Object.fromEntries((out.mech || []).map(c => [c.id, c]));
-      out.mech = C.cards.map(c => { const m = (c.m || []).map(e => parseMechEntry(e.n, e.x, e.w)); const p = prev[c.id]; return { id: c.id, n: c.n, l: c.l, t: c.t, u: c.u ? 1 : (p && p.u) || 0, v: c.v, g: imgField(c) || (p && p.g) || null, m: m.length ? m : (p && p.m) || [] }; });
+      out.mech = C.cards.map(c => { const m = (c.m || []).map(e => parseMechEntry(e.n, e.x, e.w)); const p = prev[c.id]; return { id: c.id, n: c.n, l: c.l, t: c.t, u: c.u ? 1 : (p && p.u) || 0, v: c.v, g: c.g || imgField(c) || (p && p.g) || null, m: m.length ? m : (p && p.m) || [] }; });
       out.tagLabels = C.tagLabels; out.t = Date.now(); try { out.diag = { mechKeys: Object.keys(C.cards[0] || {}), mechSample: JSON.stringify(C.cards[0]).slice(0, 1500) }; } catch (e) {}
     }
     if (full) {
+      try { const all = await fetchAllItems(); if (all && all.length) out.allItems = all; } catch (e) {}
       const bp = await rsc('/bestiaire');
       const B = bp.find(p => Array.isArray(p.monsters) && Array.isArray(p.zones));
       if (B) { out.monsters = B.monsters; out.items = B.items; out.zones = B.zones; out.pp = B.prospection; out.tFull = Date.now(); }
     }
-    try { localStorage.setItem(BEST_KEY, JSON.stringify(out)); } catch (e) { try { localStorage.setItem(BEST_KEY, JSON.stringify({ mech: out.mech, t: out.t })); } catch (e2) {} }
+    try { localStorage.setItem(BEST_KEY, JSON.stringify(Object.assign({}, out, { allItems: undefined }))); } catch (e) { try { localStorage.setItem(BEST_KEY, JSON.stringify({ mech: out.mech, t: out.t })); } catch (e2) {} }
     return out;
   }
   const diffForFloor = fl => fl <= 2 ? 'F' : fl <= 5 ? 'N' : fl <= 8 ? 'D' : 'C';

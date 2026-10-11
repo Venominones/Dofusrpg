@@ -247,7 +247,7 @@ th,td{border-bottom-color:var(--line)}
       <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:baseline">
         <h2 id="charName">Personnage</h2><span class="muted" id="charSub"></span>
       </div>
-      <div class="kpis" id="charKpis"></div><div id="compWrap" class="note" style="margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label for="compPct">Compagnon : bonus d'équipement</label><input type="number" id="compPct" min="0" max="100" step="0.1" placeholder="auto" style="width:6em"> % <span id="compInfo" class="dim"></span></div>
+      <div class="kpis" id="charKpis"></div><div id="compWrap" class="note" style="margin-top:6px"><span id="compInfo"></span></div>
       <div id="freePts" style="margin-top:10px"></div>
     </div>
     <div class="panel" id="pvPanel">
@@ -2084,7 +2084,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
 <script type="text/plain" id="src-userscript">// ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.11.2
+// @version      2.11.3
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -3643,6 +3643,29 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     o.x = x;
     return o;
   }
+  // v2.11.3 : catalogue complet des objets (onglet Objets du bestiaire, ~3 300 objets), lu page par page si besoin ; gardé 24 h
+  const ALLITEMS_KEY = 'labo-allitems';
+  function itemArrays(v, out, d = 0) {
+    if (!v || typeof v !== 'object' || d > 10) return out;
+    if (Array.isArray(v)) { if (v.length && v.filter(x => x && typeof x === 'object' && x.id != null && typeof x.n === 'string' && typeof x.s === 'string' && (x.st || x.stats)).length >= Math.min(5, v.length)) out.push(v); for (const x of v) itemArrays(x, out, d + 1); return out; }
+    for (const k in v) itemArrays(v[k], out, d + 1); return out;
+  }
+  const slimItem = x => ({ id: x.id, n: x.n, lvl: x.lvl ?? x.level, s: x.s, icon: x.icon ?? x.gfx ?? null, r: x.r ?? x.rarity ?? 0, st: x.st || x.stats || {}, setName: x.setName || null, setId: x.setId || null, w: x.w || null, src: typeof x.src === 'string' ? x.src.slice(0, 200) : undefined });
+  async function fetchAllItems() {
+    try { const c = JSON.parse(localStorage.getItem(ALLITEMS_KEY) || 'null'); if (c && c.items && Date.now() - c.t < 864e5) return c.items; } catch (e) {}
+    const got = new Map(); const take = rows => { let n = 0; for (const arr of itemArrays(rows, [])) for (const x of arr) if (!got.has(x.id)) { got.set(x.id, slimItem(x)); n++; } return n; };
+    take(await rsc('/bestiaire?onglet=objets'));
+    // si la page n'en donne qu'une partie, on essaie les paramètres de pagination usuels
+    if (got.size < 1000) {
+      for (const q of ['&limit=10000', '&n=10000', '&take=10000', '&perPage=10000', '&size=10000']) { if (take(await rsc('/bestiaire?onglet=objets' + q)) > 50) break; }
+    }
+    if (got.size < 1000) {
+      for (const key of ['page', 'p']) { let added = 0; for (let k = 2; k <= 200; k++) { const n = take(await rsc('/bestiaire?onglet=objets&' + key + '=' + k)); if (!n) break; added += n; await new Promise(r => setTimeout(r, 150)); } if (added) break; }
+    }
+    const items = [...got.values()];
+    try { localStorage.setItem(ALLITEMS_KEY, JSON.stringify({ t: Date.now(), items })); } catch (e) {}
+    return items;
+  }
   async function fetchBestiary(full) {
     const out = loadBest() || {};
     const mp = await rsc('/bestiaire?onglet=mecaniques');
@@ -3650,15 +3673,16 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     if (C) {
       // les mécaniques ne sont révélées qu'aux persos qui ont battu le boss : on garde celles déjà connues (perso principal)
       const prev = Object.fromEntries((out.mech || []).map(c => [c.id, c]));
-      out.mech = C.cards.map(c => { const m = (c.m || []).map(e => parseMechEntry(e.n, e.x, e.w)); const p = prev[c.id]; return { id: c.id, n: c.n, l: c.l, t: c.t, u: c.u ? 1 : (p && p.u) || 0, v: c.v, g: imgField(c) || (p && p.g) || null, m: m.length ? m : (p && p.m) || [] }; });
+      out.mech = C.cards.map(c => { const m = (c.m || []).map(e => parseMechEntry(e.n, e.x, e.w)); const p = prev[c.id]; return { id: c.id, n: c.n, l: c.l, t: c.t, u: c.u ? 1 : (p && p.u) || 0, v: c.v, g: c.g || imgField(c) || (p && p.g) || null, m: m.length ? m : (p && p.m) || [] }; });
       out.tagLabels = C.tagLabels; out.t = Date.now(); try { out.diag = { mechKeys: Object.keys(C.cards[0] || {}), mechSample: JSON.stringify(C.cards[0]).slice(0, 1500) }; } catch (e) {}
     }
     if (full) {
+      try { const all = await fetchAllItems(); if (all && all.length) out.allItems = all; } catch (e) {}
       const bp = await rsc('/bestiaire');
       const B = bp.find(p => Array.isArray(p.monsters) && Array.isArray(p.zones));
       if (B) { out.monsters = B.monsters; out.items = B.items; out.zones = B.zones; out.pp = B.prospection; out.tFull = Date.now(); }
     }
-    try { localStorage.setItem(BEST_KEY, JSON.stringify(out)); } catch (e) { try { localStorage.setItem(BEST_KEY, JSON.stringify({ mech: out.mech, t: out.t })); } catch (e2) {} }
+    try { localStorage.setItem(BEST_KEY, JSON.stringify(Object.assign({}, out, { allItems: undefined }))); } catch (e) { try { localStorage.setItem(BEST_KEY, JSON.stringify({ mech: out.mech, t: out.t })); } catch (e2) {} }
     return out;
   }
   const diffForFloor = fl => fl <= 2 ? 'F' : fl <= 5 ? 'N' : fl <= 8 ? 'D' : 'C';
@@ -4037,7 +4061,7 @@ function renderCardUse(){
 }
 /* ---------- Points libres : où les mettre sans réinitialiser ---------- */
 function renderFreePts(){
-  const el=$('#freePts');if(!el)return;const free=DATA.meta.pointsFree||0;
+  const el=$('#freePts');if(!el)return;el.innerHTML='';return;const free=DATA.meta.pointsFree||0;
   if(!(free>0)){el.innerHTML='';return}
   el.innerHTML=`<div class="alert" style="margin:0"><strong>${fmt(free)} points de caractéristiques à répartir.</strong><span>Le Labo peut te dire où les mettre sans toucher au reste. <button type="button" class="btn" id="freeRun">Où mettre mes points ?</button></span></div><div id="freeOut" style="margin-top:6px"></div>`;
   $('#freeRun').onclick=()=>{$('#freeOut').innerHTML='<p class="muted">Calcul…</p>';setTimeout(()=>{try{freePlan(free)}catch(e){$('#freeOut').textContent='Échec : '+e.message}},30)};
@@ -4067,7 +4091,7 @@ function renderPerso(){
   let sl=m.deckSize;try{const o=JSON.parse(localStorage.getItem(slotsKey())||'null');if(o&&o.base===m.deckSize&&o.v)sl=o.v}catch(e){}syncSlots(sl);
   $('#charSub').textContent=`Niveau ${m.level} · Prestige ${m.prestige} · deck de ${sl} cartes${m.forge?' · bouclier de forge niv. '+m.forge.level+(ctx.forgePct?' (+'+fmt(ctx.forgePct,2)+' %)':''):''}`+(m.forge&&m.forge.level<200?` · forge au plafond d'orbes : niv. 100 (+12 %) en ${R.forgeDaysTo(100,m.forge.level,m.forge.xp)} j, niv. 200 (+150 %) en ${R.forgeDaysTo(200,m.forge.level,m.forge.xp)} j`:'');
   const k=[['PV',st._maxHp],['PA',st._paTotal],['Puissance',st.puissance||0],['% Critique',st.critique||0],['Vision spectrale',fmt(st._spectral,1)+' %'],['Esquive',st._dodge+' %'],['Soins fixes',st.soins||0],['Perforation',fmt(st._perfo||0,1)+' %'],['Érosion',fmt(st._ero||0,1)+' %'],['Pénétration',fmt(st._pen||0,1)+' %'],['Réduction',fmt(st._red||0,0)+' %']];
-  {const cw=$('#compWrap');if(cw){cw.hidden=LPROF==='saison';let mv='';try{mv=localStorage.getItem('labo-companion')||''}catch(e){}$('#compPct').value=mv;const c=m.companion;$('#compInfo').textContent=mv!==''?'saisi à la main':c&&isFinite(c.pct)?'lu sur la page Compagnon : +'+fmt(c.pct,1)+' %'+(isFinite(c.level)?' (niveau '+c.level+')':''):c&&isFinite(c.level)?'niveau '+c.level+' → +'+fmt(companionPctFor(c.level),1)+' % (formule du jeu)':'pas encore lu : mets à jour le script et réexporte, ou saisis le % affiché en jeu';}}
+  {const cw=$('#compWrap');if(cw){cw.hidden=LPROF==='saison';try{localStorage.removeItem('labo-companion')}catch(e){}const c=m.companion;$('#compInfo').innerHTML='<strong>Compagnon</strong> : '+(c&&isFinite(c.pct)?'+'+fmt(c.pct,1)+' % de stats sur tout l\'équipement'+(isFinite(c.level)?' (niveau '+c.level+')':'')+', lu dans le jeu. Compté dans les calculs (hors PA, PM, PO, invocations).':c&&isFinite(c.level)?'niveau '+c.level+' → +'+fmt(companionPctFor(c.level),1)+' % (formule du jeu)':'pas encore lu : clique « Envoyer au Labo » dans le jeu.');}}
   $('#charKpis').innerHTML=k.map(([a,b])=>`<div class="kpi"><span class="lbl">${a}</span><span class="v">${typeof b==='number'?fmt(b):b}</span></div>`).join('');
   const keys=['vitalite','sagesse','force','intelligence','chance','agilite','dommages','dommagesNeutre','dommagesTerre','dommagesFeu','dommagesEau','dommagesAir','dommagesCritiques','resPctNeutre','resPctTerre','resPctFeu','resPctEau','resPctAir','po','pm'];
   $('#charStats').innerHTML=keys.map(x=>`<div><span>${STAT_LABEL[x]||x}</span><span class="num">${fmt(st[x]||0)}</span></div>`).join('');
@@ -4641,10 +4665,11 @@ function farmItem(){
     (src.length?`<h3>Tous les monstres qui le donnent</h3><div class="tablewrap"><table><tr><th>Monstre</th><th>Zone</th><th class="num">Taux par monstre tué</th></tr>${src.slice(0,12).map(x=>`<tr><td>${esc(x.m.n)} <span class="dim">niv. ${x.m.lo}${x.m.hi!==x.m.lo?'-'+x.m.hi:''}</span></td><td>${esc(x.zone)}</td><td class="num">${x.p>0?fmt(x.p,2)+' %':'objet bonus de victoire'}</td></tr>`).join('')}</table></div><p class="note">Pour une zone pas encore farmée, compte environ ${fmt(3600/8)} combats par heure (8 s par combat). « Objet bonus de victoire » : tiré au hasard parmi la liste bonus des monstres battus ; ta prospection n'y change rien et le jeu n'en publie pas le taux, le Labo l'estime d'après ce que tu obtiens dans tes zones.</p>`:'<p class="muted">Aucun monstre connu ne le donne (HDV, coffres, quêtes).</p>');
 }
 
+function bItems(B){if(!B)return [];if(bItems.b===B)return bItems.c;const ids=new Set((B.items||[]).map(i=>i.id));bItems.c=(B.items||[]).concat((B.allItems||[]).filter(i=>i&&!ids.has(i.id)));bItems.b=B;return bItems.c}
 function renderBest(){
   const B=bestData();const f=$('#bFilters'),o=$('#bOut');
   if(!B||!B.mech){$('#bInfo').textContent='';f.innerHTML='';f.dataset.v='';o.innerHTML='<p class="muted">Pas encore de bestiaire. Mets à jour le script (v1.6 ou plus), clique « Exporter pour le Labo » dans le jeu, puis colle le résultat dans Mes données : le script lit le bestiaire en plus de ton personnage.</p>';return}
-  $('#bInfo').textContent=`${B.mech.length} boss à mécanique (${B.mech.filter(b=>b.u).length} débloqués) · ${(B.monsters||[]).length} monstres · ${(B.items||[]).length} objets · prospection ${B.pp?fmt(B.pp,0):'?'}${B.t?' · lu le '+new Date(B.t).toLocaleDateString('fr-FR'):''}`;
+  $('#bInfo').textContent=`${B.mech.length} boss à mécanique (${B.mech.filter(b=>b.u).length} débloqués) · ${(B.monsters||[]).length} monstres · ${bItems(B).length} objets${B.allItems?' (catalogue complet)':''} · prospection ${B.pp?fmt(B.pp,0):'?'}${B.t?' · lu le '+new Date(B.t).toLocaleDateString('fr-FR'):''}`;
   if(bView==='mech'){
     if(f.dataset.v!=='mech'||!$('#bQ')){f.dataset.v='mech';f.innerHTML=`<div class="field"><label for="bQ">Boss</label><input type="text" id="bQ" placeholder="Nom du boss"></div><div class="field"><label for="bType">Où on le croise</label><select id="bType"><option value="">Tous les types</option>${Object.entries(TYPE_L).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div><div class="field"><label for="bDiff">Difficulté</label><select id="bDiff"><option value="">Toutes</option>${['F','N','D','C'].map(k=>`<option value="${k}">${DIFF_L[k]}</option>`).join('')}</select></div><div class="field"><label for="bFloor">Étage d'Ascension</label><input type="number" id="bFloor" min="1" max="200" placeholder="ex. 23"></div><div class="field"><label for="bMech">Mécanique</label><select id="bMech"><option value="">Toutes</option>${[...new Set(B.mech.flatMap(b=>(b.m||[]).map(e=>e.mn)))].sort().map(n=>`<option>${esc(n)}</option>`).join('')}</select></div>`;f.querySelectorAll('input,select').forEach(x=>x.oninput=renderBest)}
     const q=($('#bQ').value||'').toLowerCase(),ty=$('#bType').value,df=$('#bDiff').value,fl=+$('#bFloor').value||0,mn=$('#bMech').value;
@@ -4652,7 +4677,7 @@ function renderBest(){
     o.innerHTML=`<table><tr><th>Boss</th><th>Où</th><th>Mécaniques ${fl?'à l\'étage '+fl+' ('+DIFF_L[R.diffForFloor(fl)]+')':''}</th></tr>${rows.map(({b,es})=>{const mech=R.mechFromEntries(es),aw=R.autoWarnings(mech);return `<tr><td>${b.g?(/^\d+$/.test(String(b.g))?monImg(b.g):`<img class="thumb" src="${String(b.g).startsWith('http')?b.g:GAME+(String(b.g)[0]==='/'?'':'/')+b.g}" alt="" loading="lazy" onerror="this.remove()">`):monThumb(b.n)}<strong>${esc(b.n)}</strong><div class="note">niv. ${b.l}${b.u?' · vaincu '+(b.v||0)+' fois':' · <span class="pill out">pas encore vaincu</span>'}</div></td><td>${(b.t||[]).map(t=>`<span class="pill">${esc(TYPE_L[t]||t)}</span>`).join(' ')}</td><td>${es.length?es.map(e=>`<div class="mechl"><b>${esc(e.mn)}</b> <span class="dim">· ${esc(entryDiff(e))}${entryCtx(e)?' · '+esc(entryCtx(e)):''}</span><br>${esc(e.x||R.mechText(e))}</div>`).join(''):'<span class="muted">Bats-le une fois pour révéler sa mécanique.</span>'}${fl&&aw.length?`<div class="alert" style="margin-top:4px">En auto : ${esc(aw.join(' ; '))}</div>`:''}</td></tr>`}).join('')}</table>${rows.length?'':'<p class="muted">Aucun boss ne correspond.</p>'}`;
     return;
   }
-  const items=B.items||[],mons=B.monsters||[],zones=Object.fromEntries((B.zones||[]).map(z=>[z.id,z]));
+  const items=bItems(B),mons=B.monsters||[],zones=Object.fromEntries((B.zones||[]).map(z=>[z.id,z]));
   const itemById=Object.fromEntries(items.map(i=>[i.id,i]));
   if(bView==='extra'){
     // objets que le bestiaire n'affiche pas (aucun monstre ne les donne) : ceux que tes persos possèdent, plus les noms vus dans tes butins
@@ -4669,7 +4694,7 @@ function renderBest(){
     if(f.dataset.v!=='mon'||!$('#bMin')){f.dataset.v='mon';f.innerHTML=`<div class="field"><label for="bQ">Monstre, famille ou zone</label><input type="text" id="bQ" placeholder="ex. Bouftou, Incarnam"></div><div class="field"><label for="bMin">Niveau min.</label><input type="number" id="bMin" min="1"></div><div class="field"><label for="bMax">Niveau max.</label><input type="number" id="bMax" min="1"></div><div class="field"><label for="bDrop">Lâche un objet</label><input type="text" id="bDrop" placeholder="Nom d'objet"></div>`;f.querySelectorAll('input').forEach(x=>x.oninput=renderBest)}
     const q=($('#bQ').value||'').toLowerCase(),mi=+$('#bMin').value||0,ma=+$('#bMax').value||999,dq=($('#bDrop').value||'').toLowerCase();
     const list=mons.filter(m=>(!q||m.n.toLowerCase().includes(q)||String(m.race||'').toLowerCase().includes(q)||(m.z||[]).some(z=>zones[z]&&(zones[z].n+' '+zones[z].area).toLowerCase().includes(q)))&&m.hi>=mi&&m.lo<=ma&&(!dq||(m.d||[]).some(d=>itemById[d[0]]&&itemById[d[0]].n.toLowerCase().includes(dq))));
-    o.innerHTML=`<p class="note">${list.length} monstre${list.length>1?'s':''}${list.length>150?' · 150 premiers affichés':''}. Chances de butin : base, puis avec ta prospection.</p><table><tr><th>Monstre</th><th>Zones</th><th>Butin</th></tr>${list.slice(0,150).map(m=>`<tr><td>${monImg(m.gfx)}<strong>${esc(m.n)}</strong><div class="note">niv. ${m.lo}${m.hi!==m.lo?'-'+m.hi:''} · ${esc(m.race||'')}</div></td><td>${(m.z||[]).map(z=>zones[z]?esc(zones[z].n)+' <span class="dim">('+esc(zones[z].area)+')</span>':z).join('<br>')}</td><td>${(m.d||[]).map(d=>{const it=itemById[d[0]];return `${it?itemImg(it,1):''}${esc(it?it.n:'#'+d[0])} <span class="dim">${fmt(d[1],2)} % → <strong>${fmt(d[2],2)} %</strong></span>`}).join('<br>')||'<span class="muted">—</span>'}</td></tr>`).join('')}</table>`;
+    o.innerHTML=`<p class="note">${list.length} monstre${list.length>1?'s':''}${list.length>150?' · 150 premiers affichés':''}. Chances de butin avec ta prospection (survole un taux pour la chance de base).</p><table><tr><th>Monstre</th><th>Zones</th><th>Butin</th></tr>${list.slice(0,150).map(m=>`<tr><td>${monImg(m.gfx)}<strong>${esc(m.n)}</strong><div class="note">niv. ${m.lo}${m.hi!==m.lo?'-'+m.hi:''} · ${esc(m.race||'')}</div></td><td>${(m.z||[]).map(z=>zones[z]?esc(zones[z].n)+' <span class="dim">('+esc(zones[z].area)+')</span>':z).join('<br>')}</td><td>${(m.d||[]).map(d=>{const it=itemById[d[0]];return `${it?itemImg(it,1):''}${esc(it?it.n:'#'+d[0])} <span class="dim" title="Chance de base : ${fmt(d[1],2)} %"><strong>${fmt(d[2],2)} %</strong></span>`}).join('<br>')||'<span class="muted">—</span>'}</td></tr>`).join('')}</table>`;
     return;
   }
   // objets
@@ -4679,7 +4704,7 @@ function renderBest(){
   const src={};for(const m of mons)for(const d of (m.d||[]))(src[d[0]]=src[d[0]]||[]).push({m,b:d[1],p:dropRate(d)});
   const list=items.filter(i=>(!q||i.n.toLowerCase().includes(q)||String(i.setName||'').toLowerCase().includes(q))&&(!sl||i.s===sl)&&(i.lvl||0)>=mi&&(i.lvl||0)<=ma&&(!miss||!owned.has(i.id)));
   const stTxt=st=>Object.entries(st||{}).map(([k,v])=>`${STAT_LABEL[k]||k} ${v>0?'+':''}${v}`).join(', ');
-  o.innerHTML=`<p class="note">${list.length} objet${list.length>1?'s':''}${list.length>150?' · 150 premiers affichés':''}.</p><table><tr><th>Objet</th><th>Caractéristiques</th><th>Où le trouver</th></tr>${list.slice(0,150).map(i=>{const s2=(src[i.id]||[]).sort((a,b)=>b.p-a.p);return `<tr><td>${itemImg(i)}<strong>${esc(i.n)}</strong> ${owned.has(i.id)?'<span class="pill in">possédé</span>':''}<div class="note">niv. ${i.lvl} · ${esc(i.s)}${i.setName?' · '+esc(i.setName):''}</div></td><td class="note">${esc(stTxt(i.st))}</td><td>${s2.slice(0,5).map(x=>`${esc(x.m.n)} <span class="dim">niv. ${x.m.lo}${x.m.hi!==x.m.lo?'-'+x.m.hi:''} · <strong>${fmt(x.p,2)} %</strong></span>`).join('<br>')||'<span class="muted">aucun monstre connu</span>'}${s2.length>5?`<div class="note">+${s2.length-5} autres</div>`:''}</td></tr>`}).join('')}</table>`;
+  o.innerHTML=`<p class="note">${list.length} objet${list.length>1?'s':''}${list.length>150?' · 150 premiers affichés':''}.</p><table><tr><th>Objet</th><th>Caractéristiques</th><th>Où le trouver</th></tr>${list.slice(0,150).map(i=>{const s2=(src[i.id]||[]).sort((a,b)=>b.p-a.p);return `<tr><td>${itemImg(i)}<strong>${esc(i.n)}</strong> ${owned.has(i.id)?'<span class="pill in">possédé</span>':''}<div class="note">niv. ${i.lvl} · ${esc(i.s)}${i.setName?' · '+esc(i.setName):''}</div></td><td class="note">${esc(stTxt(i.st))}</td><td>${s2.slice(0,5).map(x=>`${esc(x.m.n)} <span class="dim">niv. ${x.m.lo}${x.m.hi!==x.m.lo?'-'+x.m.hi:''} · <strong>${fmt(x.p,2)} %</strong></span>`).join('<br>')||(i.src?`<span class="dim">${esc(i.src)}</span>`:'<span class="muted">aucun monstre connu (objet bonus, coffres, HDV)</span>')}${s2.length>5?`<div class="note">+${s2.length-5} autres</div>`:''}</td></tr>`}).join('')}</table>`;
 }
 document.querySelectorAll('#bView button').forEach(b=>b.onclick=()=>{bView=b.dataset.v;document.querySelectorAll('#bView button').forEach(x=>x.setAttribute('aria-pressed',x===b?'true':'false'));$('#bFilters').dataset.v='';renderBest()});
 // Fichier allégé pour l'analyse : journal détaillé, tours, combats récents, builds, monstres croisés, deck et équipement (sans inventaire ni bestiaire complet)
@@ -4701,9 +4726,9 @@ function renderDofusFx(){const el=$('#dofusFx');if(!el)return;const S=profData('
   el.innerHTML=`<table><tr><th>Dofus</th><th>Effet</th><th>Simulé</th><th>Héroïque</th><th>Principal</th></tr>${Object.entries(DOFUS_TXT).map(([k,[n,t,m]])=>`<tr><td><strong>${n}</strong></td><td>${esc(t)}</td><td class="dim">${esc(m)}</td><td>${has(S,k)?'<span class="up">oui</span>':'—'}</td><td>${has(Pp,k)?'<span class="up">oui</span>':'—'}</td></tr>`).join('')}</table>`}
 /* ---------- Objets : tier list + Banque ---------- */
 // Bonus du Compagnon (% sur les stats de l'équipement, hors PA/PM/PO/invocations) : saisi à la main, sinon lu par le script, sinon estimé (niveau ÷ 4, linéaire supposé)
-function companionPct(m){if(LPROF==='saison'||(m&&m.profile==='saison'))return 0;let v=null;try{const x=localStorage.getItem('labo-companion');if(x!==null&&x!=='')v=+x}catch(e){}if(v!=null&&isFinite(v))return v;const c=m&&m.companion;if(c&&isFinite(c.pct))return c.pct;if(c&&isFinite(c.level))return companionPctFor(c.level);return 0}
+function companionPct(m){if(LPROF==='saison'||(m&&m.profile==='saison'))return 0;const c=m&&m.companion;if(c&&isFinite(c.pct))return c.pct;if(c&&isFinite(c.level))return companionPctFor(c.level);return 0}
 // formule du jeu (page Compagnon) : bonus = 100 × ((niveau − 1) / 399)², arrondi à 0,1 %
-function companionPctFor(L){L=Math.min(400,Math.max(1,Math.floor(L||1)));return Math.round(100*((L-1)/399)**2*10)/10}
+function companionPctFor(L){L=Math.min(400,Math.max(1,Math.floor(L||1)));return Math.round((L-1)*0.2*10)/10} // jeu : +0,2 % par niveau (niv. 13 = 2,4 %, niv. 400 = 79,8 %)
 function vitrineData(){const a=DATA.vitrines,b=(profData('principal')||{}).vitrines,c=(profData('saison')||{}).vitrines;return [a,b,c].filter(Boolean).sort((x,y)=>(y.t||0)-(x.t||0))[0]||{items:[],cards:[],builds:[]}}
 function profData(p){if(p===LPROF)return DATA;try{const s=dsGet(dataKey(p));if(s){const d=JSON.parse(s);if(d&&d.items)return mergeData(baseFor(p),d)}}catch(e){}return p==='principal'?SNAP:null}
 const SLOT_FR={chapeau:'Chapeau',cape:'Cape',amulette:'Amulette',anneau:'Anneau',ceinture:'Ceinture',bottes:'Bottes',arme:'Arme',bouclier:'Bouclier',familier:'Familier',dofus:'Dofus'};
@@ -4774,7 +4799,7 @@ function renderBank2(){
   $('#bank2Out').innerHTML=`<table><tr><th>#</th><th>Objet</th><th>Empl.</th><th class="num">Niv.</th><th title="Comparé aux meilleurs objets connus de cet emplacement au niveau visé">Tier</th><th>Obtention</th><th>Pourquoi</th></tr>${pick.map((u,i)=>`<tr class="${i<slots?'changed':''}"><td class="num">${i+1}${i===slots-1?'<div class="note">dernier</div>':''}</td><td><strong>${esc(u.it.n)}</strong>${u.it.f?` <span class="dim">+${u.it.f}</span>`:''}<div class="note">${esc(u.where.saison||'')} · ${esc(statsLine(u.it,5))}</div>${fxOf(u.it).map(f=>`<div class="note" style="color:var(--gold)">Effet : ${esc(f[1])}</div>`).join('')}</td><td>${SLOT_FR[u.it.s]||u.it.s}</td><td class="num">${u.it.lvl||''}</td><td><span class="tier ${tierOf(u.rH)}">${tierOf(u.rH)}</span></td><td class="dim">${obtainText(X,u)}</td><td class="dim">${[u.dup?'ton principal l\'a déjà':'',u.later?'au-dessus du niveau visé':'',u.extra?'emplacement déjà couvert':'',!X.inCat.has(u.it.id)?'introuvable en farm':'',u.setB?`panoplie (${sCnt[u.it.setId]} pièces)`:'',`valeur ${fmt(u.vb,1)}`].filter(Boolean).join(' · ')}</td></tr>`).join('')}</table><p class="note">Les ${slots} premiers (surlignés) tiennent dans ta Banque ; les suivants sont les remplaçants. Un objet équipé compte aussi : déséquipe-le pour le déposer.</p>`;
 }
 
-$('#compPct').addEventListener('change',()=>{try{const v=$('#compPct').value.trim();if(v==='')localStorage.removeItem('labo-companion');else localStorage.setItem('labo-companion',String(+v))}catch(e){}init()});
+
 /* ---------- Sauvegarde du Labo ---------- */
 $('#bkDl').onclick=()=>{try{const data={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(/^labo/.test(k))data[k]=localStorage.getItem(k)}for(const [k,v] of Object.entries(DS))if(typeof v==='string')data[k]=v;const txt=JSON.stringify({kind:'labo-sauvegarde-site',v:1,t:Date.now(),data});saveFile('labo-site-sauvegarde-'+new Date().toISOString().slice(0,10)+'.json',txt);$('#bkMsg').textContent='Sauvegarde téléchargée ('+Math.round(txt.length/1024)+' Ko).'}catch(e){$('#bkMsg').textContent='Impossible : '+e.message}};
 $('#bkRest').onclick=()=>$('#bkFile').click();
@@ -4950,7 +4975,7 @@ function mbAll(){if(mbAll.c&&mbAll.d===DATA)return mbAll.c;const m={},icon={};
   for(const i of ((DATA.bestiary&&DATA.bestiary.items)||[]))if(i&&i.icon)icon[i.id]=i.icon;
   for(const pr of ['principal','saison']){let PD=null;try{PD=profData(pr)}catch(e){}if(PD)for(const i of (PD.items||[]).concat(PD.worn||[]))if(i&&i.icon&&!icon[i.id])icon[i.id]=i.icon}
   let V={};try{V=vitrineData()||{}}catch(e){}
-  for(const i of [...((DATA.bestiary&&DATA.bestiary.items)||[]),...((V.items)||[]),...DATA.items,...(DATA.worn||[])]){if(!i||!i.st||!i.s)continue;if(i.icon)icon[i.id]=i.icon;if(!m[i.id])m[i.id]=Object.assign({},i)}
+  for(const i of [...((DATA.bestiary&&DATA.bestiary.items)||[]),...((DATA.bestiary&&DATA.bestiary.allItems)||[]),...((V.items)||[]),...DATA.items,...(DATA.worn||[])]){if(!i||!i.st||!i.s)continue;if(i.icon)icon[i.id]=i.icon;if(!m[i.id])m[i.id]=Object.assign({},i)}
   const own={};for(const i of DATA.items.concat(DATA.worn||[])){const o=own[i.id];own[i.id]={q:(o?o.q:0)+(i.q||1),f:Math.max(o?o.f:0,i.f||0)}}
   mbAll.c={m,icon,own};mbAll.d=DATA;return mbAll.c}
 function mbIcon(it){const ic=it&&(it.icon||mbAll().icon[it.id]);return ic?`https://rpgmasters.houk.fr/img/items/${ic}.png`:''}
