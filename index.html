@@ -239,7 +239,7 @@ textarea{min-height:110px;font-family:var(--f-mono);font-size:.8rem}
             <optgroup label="Général"><option value="equilibre" selected>Polyvalent : tank + dégâts (conseillé)</option><option value="vitesse">Finir vite (dégâts)</option><option value="survie">Survivre (tank)</option></optgroup>
             <optgroup label="Farm"><option value="sagesse">Sagesse : XP plus vite</option><option value="pp">Prospection : meilleur butin (10 Chance = 1 PP)</option></optgroup>
             <optgroup label="Éléments"><option value="mono:1">Mono Terre (Force)</option><option value="mono:2">Mono Feu (Intelligence)</option><option value="mono:3">Mono Eau (Chance)</option><option value="mono:4">Mono Air (Agilité)</option><option value="multi">Multi-élément</option></optgroup>
-            <optgroup label="Contenu dur"><option value="ascension">Ascension (survie, difficulté ×3)</option></optgroup>
+            <optgroup label="Contenu dur"><option value="ascension">Ascension (survie, difficulté ×3)</option><option value="kralamoure">Kralamoure de la Faille : max de dégâts en 10 tours (full DPS)</option></optgroup>
           </select>
           <span class="note" id="oObjNote"></span>
         </div>
@@ -516,7 +516,10 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   const DRAWS_MAX = 3;
   const CLASS_SPECTRAL = { 9: 26 }; // Crâ : Œil de lynx (patch du 10/10 : 18 → 26 %, plafond 60 %)
   // Passifs de classe observés en combat : 8 = « Enchaînement » (+15 % sur les sorts de dégâts suivants du tour, cumulable)
-  const CLASS_PASSIVE = { 8: { chainPct: 15 } }; const CHAIN_MAX = 3; const CARACS_ALL = ['force', 'intelligence', 'chance', 'agilite'];
+  const CLASS_PASSIVE = { 8: { chainPct: 15 } };
+  // Passifs de classe (texte du client, patch du 10/10) — clé par breedId
+  const BREED_KEY = { 1: 'feca', 2: 'osamodas', 3: 'enutrof', 4: 'sram', 5: 'xelor', 6: 'ecaflip', 7: 'eniripsa', 8: 'iop', 9: 'cra', 10: 'sadida', 11: 'sacrieur', 12: 'pandawa', 13: 'roublard', 14: 'zobal', 15: 'steamer', 16: 'eliotrope', 17: 'huppermage', 18: 'ouginak', 20: 'forgelance' };
+  const BREED_NAME = { 1: 'Féca', 2: 'Osamodas', 3: 'Enutrof', 4: 'Sram', 5: 'Xélor', 6: 'Ecaflip', 7: 'Eniripsa', 8: 'Iop', 9: 'Crâ', 10: 'Sadida', 11: 'Sacrieur', 12: 'Pandawa', 13: 'Roublard', 14: 'Zobal', 15: 'Steamer', 16: 'Eliotrope', 17: 'Huppermage', 18: 'Ouginak', 20: 'Forgelance' }; const CHAIN_MAX = 3; const CARACS_ALL = ['force', 'intelligence', 'chance', 'agilite'];
   const SPECTRAL_PER_PO = 0.4, SPECTRAL_MAX = 60;
   const POINTS_PER_LEVEL = 5;
   const CARAC_TIERS = [[0, 1], [100, 2], [200, 3], [300, 4]];
@@ -653,24 +656,24 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   }
 
   // ---------- Dégâts ----------
-  function dmgLine(S, line, crit, buffPuiss, dmgPct, spectral, resPct, withFixed, isWeapon) {
+  function dmgLine(S, line, crit, buffPuiss, dmgPct, spectral, resPct, withFixed, isWeapon, extra) {
     const base = line.min + RND() * (line.max - line.min + 1);
     const b = Math.min(line.max, Math.floor(base));
     const carac = (S[CARAC_OF_EL[line.el || 0]] || 0) + (S.puissance || 0) + buffPuiss + ((S._cb && S._cb[CARAC_OF_EL[line.el || 0]]) || 0);
     let fixed = 0;
     if (withFixed) fixed = (S.dommages || 0) + (S['dommages' + EL_NAMES[line.el || 0]] || 0) + (crit ? (S.dommagesCritiques || 0) : 0);
-    let v = (b * (1 + carac / 100) * (crit === 'boost' ? CRIT_MULT : 1) + fixed) * (1 + (isWeapon ? (S.dmgPctArmes || 0) : dmgPct) / 100) * (spectral ? 2 : 1) * (1 - resPct / 100);
+    let v = (b * (1 + carac / 100) * (crit === 'boost' ? CRIT_MULT : 1) + fixed) * (1 + ((isWeapon ? (S.dmgPctArmes || 0) : dmgPct) + (extra || 0)) / 100) * (spectral ? 2 : 1) * (1 - resPct / 100);
     return Math.max(0, Math.floor(v));
   }
   // Valeur moyenne attendue d'une ligne (pour la politique de jeu)
-  function expLine(S, line, critP, buffPuiss, dmgPct, specP, resPct, withFixed, isWeapon, critLine) {
+  function expLine(S, line, critP, buffPuiss, dmgPct, specP, resPct, withFixed, isWeapon, critLine, extra) {
     const avg = l => (l.min + l.max) / 2;
     const carac = (S[CARAC_OF_EL[line.el || 0]] || 0) + (S.puissance || 0) + buffPuiss + ((S._cb && S._cb[CARAC_OF_EL[line.el || 0]]) || 0);
     const fixed = withFixed ? (S.dommages || 0) + (S['dommages' + EL_NAMES[line.el || 0]] || 0) : 0;
     const nc = avg(line) * (1 + carac / 100) + fixed;
     const cl = critLine || line;
     const cr = avg(cl) * (1 + carac / 100) * (critLine ? 1 : CRIT_MULT) + fixed + (withFixed ? (S.dommagesCritiques || 0) : 0);
-    const v = ((1 - critP) * nc + critP * cr) * (1 + (isWeapon ? (S.dmgPctArmes || 0) : dmgPct) / 100) * (1 + (isWeapon ? 0 : specP)) * (1 - resPct / 100);
+    const v = ((1 - critP) * nc + critP * cr) * (1 + ((isWeapon ? (S.dmgPctArmes || 0) : dmgPct) + (extra || 0)) / 100) * (1 + (isWeapon ? 0 : specP)) * (1 - resPct / 100);
     return Math.max(0, v);
   }
 
@@ -720,6 +723,33 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const chainPct = opts.chainPct != null ? opts.chainPct : ((CLASS_PASSIVE[S._breed] || {}).chainPct || 0);
     const T = { buffP: 0, buffC: 0, dmgPct: 0, sustainLeft: 0, weaponUsed: false, inv: false, invS: false, half: false, cards: 0, lastEl: null, round: 0 };
     const DF = S._dofus || {}; const pers = []; S._cb = {}; /* bonus qui durent plusieurs tours (Prélude au Fer, Évolution…) et caracs volées (Drain Élémentaire) */ let vulb = 0, critTurn = false, pourpreUsed = !DF.pourpre, emeraudeUsed = !DF.emeraude;
+    // ----- passif de classe -----
+    const PK = opts.passive !== undefined ? opts.passive : (BREED_KEY[S._breed] || null);
+    const C = { n: 0, prey: null, preyN: 0, att: 0, runes: new Set(), cur: null, firstDone: false, ougPa: false, bombN: 0 };
+    const missPct = () => Math.max(0, 100 - P.hp * 100 / maxHp);
+    // bonus % de dégâts du passif contre m (c = carte jouée, null pour une bombe qui explose)
+    const clsPct = (m, c, bomb) => {
+      if (!PK) return 0; const w = c && c.weapon, cur = C.cur || {};
+      switch (PK) {
+        case 'feca': return 6 * C.n;
+        case 'enutrof': return 5 * C.n;
+        case 'xelor': return 6 * C.n;
+        case 'eniripsa': return 9 * C.n;
+        case 'pandawa': return 5 * C.n;
+        case 'sram': { const r = m ? m.hp / m.maxHp : 1; return r < 0.25 ? 60 : r < 0.5 ? 30 : 0; }
+        case 'sacrieur': return Math.min(63, 7 * Math.floor(missPct() / 10));
+        case 'roublard': return (bomb ? 50 : 0) + 10 * Math.min(3, C.bombN);
+        case 'zobal': { const k = (T.round - 1) % 3; return k === 0 ? 10 : k === 1 ? 25 : 0; }
+        case 'steamer': return 7 * Math.min(6, Math.max(0, T.round - 1));
+        case 'eliotrope': return cur.portal ? 50 : 0;
+        case 'huppermage': return 11 * Math.min(4, C.runes.size);
+        case 'ouginak': return m && m === C.prey ? 12 * C.preyN : 0;
+        case 'forgelance': return cur.lance && !w ? 45 : 0;
+      }
+      return 0;
+    };
+    const clsTaken = () => PK === 'feca' ? 6 * C.n : PK === 'zobal' ? [10, 0, 25][(T.round - 1) % 3] : 0; // % de dégâts subis en moins
+    const ECA = PK === 'ecaflip';
     const saved = () => { if (P.hp <= 0 && !emeraudeUsed) { emeraudeUsed = true; P.hp = Math.max(1, Math.round(maxHp * 0.2)); } return P.hp > 0; }; // Émeraude : survit une fois avec 20 % de PV
     // Mécaniques de boss : chaque boss encore debout applique les siennes (bestiaire + mécaniques apprises en combat)
     const alive = () => mons.filter(x => x.alive);
@@ -737,6 +767,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       // ----- tour du joueur -----
       let ap = S._paTotal + P.apNext + (critTurn ? 1 : 0); P.apNext = 0; critTurn = false; // Turquoise : +1 PA (au-delà du plafond) le tour après un critique
       while (hand.length < HAND_SIZE + (round === 1 && DF.ocre ? 1 : 0)) { const c = draw(); if (!c) break; hand.push(c); }
+      C.firstDone = false; C.ougPa = false; if (PK === 'pandawa' && C.n) P.hp = Math.min(maxHp, P.hp + Math.floor(maxHp * C.n / 100)); // Ivresse : soin non réductible
       T.buffP = 0; T.buffC = 0; T.chainN = 0; T.dmgPct = S.dmgPctSorts || 0; S._cb = {};
       for (const b of pers) if (b.until >= round) { if (b.stat === 'puissance') T.buffP += b.v; else if (b.stat === 'critique') T.buffC += b.v; else if (b.stat === 'dmgPctSorts') T.dmgPct += b.v; else S._cb[b.stat] = (S._cb[b.stat] || 0) + b.v; } T.sustainLeft = SUSTAIN.perTurn; T.weaponUsed = false; T.cards = 0; let drawsLeft = DRAWS_MAX;
       const invFrom = opts.invertFrom || mv('invertFrom', 0), sealPa = opts.sealPa || mv('sealPa', 0), sealFrom = opts.sealFrom || mv('sealFrom', 1);
@@ -755,7 +786,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       // Fureur : au-delà de N cartes (hors arme) dans le tour, sa prochaine attaque est multipliée
       const furyCap = Math.min(99, ...alive().filter(m => m.mech && m.mech.furyCards).map(m => m.mech.furyCards));
       // bombes posées au tour précédent
-      for (const m of mons) if (m.alive && m.bombs.length) { for (const b of m.bombs) hit(m, b, 'Bombe'); m.bombs = []; }
+      for (const m of mons) if (m.alive && m.bombs.length) { for (const b of m.bombs) { C.cur = null; hit(m, b, 'Bombe', { bomb: true }); if (PK === 'roublard') C.bombN++; } m.bombs = []; }
       for (let guard = 0; guard < 20; guard++) {
         if (!mons.some(m => m.alive)) break;
         const cost = c => c.ap + (T.seal && !c.weapon ? T.seal : 0);
@@ -788,7 +819,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
           const seq = planTurn(opts2.map(o => o.c), room, cost, capped ? 0 : furyCap - T.cards, paNeed != null ? paNeed : null, ap);
           if (seq && seq.length) pick = seq[0];
         }
-        play(pick); if (chainPct && (T.chainN || 0) < CHAIN_MAX) { T.dmgPct += chainPct; T.chainN = (T.chainN || 0) + 1; } // Enchaînement (Iop) : chaque sort lancé (et l'arme, observé) +15 % aux suivants du tour, 3 fois au plus (+45 %) — texte du jeu // l'arme compte aussi dans l'Enchaînement (observé)
+        play(pick); passiveAfter(pick); if (chainPct && (T.chainN || 0) < CHAIN_MAX) { T.dmgPct += chainPct; T.chainN = (T.chainN || 0) + 1; } // Enchaînement (Iop) : chaque sort lancé (et l'arme, observé) +15 % aux suivants du tour, 3 fois au plus (+45 %) — texte du jeu // l'arme compte aussi dans l'Enchaînement (observé)
         if (opts.trace) (trace[round] = trace[round] || []).push(pick.name + (pick.weapon ? ' (arme)' : ''));
         if (!pick.weapon) T.cards++;
         if (T.apNow) { ap += T.apNow; T.apNow = 0; } // PA gagnés tout de suite (Précipitation)
@@ -809,6 +840,12 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       // ----- tour des monstres -----
       for (const m of mons) {
         if (!m.alive) continue;
+        if (m.poison && m.poison.length) { // Sadida : poison en % des PV max au début du tour du monstre
+          const pct = Math.min(m.isBoss ? 3 : 12, m.poison.length * 3); // 3 % par charge, 12 % max (boss : 3 %)
+          const d = Math.min(m.hp, Math.floor(m.maxHp * pct / 100)); m.hp -= d; dmgDone += d; perCard['Poison (passif)'] = (perCard['Poison (passif)'] || 0) + d;
+          m.poison = m.poison.map(x => x - 1).filter(x => x > 0);
+          if (m.hp <= 0) { m.hp = 0; down(m); if (!m.alive) continue; }
+        }
         const intent = m.pattern[m.idx % m.pattern.length]; m.idx++;
         m.shield = 0;
         if (intent === 'rage') { m.rage++; continue; }
@@ -820,7 +857,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         if (RND() * 100 < Math.min(DF.vulbis ? 75 : 100, S._dodge + vulb)) continue;
         if (DF.vulbis) vulb += 2; // Vulbis : +2 % d'esquive par coup non esquivé
         const rf = S[RES_FIX[m.el]] || 0, rp = Math.min(RES_PCT_CAP_PLAYER, S[RES_PCT[m.el]] || 0);
-        let dmg = Math.max(0, Math.floor((m.atk * mult * (1 - (S._red || 0) / 100) - rf) * (1 - rp / 100)));
+        let dmg = Math.max(0, Math.floor((m.atk * mult * (1 - (S._red || 0) / 100) * (1 - clsTaken() / 100) - rf) * (1 - rp / 100)));
         // coup critique du monstre (rare, observé ~6 %) : la Résistance Critiques retire sa valeur au coup critique reçu
         if (RND() < MON_CRIT_P) dmg = Math.max(0, Math.floor(dmg * MON_CRIT_MULT) - (S.resCritiques || 0));
         if (opts.mlog) { opts.mlog.hits = (opts.mlog.hits || 0) + 1; opts.mlog.raw = (opts.mlog.raw || 0) + dmg; if (round === 1) opts.mlog.r1 = (opts.mlog.r1 || 0) + 1; }
@@ -831,6 +868,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         if (S.renvoi > 0 && dmg > 0) { const r = Math.min(m.hp, S.renvoi, dmg); /* au plus les dégâts reçus */ m.hp -= r; dmgDone += r; if (m.hp <= 0) { m.hp = 0; down(m); } }
         if (P.hp <= 0 && !saved()) return result(false, round);
       }
+      if (!mons.some(m => m.alive)) return result(true, round);
     }
     return result(false, opts.maxRounds || 30);
 
@@ -853,7 +891,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         if (intent === 'rage' || intent === 'guard') continue;
         const mult = (INTENT_MULT[intent] || 1) * (1 + RAGE_STEP * m.rage) * (1 - Math.min(100, m.weaken) / 100);
         const rf = S[RES_FIX[m.el]] || 0, rp = Math.min(RES_PCT_CAP_PLAYER, S[RES_PCT[m.el]] || 0);
-        tot += Math.max(0, (m.atk * mult * (1 - (S._red || 0) / 100) - rf) * (1 - rp / 100));
+        tot += Math.max(0, (m.atk * mult * (1 - (S._red || 0) / 100) * (1 - clsTaken() / 100) - rf) * (1 - rp / 100));
       }
       return tot;
     }
@@ -867,11 +905,11 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         const cl = c._clMap.has(l) ? c._clMap.get(l) : null;
         const withFixed = c.weapon ? true : first; first = false;
         let lv = 0;
-        if (l.zone && !mono) { for (const m of mons) if (m.alive) lv += Math.min(m.hp + m.shield, (m === t ? 1 : ZONE_SEC) * expLine(S, l, critP, puiss, dpct, c.weapon ? 0 : specP, er(m.res[RES_PCT[l.el || 0]] || 0), withFixed, c.weapon, cl)); }
-        else lv = expLine(S, l, critP, puiss, dpct, c.weapon ? 0 : specP, er(t.res[RES_PCT[l.el || 0]] || 0), withFixed, c.weapon, cl);
+        if (l.zone && !mono) { for (const m of mons) if (m.alive) lv += Math.min(m.hp + m.shield, (m === t ? 1 : ZONE_SEC) * expLine(S, l, critP, puiss, dpct, c.weapon ? 0 : specP, er(m.res[RES_PCT[l.el || 0]] || 0), withFixed, c.weapon, cl, estPct(m, c)) * ecaF(c)); }
+        else lv = expLine(S, l, critP, puiss, dpct, c.weapon ? 0 : specP, er(t.res[RES_PCT[l.el || 0]] || 0), withFixed, c.weapon, cl, estPct(t, c)) * ecaF(c);
         v += lv;
       });
-      for (const l of c.eff) if (l.k === 'bomb') v += 0.8 * expLine(S, l, 0, puiss, dpct, 0, er(t.res[RES_PCT[l.el || 0]] || 0), true, false);
+      for (const l of c.eff) if (l.k === 'bomb') v += 0.8 * expLine(S, l, 0, puiss, dpct, 0, er(t.res[RES_PCT[l.el || 0]] || 0), true, false, null, PK ? clsPct(t, null, true) : 0);
       return v;
     }
     // Recherche de la meilleure séquence de cartes pour le tour (profondeur limitée), avec les bonus appliqués aux cartes suivantes
@@ -953,16 +991,42 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       if (shieldTotal() <= 0 && alive().some(m => m.mech && m.mech.hardSkin) && c.eff.some(l => l.k === 'shieldHp' || l.k === 'shieldLvl')) v += 5000;
       return v;
     }
+    // estimation du bonus de passif si on joue c maintenant (planification)
+    function estPct(m, c) {
+      if (!PK) return 0; const sv = C.cur; const w = c.weapon;
+      C.cur = { portal: PK === 'eliotrope' && (C.att + 1) % 2 === 0, lance: PK === 'forgelance' && !C.firstDone && !w };
+      let v = clsPct(m, c);
+      if (PK === 'huppermage' && !w && c.hasDmg && !C.runes.has(mainEl(c)) && C.runes.size < 4) v += 11;
+      if (PK === 'ouginak' && !w && m !== C.prey) v = 0;
+      C.cur = sv; return v;
+    }
+    function ecaF(c) { return ECA && !c.weapon && c.hasDmg ? 1.31 : 1; }
+    // charges du passif après un sort
+    function passiveAfter(c) {
+      if (!PK) return; const w = c.weapon;
+      const has = k => c.eff.some(l => k.includes(l.k));
+      if (PK === 'feca' && !w && (has(['shieldHp', 'shieldLvl', 'heal', 'healPct']) || c.eff.some(l => l.k === 'buff' && /^res/.test(l.stat || '')))) C.n = Math.min(5, C.n + 1);
+      else if (PK === 'enutrof' && !w && c.ap <= 2) C.n = Math.min(10, C.n + 1);
+      else if (PK === 'xelor') { const n = c.eff.filter(l => l.k === 'apRemove' || l.k === 'apSteal').reduce((a, l) => a + (l.max || 0), 0); C.n = Math.min(10, C.n + n); }
+      else if (PK === 'eniripsa' && !w && has(['shieldHp', 'shieldLvl', 'heal', 'healPct'])) C.n = Math.min(5, C.n + 1);
+      else if (PK === 'pandawa' && !w) C.n = Math.min(6, C.n + 1);
+      else if (PK === 'huppermage' && !w && c.hasDmg) C.runes.add(mainEl(c));
+      else if (PK === 'ouginak' && !w && c.hasDmg && C.lastTgt) { if (C.prey !== C.lastTgt) { C.prey = C.lastTgt; C.preyN = 0; } C.preyN = Math.min(5, C.preyN + 1); }
+      if (PK === 'forgelance' && !w && c.hasDmg) C.firstDone = true;
+      C.cur = null;
+    }
     function mainEl(c) { const l = c.dmgLines && c.dmgLines[0]; return l ? (l.el || 0) : null; }
     // Mort d'un monstre ; certains boss se relèvent une fois (« se relève, fou de rage ») avec une part de leurs PV (inconnue : 50 % par défaut)
     function down(m) {
       if (m.mech && m.mech.revive && !m.revived) { m.revived = true; m.hp = Math.max(1, Math.round(m.cap * (m.mech.revivePct != null ? m.mech.revivePct / 100 : opts.revivePct != null ? opts.revivePct : 0.5))); m.rage += m.mech.reviveRage === 0 ? 0 : 2; m.shield = 0; m.bombs = []; return; }
       m.alive = false;
+      if (PK === 'ouginak' && m === C.prey && C.inTurn && !C.ougPa) { C.ougPa = true; T.apNow = (T.apNow || 0) + 2; } // Proie tuée pendant son tour : +2 PA
     }
     function hit(m, line, label, opt) {
       opt = opt || {};
       const rp = er(m.res[RES_PCT[line.el || 0]] || 0);
-      let d = dmgLine(S, line, opt.crit, T.buffP, T.dmgPct, opt.spec, rp, opt.fixed !== false, opt.weapon);
+      let d = dmgLine(S, line, opt.crit, T.buffP, T.dmgPct, opt.spec, rp, opt.fixed !== false, opt.weapon, PK ? clsPct(m, opt.card || null, opt.bomb) : 0);
+      if (opt.luck) d = Math.floor(d * opt.luck);
       if (opt.sec) d = Math.floor(d * ZONE_SEC);
       if (opt.x2) d *= 2;
       if (m.mech && m.mech.hardSkin && shieldTotal() <= 0) d = Math.floor(d * m.mech.hardSkin / 100);
@@ -985,6 +1049,9 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       const x2 = !pourpreUsed && c.hasDmg && !c.weapon; if (x2) pourpreUsed = true; // Pourpre : le premier sort de dégâts du combat ×2
       const critArg = crit ? ((c.crit && c.crit.length) ? true : 'boost') : false;
       const lines = crit && c.crit ? c.crit : c.eff;
+      if (PK && c.hasDmg) { C.att++; C.cur = { portal: PK === 'eliotrope' && C.att % 2 === 0, lance: PK === 'forgelance' && !C.firstDone && !c.weapon }; } else C.cur = null;
+      C.inTurn = true;
+      let luck = 1; if (ECA && !c.weapon && c.hasDmg) { const r = RND(); luck = r < 0.32 ? 2 : r < 0.34 ? 0.5 : 1; } // Chance d'Ecaflip
       const spec = !c.weapon && c.hasDmg && RND() < specP;  // Vision spectrale : tout le sort est doublé (toutes cibles et lignes, vérifié dans le journal)
       if (c.hasDmg && !c.weapon) {
         const el = mainEl(c), sh = mv('shockPct', 0);
@@ -998,10 +1065,10 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         if (chosen && l.chance && l !== chosen[0] && !(crit && c.crit)) continue;
         if (l.k === 'dmg' || l.k === 'steal') {
           const withFixed = c.weapon ? true : first; first = false;
-          if (l.zone) { if (!tgt || !tgt.alive) tgt = target(); for (const m of [tgt, ...mons.filter(x => x !== tgt)]) if (m && m.alive) { hit(m, l, c.name, { crit: critArg, spec, fixed: withFixed, weapon: c.weapon, sec: m !== tgt, x2 }); } }
+          if (l.zone) { if (!tgt || !tgt.alive) tgt = target(); for (const m of [tgt, ...mons.filter(x => x !== tgt)]) if (m && m.alive) { hit(m, l, c.name, { crit: critArg, spec, fixed: withFixed, weapon: c.weapon, sec: m !== tgt, x2, card: c, luck }); } }
           else {
             if (!tgt || !tgt.alive) tgt = target(); if (!tgt) break;
-            const r = hit(tgt, l, c.name, { crit: critArg, spec, fixed: withFixed, weapon: c.weapon, x2 });
+            const r = hit(tgt, l, c.name, { crit: critArg, spec, fixed: withFixed, weapon: c.weapon, x2, card: c, luck });
             if (l.k === 'steal') healP(Math.floor(r / 2));
           }
         } else if (l.k === 'dmgCasterHp') {
@@ -1025,7 +1092,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
           P.shields.push({ value: Math.min(amount, room), turns: l.dur || 1 });
         } else if ((l.k === 'heal' || l.k === 'healPct') && l.tgt === 'self') {
           if (!c.hasDmg) { if (T.sustainLeft <= 0 && !sustainUsed) continue; sustainUsed = true; }
-          const amount = Math.floor(l.k === 'healPct' ? maxHp * l.max / 100 : (l.max + (S.soins || 0)));
+          const amount = Math.floor((l.k === 'healPct' ? maxHp * l.max / 100 : (l.max + (S.soins || 0))) * (PK === 'eniripsa' ? 1 + 0.09 * C.n : 1));
           healP(amount);
         } else if (l.k === 'apRemove' && l.tgt === 'enemy') {
           const n = l.max; if (n <= 0) continue;
@@ -1034,6 +1101,9 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         } else if (l.k === 'apGain') { if (l.now) T.apNow = (T.apNow || 0) + l.max; else P.apNext += l.max; }
       }
       if (sustainUsed) T.sustainLeft--;
+      if (PK && c.hasDmg && !c.weapon) { const t0 = tgt && tgt.alive ? tgt : null; C.lastTgt = tgt || null;
+        if (PK === 'sadida' && t0) { t0.poison = t0.poison || []; if (t0.poison.length < 4) t0.poison.push(3); else { t0.poison.sort((a, b) => a - b); t0.poison[0] = 3; } } }
+      C.inTurn = false;
     }
   }
 
@@ -1114,7 +1184,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     if (mech.shockPct) w.push(`l'auto n'alterne pas les éléments (Onde de choc)`);
     return w;
   }
-  const api = { deriveStats, setAutoOrder: v => { AUTO_ORDER = v; }, setTuning: o => { if (o.crit != null) CRIT_MULT = o.crit; if (o.zoneSec != null) ZONE_SEC = o.zoneSec; if (o.weaponLast != null) WEAPON_LAST = o.weaponLast; if (o.weaponMode) WEAPON_MODE = o.weaponMode; }, CLASS_PASSIVE, dofusFx, forgePctFor, forgeDaysTo, forgeXpAt, diffForFloor, bestiaryEntries, mechFromEntries, mechText, autoWarnings, itemStats, weaponWithFusion, tierCost, allocCost, pointsTotal, computeStats, prepCard, weaponCard, simulateFight, runMany, STAT_TIERS, CARAC_OF_EL, EL_NAMES, RES_PCT, RES_FIX };
+  const api = { BREED_KEY, BREED_NAME, CLASS_SPECTRAL, deriveStats, setAutoOrder: v => { AUTO_ORDER = v; }, setTuning: o => { if (o.crit != null) CRIT_MULT = o.crit; if (o.zoneSec != null) ZONE_SEC = o.zoneSec; if (o.weaponLast != null) WEAPON_LAST = o.weaponLast; if (o.weaponMode) WEAPON_MODE = o.weaponMode; }, CLASS_PASSIVE, dofusFx, forgePctFor, forgeDaysTo, forgeXpAt, diffForFloor, bestiaryEntries, mechFromEntries, mechText, autoWarnings, itemStats, weaponWithFusion, tierCost, allocCost, pointsTotal, computeStats, prepCard, weaponCard, simulateFight, runMany, STAT_TIERS, CARAC_OF_EL, EL_NAMES, RES_PCT, RES_FIX };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.RPG = api;
 })(typeof self !== 'undefined' ? self : this);
 </script>
@@ -1132,13 +1202,16 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   // Orientations : vitesse, survie, sagesse, pp, mono:<el>, multi, ascension
   const ORIENT = {
     equilibre: { label: 'Polyvalent (tank + dégâts)' }, vitesse: { label: 'Finir vite' }, survie: { label: 'Survivre' }, sagesse: { label: 'Sagesse (XP)', focus: 'sagesse' },
-    pp: { label: 'Prospection (butin)', focus: 'chance' }, multi: { label: 'Multi-élément' }, ascension: { label: 'Ascension' }, 'ascension-tank': { label: 'Ascension · Tank' }, 'ascension-burst': { label: 'Ascension · Dégâts' },
+    pp: { label: 'Prospection (butin)', focus: 'chance' }, multi: { label: 'Multi-élément' }, ascension: { label: 'Ascension' }, 'ascension-tank': { label: 'Ascension · Tank' }, 'ascension-burst': { label: 'Ascension · Dégâts' }, kralamoure: { label: 'Kralamoure · dégâts en 10 tours' },
     'mono:1': { label: 'Mono Terre', el: 1 }, 'mono:2': { label: 'Mono Feu', el: 2 }, 'mono:3': { label: 'Mono Eau', el: 3 }, 'mono:4': { label: 'Mono Air', el: 4 }
   };
+  const KRALA_TURNS = 10;
   function winGate(r) { return r.winRate >= 0.95 ? 1000 : r.winRate * 1000 - 200; }
   function score(r, S, objective) {
     const hpPct = r.avgHpLost / S._maxHp * 100;
     const rounds = isFinite(r.avgRounds) ? r.avgRounds : 30;
+    // Kralamoure de la Faille : on ne le tue pas, on cumule un maximum de dégâts sur 10 tours (mourir avant coupe le compteur)
+    if (objective === 'kralamoure') return (r.avgDmg || 0) / 100;
     if (objective === 'ascension') return r.winRate * 1000 + 150 * (r.progress || 0) + 15 * (r.avgKills || 0) - hpPct * 0.5 - rounds * 1;
     // Styles d'Ascension : tank (survie, PV gardés, boucliers) ou burst (finir vite avant les mécaniques des tours 3-4)
     if (objective === 'ascension-tank') return r.winRate * 1000 + 100 * (r.progress || 0) - hpPct * 4 - rounds * 0.5;
@@ -1346,7 +1419,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     let ev = 0;
     const total = R.pointsTotal(ctx.level);
     const tick = (phase, done, of, best) => opts.onProgress && opts.onProgress({ phase, done, of, best, evals: ev });
-    const FO = { invertFrom: opts.invertFrom || 0, invertShields: !!opts.invertShields, auto: !!opts.auto, weaponMode: opts.weaponMode, plan: (opts.effort || 2) >= 3, seed: 1 }; const SU = opts.sustain || 'all', NS = !normSus(opts.sustain, opts.noSteal).steal;
+    const FO = { invertFrom: opts.invertFrom || 0, invertShields: !!opts.invertShields, auto: !!opts.auto, weaponMode: opts.weaponMode, plan: (opts.effort || 2) >= 3, seed: 1, maxRounds: opts.maxRounds || (obj === 'kralamoure' ? KRALA_TURNS : undefined) }; const SU = opts.sustain || 'all', NS = !normSus(opts.sustain, opts.noSteal).steal;
     const s0 = opts.start0 || opts.start; const start0 = { gear: Object.assign({}, s0.gear), deck: s0.deck.slice() };
     const changes = st => SLOTS.filter(([s]) => (st.gear[s] && st.gear[s].id) !== (start0.gear[s] && start0.gear[s].id)).length + st.deck.filter(k => !start0.deck.includes(k)).length;
     // Ascension : à efficacité égale, on préfère le build qui change le moins de choses
@@ -1620,7 +1693,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     if (seed) runs.unshift({ id: 'memo', label: 'Reprise du dernier build trouvé', arch: null, start: seed });
     return runs;
   }
-  const FINAL_FO = opts => ({ invertFrom: opts.invertFrom || 0, invertShields: !!opts.invertShields, auto: !!opts.auto, weaponMode: opts.weaponMode, plan: true, seed: 7919 }); // autre graine que la recherche : pas de build « chanceux »
+  const FINAL_FO = opts => ({ invertFrom: opts.invertFrom || 0, invertShields: !!opts.invertShields, auto: !!opts.auto, weaponMode: opts.weaponMode, plan: true, seed: 7919, maxRounds: opts.maxRounds || (opts.objective === 'kralamoure' ? KRALA_TURNS : undefined) }); // autre graine que la recherche : pas de build « chanceux »
   // Une partie des recherches (ids), avec confirmation (Approfondi) et vérification sur 2 500 combats de ses meilleurs résultats
   function deepPart(data, opts, ids, keep) {
     data._cardsByKey = data._cardsByKey || Object.fromEntries(data.cards.map(c => [c.key, c]));
@@ -1804,7 +1877,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
 <script type="text/plain" id="src-userscript">// ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.9.4
+// @version      2.9.5
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -1854,7 +1927,10 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   const DRAWS_MAX = 3;
   const CLASS_SPECTRAL = { 9: 26 }; // Crâ : Œil de lynx (patch du 10/10 : 18 → 26 %, plafond 60 %)
   // Passifs de classe observés en combat : 8 = « Enchaînement » (+15 % sur les sorts de dégâts suivants du tour, cumulable)
-  const CLASS_PASSIVE = { 8: { chainPct: 15 } }; const CHAIN_MAX = 3; const CARACS_ALL = ['force', 'intelligence', 'chance', 'agilite'];
+  const CLASS_PASSIVE = { 8: { chainPct: 15 } };
+  // Passifs de classe (texte du client, patch du 10/10) — clé par breedId
+  const BREED_KEY = { 1: 'feca', 2: 'osamodas', 3: 'enutrof', 4: 'sram', 5: 'xelor', 6: 'ecaflip', 7: 'eniripsa', 8: 'iop', 9: 'cra', 10: 'sadida', 11: 'sacrieur', 12: 'pandawa', 13: 'roublard', 14: 'zobal', 15: 'steamer', 16: 'eliotrope', 17: 'huppermage', 18: 'ouginak', 20: 'forgelance' };
+  const BREED_NAME = { 1: 'Féca', 2: 'Osamodas', 3: 'Enutrof', 4: 'Sram', 5: 'Xélor', 6: 'Ecaflip', 7: 'Eniripsa', 8: 'Iop', 9: 'Crâ', 10: 'Sadida', 11: 'Sacrieur', 12: 'Pandawa', 13: 'Roublard', 14: 'Zobal', 15: 'Steamer', 16: 'Eliotrope', 17: 'Huppermage', 18: 'Ouginak', 20: 'Forgelance' }; const CHAIN_MAX = 3; const CARACS_ALL = ['force', 'intelligence', 'chance', 'agilite'];
   const SPECTRAL_PER_PO = 0.4, SPECTRAL_MAX = 60;
   const POINTS_PER_LEVEL = 5;
   const CARAC_TIERS = [[0, 1], [100, 2], [200, 3], [300, 4]];
@@ -1991,24 +2067,24 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   }
 
   // ---------- Dégâts ----------
-  function dmgLine(S, line, crit, buffPuiss, dmgPct, spectral, resPct, withFixed, isWeapon) {
+  function dmgLine(S, line, crit, buffPuiss, dmgPct, spectral, resPct, withFixed, isWeapon, extra) {
     const base = line.min + RND() * (line.max - line.min + 1);
     const b = Math.min(line.max, Math.floor(base));
     const carac = (S[CARAC_OF_EL[line.el || 0]] || 0) + (S.puissance || 0) + buffPuiss + ((S._cb && S._cb[CARAC_OF_EL[line.el || 0]]) || 0);
     let fixed = 0;
     if (withFixed) fixed = (S.dommages || 0) + (S['dommages' + EL_NAMES[line.el || 0]] || 0) + (crit ? (S.dommagesCritiques || 0) : 0);
-    let v = (b * (1 + carac / 100) * (crit === 'boost' ? CRIT_MULT : 1) + fixed) * (1 + (isWeapon ? (S.dmgPctArmes || 0) : dmgPct) / 100) * (spectral ? 2 : 1) * (1 - resPct / 100);
+    let v = (b * (1 + carac / 100) * (crit === 'boost' ? CRIT_MULT : 1) + fixed) * (1 + ((isWeapon ? (S.dmgPctArmes || 0) : dmgPct) + (extra || 0)) / 100) * (spectral ? 2 : 1) * (1 - resPct / 100);
     return Math.max(0, Math.floor(v));
   }
   // Valeur moyenne attendue d'une ligne (pour la politique de jeu)
-  function expLine(S, line, critP, buffPuiss, dmgPct, specP, resPct, withFixed, isWeapon, critLine) {
+  function expLine(S, line, critP, buffPuiss, dmgPct, specP, resPct, withFixed, isWeapon, critLine, extra) {
     const avg = l => (l.min + l.max) / 2;
     const carac = (S[CARAC_OF_EL[line.el || 0]] || 0) + (S.puissance || 0) + buffPuiss + ((S._cb && S._cb[CARAC_OF_EL[line.el || 0]]) || 0);
     const fixed = withFixed ? (S.dommages || 0) + (S['dommages' + EL_NAMES[line.el || 0]] || 0) : 0;
     const nc = avg(line) * (1 + carac / 100) + fixed;
     const cl = critLine || line;
     const cr = avg(cl) * (1 + carac / 100) * (critLine ? 1 : CRIT_MULT) + fixed + (withFixed ? (S.dommagesCritiques || 0) : 0);
-    const v = ((1 - critP) * nc + critP * cr) * (1 + (isWeapon ? (S.dmgPctArmes || 0) : dmgPct) / 100) * (1 + (isWeapon ? 0 : specP)) * (1 - resPct / 100);
+    const v = ((1 - critP) * nc + critP * cr) * (1 + ((isWeapon ? (S.dmgPctArmes || 0) : dmgPct) + (extra || 0)) / 100) * (1 + (isWeapon ? 0 : specP)) * (1 - resPct / 100);
     return Math.max(0, v);
   }
 
@@ -2058,6 +2134,33 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const chainPct = opts.chainPct != null ? opts.chainPct : ((CLASS_PASSIVE[S._breed] || {}).chainPct || 0);
     const T = { buffP: 0, buffC: 0, dmgPct: 0, sustainLeft: 0, weaponUsed: false, inv: false, invS: false, half: false, cards: 0, lastEl: null, round: 0 };
     const DF = S._dofus || {}; const pers = []; S._cb = {}; /* bonus qui durent plusieurs tours (Prélude au Fer, Évolution…) et caracs volées (Drain Élémentaire) */ let vulb = 0, critTurn = false, pourpreUsed = !DF.pourpre, emeraudeUsed = !DF.emeraude;
+    // ----- passif de classe -----
+    const PK = opts.passive !== undefined ? opts.passive : (BREED_KEY[S._breed] || null);
+    const C = { n: 0, prey: null, preyN: 0, att: 0, runes: new Set(), cur: null, firstDone: false, ougPa: false, bombN: 0 };
+    const missPct = () => Math.max(0, 100 - P.hp * 100 / maxHp);
+    // bonus % de dégâts du passif contre m (c = carte jouée, null pour une bombe qui explose)
+    const clsPct = (m, c, bomb) => {
+      if (!PK) return 0; const w = c && c.weapon, cur = C.cur || {};
+      switch (PK) {
+        case 'feca': return 6 * C.n;
+        case 'enutrof': return 5 * C.n;
+        case 'xelor': return 6 * C.n;
+        case 'eniripsa': return 9 * C.n;
+        case 'pandawa': return 5 * C.n;
+        case 'sram': { const r = m ? m.hp / m.maxHp : 1; return r < 0.25 ? 60 : r < 0.5 ? 30 : 0; }
+        case 'sacrieur': return Math.min(63, 7 * Math.floor(missPct() / 10));
+        case 'roublard': return (bomb ? 50 : 0) + 10 * Math.min(3, C.bombN);
+        case 'zobal': { const k = (T.round - 1) % 3; return k === 0 ? 10 : k === 1 ? 25 : 0; }
+        case 'steamer': return 7 * Math.min(6, Math.max(0, T.round - 1));
+        case 'eliotrope': return cur.portal ? 50 : 0;
+        case 'huppermage': return 11 * Math.min(4, C.runes.size);
+        case 'ouginak': return m && m === C.prey ? 12 * C.preyN : 0;
+        case 'forgelance': return cur.lance && !w ? 45 : 0;
+      }
+      return 0;
+    };
+    const clsTaken = () => PK === 'feca' ? 6 * C.n : PK === 'zobal' ? [10, 0, 25][(T.round - 1) % 3] : 0; // % de dégâts subis en moins
+    const ECA = PK === 'ecaflip';
     const saved = () => { if (P.hp <= 0 && !emeraudeUsed) { emeraudeUsed = true; P.hp = Math.max(1, Math.round(maxHp * 0.2)); } return P.hp > 0; }; // Émeraude : survit une fois avec 20 % de PV
     // Mécaniques de boss : chaque boss encore debout applique les siennes (bestiaire + mécaniques apprises en combat)
     const alive = () => mons.filter(x => x.alive);
@@ -2075,6 +2178,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       // ----- tour du joueur -----
       let ap = S._paTotal + P.apNext + (critTurn ? 1 : 0); P.apNext = 0; critTurn = false; // Turquoise : +1 PA (au-delà du plafond) le tour après un critique
       while (hand.length < HAND_SIZE + (round === 1 && DF.ocre ? 1 : 0)) { const c = draw(); if (!c) break; hand.push(c); }
+      C.firstDone = false; C.ougPa = false; if (PK === 'pandawa' && C.n) P.hp = Math.min(maxHp, P.hp + Math.floor(maxHp * C.n / 100)); // Ivresse : soin non réductible
       T.buffP = 0; T.buffC = 0; T.chainN = 0; T.dmgPct = S.dmgPctSorts || 0; S._cb = {};
       for (const b of pers) if (b.until >= round) { if (b.stat === 'puissance') T.buffP += b.v; else if (b.stat === 'critique') T.buffC += b.v; else if (b.stat === 'dmgPctSorts') T.dmgPct += b.v; else S._cb[b.stat] = (S._cb[b.stat] || 0) + b.v; } T.sustainLeft = SUSTAIN.perTurn; T.weaponUsed = false; T.cards = 0; let drawsLeft = DRAWS_MAX;
       const invFrom = opts.invertFrom || mv('invertFrom', 0), sealPa = opts.sealPa || mv('sealPa', 0), sealFrom = opts.sealFrom || mv('sealFrom', 1);
@@ -2093,7 +2197,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       // Fureur : au-delà de N cartes (hors arme) dans le tour, sa prochaine attaque est multipliée
       const furyCap = Math.min(99, ...alive().filter(m => m.mech && m.mech.furyCards).map(m => m.mech.furyCards));
       // bombes posées au tour précédent
-      for (const m of mons) if (m.alive && m.bombs.length) { for (const b of m.bombs) hit(m, b, 'Bombe'); m.bombs = []; }
+      for (const m of mons) if (m.alive && m.bombs.length) { for (const b of m.bombs) { C.cur = null; hit(m, b, 'Bombe', { bomb: true }); if (PK === 'roublard') C.bombN++; } m.bombs = []; }
       for (let guard = 0; guard < 20; guard++) {
         if (!mons.some(m => m.alive)) break;
         const cost = c => c.ap + (T.seal && !c.weapon ? T.seal : 0);
@@ -2126,7 +2230,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
           const seq = planTurn(opts2.map(o => o.c), room, cost, capped ? 0 : furyCap - T.cards, paNeed != null ? paNeed : null, ap);
           if (seq && seq.length) pick = seq[0];
         }
-        play(pick); if (chainPct && (T.chainN || 0) < CHAIN_MAX) { T.dmgPct += chainPct; T.chainN = (T.chainN || 0) + 1; } // Enchaînement (Iop) : chaque sort lancé (et l'arme, observé) +15 % aux suivants du tour, 3 fois au plus (+45 %) — texte du jeu // l'arme compte aussi dans l'Enchaînement (observé)
+        play(pick); passiveAfter(pick); if (chainPct && (T.chainN || 0) < CHAIN_MAX) { T.dmgPct += chainPct; T.chainN = (T.chainN || 0) + 1; } // Enchaînement (Iop) : chaque sort lancé (et l'arme, observé) +15 % aux suivants du tour, 3 fois au plus (+45 %) — texte du jeu // l'arme compte aussi dans l'Enchaînement (observé)
         if (opts.trace) (trace[round] = trace[round] || []).push(pick.name + (pick.weapon ? ' (arme)' : ''));
         if (!pick.weapon) T.cards++;
         if (T.apNow) { ap += T.apNow; T.apNow = 0; } // PA gagnés tout de suite (Précipitation)
@@ -2147,6 +2251,12 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       // ----- tour des monstres -----
       for (const m of mons) {
         if (!m.alive) continue;
+        if (m.poison && m.poison.length) { // Sadida : poison en % des PV max au début du tour du monstre
+          const pct = Math.min(m.isBoss ? 3 : 12, m.poison.length * 3); // 3 % par charge, 12 % max (boss : 3 %)
+          const d = Math.min(m.hp, Math.floor(m.maxHp * pct / 100)); m.hp -= d; dmgDone += d; perCard['Poison (passif)'] = (perCard['Poison (passif)'] || 0) + d;
+          m.poison = m.poison.map(x => x - 1).filter(x => x > 0);
+          if (m.hp <= 0) { m.hp = 0; down(m); if (!m.alive) continue; }
+        }
         const intent = m.pattern[m.idx % m.pattern.length]; m.idx++;
         m.shield = 0;
         if (intent === 'rage') { m.rage++; continue; }
@@ -2158,7 +2268,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         if (RND() * 100 < Math.min(DF.vulbis ? 75 : 100, S._dodge + vulb)) continue;
         if (DF.vulbis) vulb += 2; // Vulbis : +2 % d'esquive par coup non esquivé
         const rf = S[RES_FIX[m.el]] || 0, rp = Math.min(RES_PCT_CAP_PLAYER, S[RES_PCT[m.el]] || 0);
-        let dmg = Math.max(0, Math.floor((m.atk * mult * (1 - (S._red || 0) / 100) - rf) * (1 - rp / 100)));
+        let dmg = Math.max(0, Math.floor((m.atk * mult * (1 - (S._red || 0) / 100) * (1 - clsTaken() / 100) - rf) * (1 - rp / 100)));
         // coup critique du monstre (rare, observé ~6 %) : la Résistance Critiques retire sa valeur au coup critique reçu
         if (RND() < MON_CRIT_P) dmg = Math.max(0, Math.floor(dmg * MON_CRIT_MULT) - (S.resCritiques || 0));
         if (opts.mlog) { opts.mlog.hits = (opts.mlog.hits || 0) + 1; opts.mlog.raw = (opts.mlog.raw || 0) + dmg; if (round === 1) opts.mlog.r1 = (opts.mlog.r1 || 0) + 1; }
@@ -2169,6 +2279,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         if (S.renvoi > 0 && dmg > 0) { const r = Math.min(m.hp, S.renvoi, dmg); /* au plus les dégâts reçus */ m.hp -= r; dmgDone += r; if (m.hp <= 0) { m.hp = 0; down(m); } }
         if (P.hp <= 0 && !saved()) return result(false, round);
       }
+      if (!mons.some(m => m.alive)) return result(true, round);
     }
     return result(false, opts.maxRounds || 30);
 
@@ -2191,7 +2302,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         if (intent === 'rage' || intent === 'guard') continue;
         const mult = (INTENT_MULT[intent] || 1) * (1 + RAGE_STEP * m.rage) * (1 - Math.min(100, m.weaken) / 100);
         const rf = S[RES_FIX[m.el]] || 0, rp = Math.min(RES_PCT_CAP_PLAYER, S[RES_PCT[m.el]] || 0);
-        tot += Math.max(0, (m.atk * mult * (1 - (S._red || 0) / 100) - rf) * (1 - rp / 100));
+        tot += Math.max(0, (m.atk * mult * (1 - (S._red || 0) / 100) * (1 - clsTaken() / 100) - rf) * (1 - rp / 100));
       }
       return tot;
     }
@@ -2205,11 +2316,11 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         const cl = c._clMap.has(l) ? c._clMap.get(l) : null;
         const withFixed = c.weapon ? true : first; first = false;
         let lv = 0;
-        if (l.zone && !mono) { for (const m of mons) if (m.alive) lv += Math.min(m.hp + m.shield, (m === t ? 1 : ZONE_SEC) * expLine(S, l, critP, puiss, dpct, c.weapon ? 0 : specP, er(m.res[RES_PCT[l.el || 0]] || 0), withFixed, c.weapon, cl)); }
-        else lv = expLine(S, l, critP, puiss, dpct, c.weapon ? 0 : specP, er(t.res[RES_PCT[l.el || 0]] || 0), withFixed, c.weapon, cl);
+        if (l.zone && !mono) { for (const m of mons) if (m.alive) lv += Math.min(m.hp + m.shield, (m === t ? 1 : ZONE_SEC) * expLine(S, l, critP, puiss, dpct, c.weapon ? 0 : specP, er(m.res[RES_PCT[l.el || 0]] || 0), withFixed, c.weapon, cl, estPct(m, c)) * ecaF(c)); }
+        else lv = expLine(S, l, critP, puiss, dpct, c.weapon ? 0 : specP, er(t.res[RES_PCT[l.el || 0]] || 0), withFixed, c.weapon, cl, estPct(t, c)) * ecaF(c);
         v += lv;
       });
-      for (const l of c.eff) if (l.k === 'bomb') v += 0.8 * expLine(S, l, 0, puiss, dpct, 0, er(t.res[RES_PCT[l.el || 0]] || 0), true, false);
+      for (const l of c.eff) if (l.k === 'bomb') v += 0.8 * expLine(S, l, 0, puiss, dpct, 0, er(t.res[RES_PCT[l.el || 0]] || 0), true, false, null, PK ? clsPct(t, null, true) : 0);
       return v;
     }
     // Recherche de la meilleure séquence de cartes pour le tour (profondeur limitée), avec les bonus appliqués aux cartes suivantes
@@ -2291,16 +2402,42 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       if (shieldTotal() <= 0 && alive().some(m => m.mech && m.mech.hardSkin) && c.eff.some(l => l.k === 'shieldHp' || l.k === 'shieldLvl')) v += 5000;
       return v;
     }
+    // estimation du bonus de passif si on joue c maintenant (planification)
+    function estPct(m, c) {
+      if (!PK) return 0; const sv = C.cur; const w = c.weapon;
+      C.cur = { portal: PK === 'eliotrope' && (C.att + 1) % 2 === 0, lance: PK === 'forgelance' && !C.firstDone && !w };
+      let v = clsPct(m, c);
+      if (PK === 'huppermage' && !w && c.hasDmg && !C.runes.has(mainEl(c)) && C.runes.size < 4) v += 11;
+      if (PK === 'ouginak' && !w && m !== C.prey) v = 0;
+      C.cur = sv; return v;
+    }
+    function ecaF(c) { return ECA && !c.weapon && c.hasDmg ? 1.31 : 1; }
+    // charges du passif après un sort
+    function passiveAfter(c) {
+      if (!PK) return; const w = c.weapon;
+      const has = k => c.eff.some(l => k.includes(l.k));
+      if (PK === 'feca' && !w && (has(['shieldHp', 'shieldLvl', 'heal', 'healPct']) || c.eff.some(l => l.k === 'buff' && /^res/.test(l.stat || '')))) C.n = Math.min(5, C.n + 1);
+      else if (PK === 'enutrof' && !w && c.ap <= 2) C.n = Math.min(10, C.n + 1);
+      else if (PK === 'xelor') { const n = c.eff.filter(l => l.k === 'apRemove' || l.k === 'apSteal').reduce((a, l) => a + (l.max || 0), 0); C.n = Math.min(10, C.n + n); }
+      else if (PK === 'eniripsa' && !w && has(['shieldHp', 'shieldLvl', 'heal', 'healPct'])) C.n = Math.min(5, C.n + 1);
+      else if (PK === 'pandawa' && !w) C.n = Math.min(6, C.n + 1);
+      else if (PK === 'huppermage' && !w && c.hasDmg) C.runes.add(mainEl(c));
+      else if (PK === 'ouginak' && !w && c.hasDmg && C.lastTgt) { if (C.prey !== C.lastTgt) { C.prey = C.lastTgt; C.preyN = 0; } C.preyN = Math.min(5, C.preyN + 1); }
+      if (PK === 'forgelance' && !w && c.hasDmg) C.firstDone = true;
+      C.cur = null;
+    }
     function mainEl(c) { const l = c.dmgLines && c.dmgLines[0]; return l ? (l.el || 0) : null; }
     // Mort d'un monstre ; certains boss se relèvent une fois (« se relève, fou de rage ») avec une part de leurs PV (inconnue : 50 % par défaut)
     function down(m) {
       if (m.mech && m.mech.revive && !m.revived) { m.revived = true; m.hp = Math.max(1, Math.round(m.cap * (m.mech.revivePct != null ? m.mech.revivePct / 100 : opts.revivePct != null ? opts.revivePct : 0.5))); m.rage += m.mech.reviveRage === 0 ? 0 : 2; m.shield = 0; m.bombs = []; return; }
       m.alive = false;
+      if (PK === 'ouginak' && m === C.prey && C.inTurn && !C.ougPa) { C.ougPa = true; T.apNow = (T.apNow || 0) + 2; } // Proie tuée pendant son tour : +2 PA
     }
     function hit(m, line, label, opt) {
       opt = opt || {};
       const rp = er(m.res[RES_PCT[line.el || 0]] || 0);
-      let d = dmgLine(S, line, opt.crit, T.buffP, T.dmgPct, opt.spec, rp, opt.fixed !== false, opt.weapon);
+      let d = dmgLine(S, line, opt.crit, T.buffP, T.dmgPct, opt.spec, rp, opt.fixed !== false, opt.weapon, PK ? clsPct(m, opt.card || null, opt.bomb) : 0);
+      if (opt.luck) d = Math.floor(d * opt.luck);
       if (opt.sec) d = Math.floor(d * ZONE_SEC);
       if (opt.x2) d *= 2;
       if (m.mech && m.mech.hardSkin && shieldTotal() <= 0) d = Math.floor(d * m.mech.hardSkin / 100);
@@ -2323,6 +2460,9 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       const x2 = !pourpreUsed && c.hasDmg && !c.weapon; if (x2) pourpreUsed = true; // Pourpre : le premier sort de dégâts du combat ×2
       const critArg = crit ? ((c.crit && c.crit.length) ? true : 'boost') : false;
       const lines = crit && c.crit ? c.crit : c.eff;
+      if (PK && c.hasDmg) { C.att++; C.cur = { portal: PK === 'eliotrope' && C.att % 2 === 0, lance: PK === 'forgelance' && !C.firstDone && !c.weapon }; } else C.cur = null;
+      C.inTurn = true;
+      let luck = 1; if (ECA && !c.weapon && c.hasDmg) { const r = RND(); luck = r < 0.32 ? 2 : r < 0.34 ? 0.5 : 1; } // Chance d'Ecaflip
       const spec = !c.weapon && c.hasDmg && RND() < specP;  // Vision spectrale : tout le sort est doublé (toutes cibles et lignes, vérifié dans le journal)
       if (c.hasDmg && !c.weapon) {
         const el = mainEl(c), sh = mv('shockPct', 0);
@@ -2336,10 +2476,10 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         if (chosen && l.chance && l !== chosen[0] && !(crit && c.crit)) continue;
         if (l.k === 'dmg' || l.k === 'steal') {
           const withFixed = c.weapon ? true : first; first = false;
-          if (l.zone) { if (!tgt || !tgt.alive) tgt = target(); for (const m of [tgt, ...mons.filter(x => x !== tgt)]) if (m && m.alive) { hit(m, l, c.name, { crit: critArg, spec, fixed: withFixed, weapon: c.weapon, sec: m !== tgt, x2 }); } }
+          if (l.zone) { if (!tgt || !tgt.alive) tgt = target(); for (const m of [tgt, ...mons.filter(x => x !== tgt)]) if (m && m.alive) { hit(m, l, c.name, { crit: critArg, spec, fixed: withFixed, weapon: c.weapon, sec: m !== tgt, x2, card: c, luck }); } }
           else {
             if (!tgt || !tgt.alive) tgt = target(); if (!tgt) break;
-            const r = hit(tgt, l, c.name, { crit: critArg, spec, fixed: withFixed, weapon: c.weapon, x2 });
+            const r = hit(tgt, l, c.name, { crit: critArg, spec, fixed: withFixed, weapon: c.weapon, x2, card: c, luck });
             if (l.k === 'steal') healP(Math.floor(r / 2));
           }
         } else if (l.k === 'dmgCasterHp') {
@@ -2363,7 +2503,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
           P.shields.push({ value: Math.min(amount, room), turns: l.dur || 1 });
         } else if ((l.k === 'heal' || l.k === 'healPct') && l.tgt === 'self') {
           if (!c.hasDmg) { if (T.sustainLeft <= 0 && !sustainUsed) continue; sustainUsed = true; }
-          const amount = Math.floor(l.k === 'healPct' ? maxHp * l.max / 100 : (l.max + (S.soins || 0)));
+          const amount = Math.floor((l.k === 'healPct' ? maxHp * l.max / 100 : (l.max + (S.soins || 0))) * (PK === 'eniripsa' ? 1 + 0.09 * C.n : 1));
           healP(amount);
         } else if (l.k === 'apRemove' && l.tgt === 'enemy') {
           const n = l.max; if (n <= 0) continue;
@@ -2372,6 +2512,9 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         } else if (l.k === 'apGain') { if (l.now) T.apNow = (T.apNow || 0) + l.max; else P.apNext += l.max; }
       }
       if (sustainUsed) T.sustainLeft--;
+      if (PK && c.hasDmg && !c.weapon) { const t0 = tgt && tgt.alive ? tgt : null; C.lastTgt = tgt || null;
+        if (PK === 'sadida' && t0) { t0.poison = t0.poison || []; if (t0.poison.length < 4) t0.poison.push(3); else { t0.poison.sort((a, b) => a - b); t0.poison[0] = 3; } } }
+      C.inTurn = false;
     }
   }
 
@@ -2452,7 +2595,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     if (mech.shockPct) w.push(`l'auto n'alterne pas les éléments (Onde de choc)`);
     return w;
   }
-  const api = { deriveStats, setAutoOrder: v => { AUTO_ORDER = v; }, setTuning: o => { if (o.crit != null) CRIT_MULT = o.crit; if (o.zoneSec != null) ZONE_SEC = o.zoneSec; if (o.weaponLast != null) WEAPON_LAST = o.weaponLast; if (o.weaponMode) WEAPON_MODE = o.weaponMode; }, CLASS_PASSIVE, dofusFx, forgePctFor, forgeDaysTo, forgeXpAt, diffForFloor, bestiaryEntries, mechFromEntries, mechText, autoWarnings, itemStats, weaponWithFusion, tierCost, allocCost, pointsTotal, computeStats, prepCard, weaponCard, simulateFight, runMany, STAT_TIERS, CARAC_OF_EL, EL_NAMES, RES_PCT, RES_FIX };
+  const api = { BREED_KEY, BREED_NAME, CLASS_SPECTRAL, deriveStats, setAutoOrder: v => { AUTO_ORDER = v; }, setTuning: o => { if (o.crit != null) CRIT_MULT = o.crit; if (o.zoneSec != null) ZONE_SEC = o.zoneSec; if (o.weaponLast != null) WEAPON_LAST = o.weaponLast; if (o.weaponMode) WEAPON_MODE = o.weaponMode; }, CLASS_PASSIVE, dofusFx, forgePctFor, forgeDaysTo, forgeXpAt, diffForFloor, bestiaryEntries, mechFromEntries, mechText, autoWarnings, itemStats, weaponWithFusion, tierCost, allocCost, pointsTotal, computeStats, prepCard, weaponCard, simulateFight, runMany, STAT_TIERS, CARAC_OF_EL, EL_NAMES, RES_PCT, RES_FIX };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.RPG = api;
 })(__labo);
   return __labo.RPG; })(); /*__ENGINE_END__*/
@@ -3689,7 +3832,7 @@ function memoStoreKey(){return 'labo-memo-'+LPROF}
 function memoLoad(){try{return JSON.parse(localStorage.getItem(memoStoreKey())||'[]',(k,v)=>v==='__INF__'?Infinity:v)||[]}catch(e){return []}}
 function memoSave(list){const js=x=>JSON.stringify(x,(k,v)=>v===Infinity?'__INF__':v);let l=list.slice(0,30);while(l.length){try{localStorage.setItem(memoStoreKey(),js(l));return}catch(e){l=l.slice(0,l.length-1)}}try{localStorage.removeItem(memoStoreKey())}catch(e){}}
 function dataSig(d){const m=d.meta||{};return fnv(JSON.stringify([m.level,m.prestige,m.breedId,m.forge&&m.forge.level,m.discordBonus,m.scrolls,(d.items||[]).map(i=>i.id+'/'+(i.f||0)),(d.worn||[]).map(i=>i.id+'/'+(i.f||0)),(d.cards||[]).map(c=>c.key),Object.keys(d.setBonus||{}).length]))}
-function partSig(o){const c=Object.assign({rev:"2026-10-11b"},o);delete c.onProgress;delete c.seed;delete c.monsters;delete c.sustain;delete c.noSteal;delete c._pv;return fnv(JSON.stringify(c))}
+function partSig(o){const c=Object.assign({rev:"2026-10-11c"},o);delete c.onProgress;delete c.seed;delete c.monsters;delete c.sustain;delete c.noSteal;delete c._pv;return fnv(JSON.stringify(c))}
 function packSig(kind,v){return fnv([kind,v,v==='asc-poly'?ascTargetFloor():'',kind==='opt'?$('#oDiff').value:$('#aDiff').value].join('|'))}
 function optsSig(o){const c=Object.assign({},o);delete c.onProgress;delete c.seed;delete c._pv;return fnv(JSON.stringify(c))}
 function goalSig(kind,o){return kind+'|'+o.objective+'|'+fnv(JSON.stringify(o.monsters))}
@@ -3703,8 +3846,14 @@ function markReady(sel,kind){if(!sel)return;try{const l=memoLoad();if(!l.length)
   for(const o of sel.options){o.dataset.t=o.textContent.replace(/^✓ /,'');const ok=ms.size>0&&ms.has(packSig(kind,o.value));o.textContent=(ok?'✓ ':'')+o.dataset.t;if(ok)n++}
   const note=document.getElementById(kind==='opt'?'oReady':'aReady');if(note)note.textContent=n?`✓ = résultat déjà calculé avec ces réglages (affiché tout de suite). ${n} prêt${n>1?'s':''}.`:''}catch(e){}}
 function memoNote(el,t,rerun){el.innerHTML=`Résultat mémorisé du ${new Date(t).toLocaleString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} : rien n'a changé depuis (équipement, cartes, réglages, modèle). <button type="button">Recalculer quand même</button>`;el.querySelector('button').onclick=rerun}
-function optOptsFor(v){const pack=v==='poly'?polyPack():packs[+v];if(!pack)return null;const mult=+$('#oDiff').value;const deckIdx=+$('#oStart').value;
+function optOptsFor(v){const krala=$('#oObj').value==='kralamoure';const pack=krala?kralaPack():v==='poly'?polyPack():packs[+v];if(!pack)return null;const mult=krala?1:+$('#oDiff').value;const deckIdx=+$('#oStart').value;
   const opts={optGear:$('#oGear').checked,optAlloc:$('#oAlloc').checked,optDeck:$('#oDeck').checked,deckSize:deckSlots(),objective:$('#oObj').value,sustain:susOf('o'),noSteal:!!$('#oInv').checked,...fightOpts('o'),effort:+segVal('oEffort'),monsters:monstersFor(pack,mult),ctx,start:{gear:curGear,alloc:curAlloc,deck:DATA.meta.decks[deckIdx]}};return {pack,mult,deckIdx,opts}}
+// Kralamoure de la Faille : boss à ~100 M de PV qu'on ne tue pas ; on cumule un maximum de dégâts en 10 tours.
+// Stats relevées en combat (monstre 423) ; si le perso ne l'a jamais croisé, on prend ces valeurs.
+const KRALA_REF={name:'Kralamoure Géant',grade:1,level:200,hpMin:99999458,hpMax:99999458,atk:383,element:3,pattern:['attack','attack','heavy','rage','attack','heavy'],stats:{resPctNeutre:20,resPctTerre:20,resPctFeu:20,resPctEau:30,resPctAir:20},isBoss:true};
+function kralaPack(){const seen=(DATA.monsters||[]).filter(m=>/^Kralamoure G/i.test(m.name)).sort((a,b)=>(b.seen||0)-(a.seen||0))[0];const def=Object.assign({},seen||KRALA_REF,{fixedStart:false});
+  const fights=(DATA.fights||[]).filter(f=>(f.mons||[]).some(x=>/^Kralamoure G/i.test(x)));
+  return {key:'krala',label:'Kralamoure de la Faille · 10 tours',defs:[def],fights,krala:true}}
 function runOpt(force){
   const B=optOptsFor($('#oPack').value);if(!B)return;const {pack,mult,deckIdx,opts}=B;opts._pv=$('#oPack').value;
   if(!opts.optGear&&!opts.optAlloc&&!opts.optDeck){$('#oStatus').textContent='Coche au moins une chose à optimiser.';return}
@@ -3731,7 +3880,8 @@ let lastSummary='';
 let lastOpt=null;
 function renderOpt(res,opts,pack,mult,deckIdx){lastOpt=res;
   const a=res.start.r,b=res.final.r,Sa=res.start.S,Sb=res.final.S;
-  $('#oKpis').innerHTML=[
+  if(opts.objective==='kralamoure'){const T=10,da=a.avgDmg||0,db=b.avgDmg||0;$('#oKpis').innerHTML=[['Dégâts en '+T+' tours',fmt(db),`avant ${fmt(da)} · ${delta(da,db,false,0)}`],['Par tour',fmt(db/T),`avant ${fmt(da/T)}`],['Gain',da?fmt((db/da-1)*100,1)+' %':'—','vs build actuel'],['PV perdus',fmt(b.avgHpLost),`avant ${fmt(a.avgHpLost)} · PV max ${fmt(Sb._maxHp)}`]].map(([x,y,z])=>`<div class="kpi"><span class="lbl">${x}</span><span class="v">${y}</span><span class="d muted">${z}</span></div>`).join('')}
+  else $('#oKpis').innerHTML=[
     ['Tours moyens',isFinite(b.avgRounds)?fmt(b.avgRounds,2):'—',`avant ${isFinite(a.avgRounds)?fmt(a.avgRounds,2):'—'} · ${delta(a.avgRounds,b.avgRounds,true)}`],
     ['Victoires',fmt(b.winRate*100,1)+' %',`avant ${fmt(a.winRate*100,1)} % · ${delta(a.winRate*100,b.winRate*100,false,1,' pts')}`],
     ['PV perdus',fmt(b.avgHpLost),`avant ${fmt(a.avgHpLost)} · ${delta(a.avgHpLost,b.avgHpLost,true,0)}`],
@@ -3740,7 +3890,7 @@ function renderOpt(res,opts,pack,mult,deckIdx){lastOpt=res;
   const st=res.state;let html='';const lines=[];
   if(res.saturated){$('#oDetails').innerHTML=`<div class="alert"><strong>Adversaire trop facile pour comparer des builds.</strong><span>Ton build actuel gagne déjà ${fmt(a.winRate*100,1)} % des combats en ${fmt(a.avgRounds,2)} tour, sans presque perdre de PV : n'importe quel stuff ou deck ferait pareil, et le Labo ne propose donc aucun changement. Choisis un adversaire plus dur (un boss, un étage, un groupe plus fort) ou monte la difficulté.</span><button class="btn" type="button" id="oForce" style="margin-top:6px;justify-self:start">Optimiser quand même</button></div>`;lastSummary='';$('#oForce').onclick=()=>{window.__forceSat=true;runOpt(true)};return}
   lines.push(`Labo RpgMasters — ${pack.label} ×${mult} — ${(O.ORIENT[opts.objective]||{}).label||opts.objective}`);
-  lines.push(`Tours ${fmt(a.avgRounds,2)} → ${fmt(b.avgRounds,2)} · victoires ${fmt(a.winRate*100,1)} % → ${fmt(b.winRate*100,1)} %`);
+  lines.push(opts.objective==='kralamoure'?`Dégâts en 10 tours ${fmt(a.avgDmg||0)} → ${fmt(b.avgDmg||0)}`:`Tours ${fmt(a.avgRounds,2)} → ${fmt(b.avgRounds,2)} · victoires ${fmt(a.winRate*100,1)} % → ${fmt(b.winRate*100,1)} %`);
   if(opts.optGear){
     let rows='',n=0;
     for(const [s] of O.SLOTS){const x=curGear[s],y=st.gear[s];const ch=(x&&x.id)!==(y&&y.id)||(x&&x.f)!==(y&&y.f);if(ch){n++;lines.push(`${SLOT_LABEL[s]} : ${x?x.n:'vide'} → ${y?y.n+(y.f?' '+tierLabel(y.f):''):'vide'}`)}
@@ -3817,9 +3967,9 @@ $('#simCodeLoad').onclick=()=>{const msg=$('#simCodeMsg');try{const d=O.decodeCo
   else{const keys=d.ids.map(i=>DATA.cards.find(c=>c.id===i)).filter(Boolean).map(c=>c.key);simOverride.deck=keys;const vc=Object.fromEntries((vitrineData().cards||[]).map(c=>[c.id,c]));const missing=d.ids.filter(i=>!DATA.cards.some(c=>c.id===i)).map(i=>vc[i]?vc[i].n:'#'+i);msg.textContent=`Deck chargé : ${keys.length} cartes sur ${d.ids.length} présentes dans ta collection`+(missing.length?` (absentes : ${missing.join(', ')})`:'')+'.'}
   runSim()}catch(e){msg.textContent='Code refusé : '+e.message}};
 $('#simCodeReset').onclick=()=>{simOverride={gear:null,deck:null};$('#simCodeMsg').textContent='Ton build actuel est rétabli.';runSim()};
-const OBJ_NOTES={equilibre:'Équilibre entre finir vite et perdre peu de PV, testé aussi sur ton adversaire le plus dur renforcé : un build qui farme vite sans casser sur un mauvais tirage.',vitesse:'Minimise le nombre de tours pour gagner.',survie:'Minimise les PV perdus, quitte à taper moins fort.',sagesse:'Maximise sagesse ÷ tours, avec au moins 95 % de victoires. Hypothèse : l\'XP gagnée suit la sagesse comme sur Dofus.',pp:'Maximise prospection ÷ tours, avec au moins 95 % de victoires. Prospection = 100 + PP des objets + Chance/10 (510 pour toi, comme affiché en jeu).',multi:'Deck limité aux cartes qui tapent dans 2 éléments ou plus (plus les cartes utilitaires).',ascension:'Survie face à des monstres renforcés : la difficulté passe à ×3, ajuste-la selon ton étage.'};
+const OBJ_NOTES={kralamoure:'Full DPS : maximise les dégâts cumulés en 10 tours sur le Kralamoure de la Faille (il ne meurt pas). La survie ne compte que si tu risques de mourir avant la fin. Le groupe de monstres et la difficulté sont ignorés.',equilibre:'Équilibre entre finir vite et perdre peu de PV, testé aussi sur ton adversaire le plus dur renforcé : un build qui farme vite sans casser sur un mauvais tirage.',vitesse:'Minimise le nombre de tours pour gagner.',survie:'Minimise les PV perdus, quitte à taper moins fort.',sagesse:'Maximise sagesse ÷ tours, avec au moins 95 % de victoires. Hypothèse : l\'XP gagnée suit la sagesse comme sur Dofus.',pp:'Maximise prospection ÷ tours, avec au moins 95 % de victoires. Prospection = 100 + PP des objets + Chance/10 (510 pour toi, comme affiché en jeu).',multi:'Deck limité aux cartes qui tapent dans 2 éléments ou plus (plus les cartes utilitaires).',ascension:'Survie face à des monstres renforcés : la difficulté passe à ×3, ajuste-la selon ton étage.'};
 ['1','2','3','4'].forEach(e=>OBJ_NOTES['mono:'+e]='Deck limité aux cartes d\'un seul élément (plus les cartes utilitaires sans dégâts). Les cartes interdites de ton deck de départ sont remplacées.');
-$('#oObj').onchange=e=>{const v=e.target.value;$('#oObjNote').textContent=OBJ_NOTES[v]||'';if(v==='ascension'){$('#oDiff').value=3;$('#oDiffV').textContent=dv(3)}};
+$('#oObj').onchange=e=>{const v=e.target.value;$('#oObjNote').textContent=OBJ_NOTES[v]||'';$('#oPack').disabled=$('#oDiff').disabled=v==='kralamoure';if(v==='ascension'){$('#oDiff').value=3;$('#oDiffV').textContent=dv(3)}};
 $('#oObjNote').textContent=OBJ_NOTES.equilibre;
 
 
