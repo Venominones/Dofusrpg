@@ -1479,7 +1479,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     if (ARCH && opts.optDeck) {
       if (opts.optAlloc) { const a = {}; let b = total; a.vitalite = Math.floor(total * 0.25); b -= a.vitalite; for (let step = 0; step < 3000 && b > 0; step++) { const s = ARCH.cars.reduce((x, y) => ((a[x] || 0) <= (a[y] || 0) ? x : y)); const c = R.tierCost(R.STAT_TIERS[s], a[s] || 0, 1); if (c > b) break; a[s] = (a[s] || 0) + 1; b -= c; } a.vitalite += b; cur = Object.assign({}, cur, { alloc: a }); }
       const S0 = buildState(data, cur, ctx).S;
-      const size = opts.deckSize || cur.deck.length;
+      const size = Math.min(opts.deckSize || cur.deck.length, MIN_DECK + 2); // deck compact au départ : les cartes en plus ne sont ajoutées que si elles aident (voir plus bas)
       const dmg = useful.filter(c => cardEls(c).length).sort((x, y) => cardPower(y, S0) - cardPower(x, S0));
       const util = useful.filter(c => !cardEls(c).length);
       const pickU = util.filter(c => c.eff.some(l => l.k === 'shieldHp' || l.k === 'shieldLvl' || l.k === 'apGain')).slice(0, 2);
@@ -1498,14 +1498,16 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     }
     // Emplacements libres (ex. après un Prestige) : on les remplit avec la meilleure carte disponible
     if (opts.optDeck && opts.deckSize && cur.deck.length < opts.deckSize) {
+      const nF = Math.max(40, Math.floor(N / 2)); let baseF = E(cur, nF).score;
       while (cur.deck.length < opts.deckSize) {
         const pool = useful.filter(c => !cur.deck.includes(c.key));
         if (!pool.length) break;
         const sample = pool.sort(() => Math.random() - 0.5).slice(0, 14);
         let bc = null, be = null;
-        for (const c of sample) { const cand = Object.assign({}, cur, { deck: cur.deck.concat([c.key]) }); const e = E(cand, Math.max(40, Math.floor(N / 2))); if (!be || e.score > be.score) { be = e; bc = cand; } }
-        if (!bc) break;
-        cur = bc;
+        for (const c of sample) { const cand = Object.assign({}, cur, { deck: cur.deck.concat([c.key]) }); const e = E(cand, nF); if (!be || e.score > be.score) { be = e; bc = cand; } }
+        // une carte de plus dilue la pioche : on ne l'ajoute que si elle améliore vraiment le combat (le deck n'a pas à être plein)
+        if (!bc || be.score <= baseF + 0.5) break;
+        cur = bc; baseF = be.score;
       }
       best = E(cur);
     }
@@ -1596,8 +1598,27 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         T = Math.max(2, T * 0.985);
         if (it % 5 === 0) tick('Équipement', it, budget.gearIter, best);
       }
+      fxPass();
       doAlloc(); // les caracs dépendent du stuff
     };
+    // Dofus à effet (Émeraude, Ivoire, Vulbis…) : la recherche aléatoire peut passer à côté (6 emplacements, beaucoup de candidats) ;
+    // on essaie donc chacun, systématiquement, dans chaque emplacement de Dofus, et on garde le meilleur échange.
+    function fxPass() {
+      const pool = itemPool(data);
+      const fx = (pool.dofus || []).filter(it => (it.lvl || 0) <= ctx.level && Object.keys(R.dofusFx([it.n || ''])).some(k => k !== 'kaliptus' && k !== 'dofawa'));
+      const dSlots = SLOTS.filter(([, t]) => t === 'dofus').map(([sl]) => sl);
+      let base = E(cur).score;
+      for (let round = 0; round < 2; round++) {
+        let improved = false;
+        for (const it of fx) {
+          if (dSlots.some(sl => cur.gear[sl] && cur.gear[sl].id === it.id)) continue;
+          let bestC = null, bestS = base;
+          for (const sl of dSlots) { const g2 = Object.assign({}, cur.gear, { [sl]: it }); if (!gearValid(g2)) continue; const cand = Object.assign({}, cur, { gear: g2 }); const e = E(cand); if (e.score > bestS + 0.5) { bestS = e.score; bestC = cand; } }
+          if (bestC) { cur = bestC; base = bestS; improved = true; }
+        }
+        if (!improved) break;
+      }
+    }
     gearStage();
 
     // --- 3. Deck (échanges gloutons) ---
@@ -3861,7 +3882,7 @@ function memoStoreKey(){return 'labo-memo-'+LPROF}
 function memoLoad(){try{return JSON.parse(localStorage.getItem(memoStoreKey())||'[]',(k,v)=>v==='__INF__'?Infinity:v)||[]}catch(e){return []}}
 function memoSave(list){const js=x=>JSON.stringify(x,(k,v)=>v===Infinity?'__INF__':v);let l=list.slice(0,30);while(l.length){try{localStorage.setItem(memoStoreKey(),js(l));return}catch(e){l=l.slice(0,l.length-1)}}try{localStorage.removeItem(memoStoreKey())}catch(e){}}
 function dataSig(d){const m=d.meta||{};return fnv(JSON.stringify([m.level,m.prestige,m.breedId,m.forge&&m.forge.level,m.discordBonus,m.scrolls,(d.items||[]).map(i=>i.id+'/'+(i.f||0)),(d.worn||[]).map(i=>i.id+'/'+(i.f||0)),(d.cards||[]).map(c=>c.key),Object.keys(d.setBonus||{}).length]))}
-function partSig(o){const c=Object.assign({rev:"2026-10-11e"},o);delete c.onProgress;delete c.seed;delete c.monsters;delete c.sustain;delete c.noSteal;delete c._pv;return fnv(JSON.stringify(c))}
+function partSig(o){const c=Object.assign({rev:"2026-10-11f"},o);delete c.onProgress;delete c.seed;delete c.monsters;delete c.sustain;delete c.noSteal;delete c._pv;return fnv(JSON.stringify(c))}
 function packSig(kind,v){return fnv([kind,v,v==='asc-poly'?ascTargetFloor():'',kind==='opt'?$('#oDiff').value:$('#aDiff').value].join('|'))}
 function optsSig(o){const c=Object.assign({},o);delete c.onProgress;delete c.seed;delete c._pv;return fnv(JSON.stringify(c))}
 function goalSig(kind,o){return kind+'|'+o.objective+'|'+fnv(JSON.stringify(o.monsters))}
