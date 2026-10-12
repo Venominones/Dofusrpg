@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.12.15
+// @version      2.12.16
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -1419,6 +1419,11 @@
   setInterval(() => { try { const a = self.__next_f; if (Array.isArray(a) && a.length !== detectProfile.n) { detectProfile.n = a.length; const txt = a.map(x => Array.isArray(x) ? x[1] || '' : '').join(''); detectProfile(txt); onPayload(txt); } } catch (e) {} }, 3000);
 
   // Interception passive de fetch : on lit une copie de la réponse, la requête n'est pas modifiée
+  // Runes (patch du 12/10) : en ouvrant l'onglet Runes de l'inventaire, on garde uniquement les objets qui parlent de runes (rien d'autre de la réponse)
+  const RUNE_SNAP = 'labo-runes-snap';
+  const isRuneObj = o => o && typeof o === 'object' && !Array.isArray(o) && (Object.keys(o).some(k => /rune/i.test(k)) || /^Rune /.test(String(o.n || o.name || o.label || '')));
+  function runeHits(page) { try { return page.all().filter(isRuneObj).concat(page.raw().filter(isRuneObj)); } catch (e) { return []; } }
+  function runeSnap(t, u) { try { const hits = runeHits(parsePage(t)); if (!hits.length) return; const j = JSON.stringify({ t: Date.now(), u: String(u).replace(/^https?:\/\/[^/]+/, '').slice(0, 120), hits }); if (j.length < 400000) localStorage.setItem(RUNE_SNAP, j); } catch (e) {} }
   const origFetch = window.fetch;
   window.fetch = async function (...args) {
     const res = await origFetch.apply(this, args);
@@ -1428,6 +1433,7 @@
       if (method === 'POST') res.clone().text().then(t => { detectProfile(t); onPayload(t); }).catch(() => {});
       else if (/x-component/.test(res.headers && res.headers.get ? (res.headers.get('content-type') || '') : '')) res.clone().text().then(t => { detectProfile(t); onPayload(t); }).catch(() => {});
       const u0 = String(req && req.url || req);
+      if (/\/inventaire/.test(location.pathname)) res.clone().text().then(t => { if (/rune/i.test(t)) runeSnap(t, u0); }).catch(() => {});
       if (/\/bestiaire/.test(location.pathname) && /onglet=objets/.test(u0)) res.clone().text().then(t => harvestItems(t, 'page')).catch(() => {});
     } catch (e) {}
     return res;
@@ -1466,7 +1472,9 @@
     // Runes (patch du 12/10) : format encore inconnu → on garde ce qui porte « rune » dans son nom (objet runé ou stock de runes), sans rien supposer
     const runeKeys = o => o && typeof o === 'object' ? Object.keys(o).filter(k => /rune/i.test(k)) : [];
     const runesOf = x => { const o = {}; for (const src of [x, x.item]) for (const k of runeKeys(src)) o[k] = src[k]; return Object.keys(o).length ? o : undefined; };
-    const runesProbe = (() => { try { const hits = inv.all().filter(p => runeKeys(p).length); const j = JSON.stringify(hits); return { invKeys: Object.keys(I), hits: j.length < 300000 ? hits : j.slice(0, 300000) }; } catch (e) { return { err: String(e) }; } })();
+    let runesProbe = (() => { try { const hits = runeHits(inv); const j = JSON.stringify(hits); return { invKeys: Object.keys(I), hits: j.length < 300000 ? hits : j.slice(0, 300000) }; } catch (e) { return { err: String(e) }; } })();
+    if (!(runesProbe.hits || []).length) for (const path of ['/inventaire?onglet=runes', '/inventaire?tab=runes', '/inventaire/runes']) { try { const pg = await rsc(path); const h = runeHits(pg); if (h.length) { const j = JSON.stringify(h); runesProbe.hits = j.length < 300000 ? h : j.slice(0, 300000); runesProbe.from = path; break; } } catch (e) {} }
+    try { runesProbe.snap = JSON.parse(localStorage.getItem(RUNE_SNAP) || 'null'); } catch (e) {}
     const it = (x) => ({ id: x.item.id, n: x.item.n, lvl: x.item.lvl, s: x.item.s, r: x.item.r, setId: x.item.setId || null, st: x.item.st, w: x.item.w || null, icon: x.item.icon || x.item.gfx || null, ru: runesOf(x), uid: x.uid || x.instanceId || x.id || undefined });
     return {
       meta: { scriptV: (typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) || '2.11.10', profile: PROFILE, forge, companion, level: I.level || 200, prestige: H.prestige || 0, breedId: D.breedId, deckSize: D.deckSize, discordBonus: 5, scrolls: I.scrollValues || {}, rows: Pp.rows.map(r => ({ key: r.key, base: r.base, bonus: r.bonus, tiers: r.tiers })), pointsFree: Pp.pointsFree, decks: D.initialDecks, deckNames: D.initialNames, active: D.initialActive, ranked: D.initialRanked || null, presets: (() => { try { return findPresets(perso) || presetsFromDom(I, best); } catch (e) { return null; } })(), diag: (() => { try { let ai = null; try { ai = JSON.parse(localStorage.getItem('labo-allitems-diag') || 'null'); } catch (e) {} return { allItems: ai }; } catch (e) { return null; } })(), runesProbe },
