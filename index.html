@@ -359,7 +359,7 @@ th,td{border-bottom-color:var(--line)}
         <div class="field" id="oFloorWrap" hidden><label for="oFloor">Étage visé (Ascension)</label><input type="number" id="oFloor" min="1" max="200" placeholder="auto"><span class="note">Vide = l'étage qui suit ton record. Les boss de tes derniers étages sont ramenés à la puissance de cet étage, avec toutes les mécaniques.</span></div>
 <div class="field"><span class="lbl">Survie autorisée</span><label class="chk"><input type="checkbox" id="oHeal" checked>Soins</label><label class="chk"><input type="checkbox" id="oShield" checked>Boucliers</label><label class="chk"><input type="checkbox" id="oSteal" checked>Vol de vie (cartes et arme)</label></div>
         <div class="field" hidden><span class="lbl">Mécanique de boss</span><label class="chk"><input type="checkbox" id="oInv">Soins inversés à partir du tour <input type="number" id="oInvT" min="1" max="30" value="3" style="width:4.2em;padding:3px 6px"></label><label class="chk"><input type="checkbox" id="oInvS">Les boucliers blessent aussi</label><span class="note">Le vol de vie et les soins te retirent des PV au lieu d'en rendre.</span></div>
-        <div class="field"><label for="oSpell">Type de sorts</label><select id="oSpell"><option value="">Tous</option><option value="zone">Zone</option><option value="mono">Mono-cible</option><option value="steal">Vol de vie</option><option value="sustain">Bouclier / Soin</option><option value="apremove">Retrait PA</option></select><div class="seg" id="oSpellMode" style="margin-top:4px"><button type="button" data-v="strict" aria-pressed="true">Strict</button><button type="button" data-v="pref" aria-pressed="false">Préférence</button></div><span class="note">Strict : tous les sorts de dégâts du deck sont de ce type (boucliers, PA… restent permis). Préférence : l'optimiseur en met le plus possible sans sacrifier le résultat.</span></div>
+        <div class="field"><label for="oSpell">Type de sorts</label><select id="oSpell"><option value="">Tous</option><option value="zone">Zone</option><option value="mono">Mono-cible</option><option value="steal">Vol de vie</option><option value="sustain">Bouclier / Soin</option><option value="apremove">Retrait PA</option><option value="oneline">1 ligne (bonus +50 à +150 %)</option></select><div class="seg" id="oSpellMode" style="margin-top:4px"><button type="button" data-v="strict" aria-pressed="true">Strict</button><button type="button" data-v="pref" aria-pressed="false">Préférence</button></div><span class="note">Strict : tous les sorts de dégâts du deck sont de ce type (boucliers, PA… restent permis). Préférence : l'optimiseur en met le plus possible sans sacrifier le résultat.</span></div>
         <div class="field"><span class="lbl">À inclure absolument</span>
           <div class="lockrow"><input type="search" id="oLockCard" placeholder="+ Sort… (clique ou tape pour chercher)" autocomplete="off" aria-label="Sort à inclure"><div class="lockdd" id="oLockCardL" hidden></div></div>
           <div class="lockrow"><input type="search" id="oLockItem" placeholder="+ Équipement… (clique ou tape pour chercher)" autocomplete="off" aria-label="Équipement à inclure"><div class="lockdd" id="oLockItemL" hidden></div></div>
@@ -410,7 +410,7 @@ th,td{border-bottom-color:var(--line)}
         <h3 style="margin:4px 0 0">Deck <span class="note" id="mbDeckN"></span></h3>
         <div id="mbDeck"></div>
         <details><summary>Ajouter des sorts</summary>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0"><input type="search" id="mbCardQ" placeholder="Nom du sort…" style="flex:1;min-width:140px"><select id="mbCardType"><option value="">Tous types</option><option value="zone">Zone</option><option value="mono">Mono-cible</option><option value="steal">Vol de vie</option><option value="sustain">Bouclier / Soin</option><option value="apremove">Retrait PA</option></select></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0"><input type="search" id="mbCardQ" placeholder="Nom du sort…" style="flex:1;min-width:140px"><select id="mbCardType"><option value="">Tous types</option><option value="zone">Zone</option><option value="mono">Mono-cible</option><option value="steal">Vol de vie</option><option value="sustain">Bouclier / Soin</option><option value="apremove">Retrait PA</option><option value="oneline">1 ligne (bonus +50 à +150 %)</option></select></div>
           <div id="mbCards" class="mb-list" style="max-height:260px"></div>
         </details>
         <h3 style="margin:4px 0 0">Codes et sauvegardes</h3>
@@ -446,7 +446,7 @@ th,td{border-bottom-color:var(--line)}
         <p class="note">Objectif unique : gagner. Ni XP ni butin, seulement le taux de victoire, puis le moins de PV perdus. Le build est cherché dans ton stock.</p>
         <div class="field"><label for="aPack">Étage visé (facultatif)</label><select id="aPack"></select><label class="chk"><input type="checkbox" id="aAll">Autres groupes hors Ascension</label></div>
         <div class="field" id="aFloorWrap"><label for="aFloorT">Étage de référence du build polyvalent</label><input type="number" id="aFloorT" min="1" max="200" class="slots-no"><span class="note" id="aFloorNote"></span></div>
-        <div class="field"><label for="aSpell">Type de sorts</label><select id="aSpell"><option value="">Tous</option><option value="zone">Zone</option><option value="mono">Mono-cible</option><option value="steal">Vol de vie</option><option value="sustain">Bouclier / Soin</option><option value="apremove">Retrait PA</option></select><div class="seg" id="aSpellMode" style="margin-top:4px"><button type="button" data-v="strict" aria-pressed="true">Strict</button><button type="button" data-v="pref" aria-pressed="false">Préférence</button></div><span class="note">Strict : tous les sorts de dégâts du deck sont de ce type (boucliers, PA… restent permis). Préférence : l'optimiseur en met le plus possible sans sacrifier le résultat.</span></div>
+        <div class="field"><label for="aSpell">Type de sorts</label><select id="aSpell"><option value="">Tous</option><option value="zone">Zone</option><option value="mono">Mono-cible</option><option value="steal">Vol de vie</option><option value="sustain">Bouclier / Soin</option><option value="apremove">Retrait PA</option><option value="oneline">1 ligne (bonus +50 à +150 %)</option></select><div class="seg" id="aSpellMode" style="margin-top:4px"><button type="button" data-v="strict" aria-pressed="true">Strict</button><button type="button" data-v="pref" aria-pressed="false">Préférence</button></div><span class="note">Strict : tous les sorts de dégâts du deck sont de ce type (boucliers, PA… restent permis). Préférence : l'optimiseur en met le plus possible sans sacrifier le résultat.</span></div>
         <div class="field"><span class="lbl">Style du build</span><div class="seg" id="aStyle"><button type="button" data-v="ascension" aria-pressed="true">Équilibré</button><button type="button" data-v="ascension-tank" aria-pressed="false">Tank</button><button type="button" data-v="ascension-burst" aria-pressed="false">Dégâts</button></div><span class="note" id="aStyleNote">Équilibré : gagner le plus souvent, sans sacrifier ni les PV ni la vitesse.</span></div>
         <div class="field"><label for="aDiff">Renfort des monstres <span class="mono" id="aDiffV">×1,0</span></label><input type="range" id="aDiff" min="1" max="6" step="0.25" value="1"><span class="note">Laisse ×1 pour un étage déjà enregistré. Monte-le pour anticiper un étage plus dur.</span></div>
         <div class="field"><span class="lbl">Survie autorisée</span><label class="chk" id="aSusAutoL"><input type="checkbox" id="aSusAuto" checked><span id="aSusAutoT">Auto (selon les mécaniques du boss)</span></label><label class="chk"><input type="checkbox" id="aHeal" checked>Soins</label><label class="chk"><input type="checkbox" id="aShield" checked>Boucliers</label><label class="chk"><input type="checkbox" id="aSteal" checked>Vol de vie (cartes et arme)</label></div>
@@ -775,8 +775,8 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
 
   // gear : [{item, f}] ; ctx : {prestige, discordPct, scrolls, alloc, level, breedId}
   // Dofus à effet spécial (patch du 10/10) : repérés par leur nom
-  const DOFUS_FX = { emeraude: /meraude/i, pourpre: /pourpre/i, turquoise: /turquoise/i, ocre: /ocre/i, vulbis: /vulbis/i, ivoire: /ivoire/i, glaces: /glace/i, ebene: /b[eè]ne/i, kaliptus: /kaliptus/i, tachete: /tachet/i, dofawa: /dofawa/i };
-  function dofusFx(names) { const o = {}; for (const n of names) { if (!/dofus|dofawa|kaliptus/i.test(n)) continue; for (const [k, re] of Object.entries(DOFUS_FX)) if (re.test(n)) o[k] = true; } return o; }
+  const DOFUS_FX = { emeraude: /meraude/i, pourpre: /pourpre/i, turquoise: /turquoise/i, ocre: /ocre/i, vulbis: /vulbis/i, ivoire: /ivoire/i, glaces: /glace/i, ebene: /b[eè]ne/i, kaliptus: /kaliptus/i, tachete: /tachet/i, dofawa: /dofawa/i, jyfus: /jyfus/i, cacao: /cacao/i, cawotte: /cawotte/i, dokille: /dokille/i, dolmanax: /dolmanax/i, veilleurs: /veilleur/i, dotruche: /dotruche/i, domakuro: /domakuro/i, dorigami: /dorigami/i, dofoozbz: /dofoozbz/i, forgelave: /forgelave/i, argente: /argent[ée]/i, cauchemar: /cauchemar/i, dompin: /dom de pin/i, sylvestre: /sylvestre/i }; // patch du 12/10 : passifs des Dofus « mineurs » (hors Abysses)
+  function dofusFx(names) { const o = {}; for (const n of names) { if (!/dofus|dofawa|kaliptus|jyfus|dokille|dolmanax|dotruche|domakuro|dorigami|dofoozbz|dom de pin/i.test(n)) continue; for (const [k, re] of Object.entries(DOFUS_FX)) if (re.test(n)) o[k] = true; } return o; }
   function computeStats(gear, ctx) {
     // Prestige : +25 % par Prestige ; Bouclier de forge : jusqu'à +150 % au niveau 200 (cumul supposé additif, à confirmer)
     const pMult = 1 + 0.25 * (ctx.prestige || 0) + (ctx.forgePct || 0) / 100 + (ctx.companionPct || 0) / 100; // Compagnon (patch du 10/10) : jusqu'à +100 % au niveau 400, cumul supposé additif comme le Bouclier
@@ -827,6 +827,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     s._pp = 100 + (s.prospection || 0) + Math.floor((s.chance || 0) / 10);
     s._dofus = dofusFx(gear.filter(g => g && g.item && (g.item.s === 'dofus' || /dofus/i.test(g.item.n || ''))).map(g => g.item.n || ''));
     if (s._dofus.ebene) s._perfo = Math.min(32.5, s._perfo * 1.3);
+    if (s._dofus.forgelave) s._ero = Math.min(32.5, s._ero * 1.3); // Forgelave : érosion ×1,3 (plafond 32,5 %)
     s._surprise = surpriseChance(s.initiative, ctx.level);
     return s;
   }
@@ -953,6 +954,11 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const mv = (k, d) => { const x = mk(k); return x ? x[k] : d; };
     const every = (k, round) => k > 0 && round % k === 0;
     const rageAt = opts.rageTurn || 0;
+    const dolEl = DF.dolmanax ? 1 + Math.floor(RND() * 4) : 0; let jyfusUsed = false, cacaoTurn = 0, truche = 0; // Dolmanax : élément du jour (inconnu, tiré au hasard), Jyfus 1×/combat, Cacao 1×/tour, Dotruche : bouclier de surplus de soin
+    if (DF.argente) P.shields.push({ value: Math.floor(maxHp * 0.08), turns: 99 }); // Argenté Scintillant : bouclier de 8 % des PV max au début
+    // Pioches en plus (bouton « Piocher ») : réserve plafonnée par la stat Invocations, qui se recharge de 1 par tour (Dofoozbz : 2)
+    const drawCap = Math.max(1, Math.round(S.invocations || 1)); let drawsLeft = drawCap;
+    let olStreak = 0; // Sorts à une seule ligne (patch du 12/10) : +50 %, puis +20 % par tour sans lancer à plusieurs lignes, +150 % au plus ; un lancer à plusieurs lignes (sort ou corps à corps) remet à zéro jusqu'au tour suivant
     const deckBonus = opts.abyss ? 0 : Math.min(25, 5 * Math.max(0, (opts.deck || []).length - 7)); // patch du 12/10 : +5 % de dégâts des sorts par carte au-delà de 7, +25 % au plus (hors Abysses)
     const surprised = !opts.noSurprise && (S._surprise || 0) > 0 && RND() < S._surprise; // ennemis pris de vitesse : ils passent leur premier tour
     for (let round = 1; round <= (opts.maxRounds || 30); round++) {
@@ -967,7 +973,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       while (hand.length < HAND_SIZE + (round === 1 && DF.ocre ? 1 : 0)) { const c = draw(); if (!c) break; hand.push(c); }
       C.firstDone = false; C.ougPa = false; if (PK === 'pandawa' && C.n) P.hp = Math.min(maxHp, P.hp + Math.floor(maxHp * C.n / 100)); // Ivresse : soin non réductible
       T.buffP = 0; T.buffC = 0; T.chainN = 0; T.dmgPct = (S.dmgPctSorts || 0) + deckBonus; S._cb = {};
-      for (const b of pers) if (b.until >= round) { if (b.stat === 'puissance') T.buffP += b.v; else if (b.stat === 'critique') T.buffC += b.v; else if (b.stat === 'dmgPctSorts') T.dmgPct += b.v; else S._cb[b.stat] = (S._cb[b.stat] || 0) + b.v; } T.sustainLeft = SUSTAIN.perTurn; T.weaponUsed = false; T.cards = 0; let drawsLeft = DRAWS_MAX;
+      for (const b of pers) if (b.until >= round) { if (b.stat === 'puissance') T.buffP += b.v; else if (b.stat === 'critique') T.buffC += b.v; else if (b.stat === 'dmgPctSorts') T.dmgPct += b.v; else S._cb[b.stat] = (S._cb[b.stat] || 0) + b.v; } T.sustainLeft = SUSTAIN.perTurn; T.weaponUsed = false; T.cards = 0; if (round > 1) drawsLeft = Math.min(drawCap, drawsLeft + (DF.dofoozbz ? 2 : 1)); T.makuro = !!DF.domakuro; T.makCard = null; T.olBroken = false; T.olNow = 0;
       const invFrom = opts.invertFrom || mv('invertFrom', 0), sealPa = opts.sealPa || mv('sealPa', 0), sealFrom = opts.sealFrom || mv('sealFrom', 1);
       const halfFrom = mv('healHalfFrom', 0);
       T.inv = invFrom > 0 && round >= invFrom; T.invS = T.inv && !!(opts.invertShields || mv('invertShields', false)); T.seal = (sealPa > 0 && round >= sealFrom) ? sealPa : 0;
@@ -987,13 +993,13 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       for (const m of mons) if (m.alive && m.bombs.length) { for (const b of m.bombs) { C.cur = null; hit(m, b, 'Bombe', { bomb: true }); if (PK === 'roublard') C.bombN++; } m.bombs = []; }
       for (let guard = 0; guard < 20; guard++) {
         if (!mons.some(m => m.alive)) break;
-        const cost = c => c.ap + (T.seal && !c.weapon ? T.seal : 0);
+        const cost = c => (c === T.makCard ? Math.max(1, c.ap - 1) : c.ap) + (T.seal && !c.weapon ? T.seal : 0);
         const room = paNeed != null && !opts.auto ? ap - paNeed : ap;
         const capped = !opts.auto && T.cards >= furyCap;
         const opts2 = capped ? [] : hand.filter(c => c !== sealedCard).map(c => ({ c, v: opts.auto ? 0 : valueOf(c) })) /* en auto, l'ordre vient de rank() : inutile d'estimer chaque carte deux fois */.filter(o => cost(o.c) <= room && (opts.auto || o.v > 0));
         if (!T.weaponUsed && opts.weapon && opts.weapon.ap <= room && !(opts.auto && wMode === 'never')) { const wv = opts.auto ? 0 : valueOf(opts.weapon); if (opts.auto || wv > 0) opts2.push({ c: opts.weapon, v: wv }); }
         if (!opts2.length) {
-          if (!capped && drawsLeft > 0 && hand.length < 8) { const c = draw(); drawsLeft--; if (c) { hand.push(c); continue; } }
+          if (!capped && drawsLeft > 0 && hand.length < 8) { const c = draw(); drawsLeft--; if (c) { if (T.makuro) { T.makCard = c; T.makuro = false; } hand.push(c); continue; } } // Domakuro : la 1re carte piochée en plus du tour coûte 1 PA de moins
           break;
         }
         if (opts.auto) {
@@ -1025,6 +1031,8 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         ap -= cost(pick); if (!pick.weapon) T.seal = 0;
         if (pick.weapon) T.weaponUsed = true; else { hand.splice(hand.indexOf(pick), 1); discard.push(pick); if (pick.drawN) { if (pick.handScale && HAND_DISCARD) { while (hand.length) discard.push(hand.pop()); } for (let k = 0; k < Math.min(pick.drawN, DRAW_EFF) && hand.length < 9; k++) { const c2 = draw(); if (!c2) break; hand.push(c2); } } }
       }
+      olStreak = T.olBroken ? 0 : olStreak + 1; T.olNow = 0;
+      if (DF.veilleurs && ap > 0) P.apNext += 1; // Veilleurs : 1 PA non utilisé gardé pour le tour suivant
       if (!mons.some(m => m.alive)) return result(true, round);
       // PA comptés : sinon il te pulvérise
       if (paNeed != null && ap !== paNeed && (opts.auto || ap < paNeed)) { hpLost += P.hp; P.hp = 0; return result(false, round); }
@@ -1053,7 +1061,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         // Fureur : observé en Ascension, le coup « déchaîné » vaut ~×fureur l'attaque de base (il remplace le bonus de l'intention)
         const mult = (fury > 1 && intent !== 'drain' ? fury : (INTENT_MULT[intent] || 1)) * (1 + RAGE_STEP * m.rage) * (1 - Math.min(100, m.weaken) / 100) * (DF.glaces && (m.glaces || 0) >= round ? 0.9 : 1); // Glaces : la cible touchée frappe 10 % moins fort pendant 2 tours
         m.weaken = 0;
-        if (RND() * 100 < Math.min(DF.vulbis ? 75 : 100, S._dodge + vulb)) continue;
+        if (RND() * 100 < Math.min(DF.vulbis ? 75 : 100, S._dodge + vulb)) { if (DF.dorigami) T.oriNext = true; continue; }
         if (DF.vulbis) vulb += 2; // Vulbis : +2 % d'esquive par coup non esquivé
         const rf = S[RES_FIX[m.el]] || 0, rp = Math.min(RES_PCT_CAP_PLAYER, S[RES_PCT[m.el]] || 0);
         let dmg = Math.max(0, Math.floor((m.atk * mult * (1 - (S._red || 0) / 100) * (1 - clsTaken() / 100) - rf) * (1 - rp / 100)));
@@ -1061,8 +1069,10 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         if (RND() < MON_CRIT_P) dmg = Math.max(0, Math.floor(dmg * MON_CRIT_MULT) - (S.resCritiques || 0));
         if (opts.mlog) { opts.mlog.hits = (opts.mlog.hits || 0) + 1; opts.mlog.raw = (opts.mlog.raw || 0) + dmg; if (round === 1) opts.mlog.r1 = (opts.mlog.r1 || 0) + 1; }
         for (const s of P.shields) { const a = Math.min(s.value, dmg); s.value -= a; dmg -= a; if (!dmg) break; }
+        if (DF.cauchemar && round <= 2) dmg = Math.floor(dmg * 0.85); // Cauchemar : −15 % de dégâts subis les 2 premiers tours
         if (DF.ivoire) dmg = Math.min(dmg, Math.floor(maxHp * 0.35)); // Ivoire : aucun coup ordinaire au-delà de 35 % des PV max
         P.hp -= dmg; hpLost += dmg;
+        if (DF.jyfus && !jyfusUsed && P.hp > 0 && P.hp < maxHp * 0.3) { jyfusUsed = true; P.hp = Math.min(maxHp, P.hp + Math.floor(maxHp * 0.1)); } // Jyfus : 1×/combat sous 30 % → +10 % des PV max
         if (intent === 'drain') m.hp = Math.min(m.cap, m.hp + dmg);
         if (S.renvoi > 0 && dmg > 0) { const r = Math.min(m.hp, S.renvoi, dmg); /* au plus les dégâts reçus */ m.hp -= r; dmgDone += r; if (m.hp <= 0) { m.hp = 0; down(m); } }
         if (P.hp <= 0 && !saved()) return result(false, round);
@@ -1072,7 +1082,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     return result(false, opts.maxRounds || 30);
 
     function result(win, rounds) { const tm = mons.reduce((a, m) => a + m.maxHp, 0) || 1; return { trace, win, rounds, hpLost, dmgDone, perCard, progress: win ? 1 : 1 - mons.reduce((a, m) => a + (m.alive ? Math.max(0, m.hp) + (m.mech && m.mech.revive && !m.revived ? m.maxHp * (m.mech.revivePct != null ? m.mech.revivePct / 100 : 0.5) : 0) : 0), 0) / tm, kills: mons.filter(m => !m.alive).length }; }
-    function healP(a) { if (T.inv) { P.hp -= a; hpLost += a; } else P.hp = Math.min(maxHp, P.hp + (T.half ? Math.floor(a / 2) : a)); }
+    function healP(a) { if (T.inv) { P.hp -= a; hpLost += a; } else { const h = T.half ? Math.floor(a / 2) : a, over = P.hp + h - maxHp; P.hp = Math.min(maxHp, P.hp + h); if (DF.dotruche && over > 0) { const cap = Math.floor(maxHp * 0.1), add = Math.min(over, cap - truche); if (add > 0) { truche += add; P.shields.push({ value: add, turns: 2 }); } } } } // Dotruche : soin en trop → bouclier (10 % des PV max au plus)
     function draw() { if (!pile.length) { if (!discard.length) return null; pile = shuffle(discard); discard = []; } return pile.pop(); }
     function reflects(m) { return !!(m.mech && m.mech.reflectFrom && T.round >= m.mech.reflectFrom && (!m.mech.reflectTo || T.round <= m.mech.reflectTo)); }
     // Mode auto : le jeu vise le premier boss encore debout. Mode manuel : le plus entamé, en évitant celui qui renvoie les coups.
@@ -1224,10 +1234,13 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     function hit(m, line, label, opt) {
       opt = opt || {};
       const rp = er(m.res[RES_PCT[line.el || 0]] || 0);
-      let d = dmgLine(S, line, opt.crit, T.buffP, T.dmgPct, opt.spec, rp, opt.fixed !== false, opt.weapon, PK ? clsPct(m, opt.card || null, opt.bomb) : 0);
+      let d = dmgLine(S, line, opt.crit, T.buffP, T.dmgPct, opt.spec, rp, opt.fixed !== false, opt.weapon, (PK ? clsPct(m, opt.card || null, opt.bomb) : 0) + (opt.bomb ? 0 : T.olNow || 0));
       if (opt.luck) d = Math.floor(d * opt.luck);
       if (opt.sec) d = Math.floor(d * ZONE_SEC);
       if (opt.x2) d *= 2;
+      if (opt.spec && DF.sylvestre) d = Math.floor(d * 1.125); // Sylvestre : vision spectrale ×2,25 au lieu de ×2
+      if (dolEl && (line.el || 0) === dolEl) d = Math.floor(d * 1.1); // Dolmanax : +10 % dans l'élément du jour
+      if (T.ori && !opt.weapon) d = Math.floor(d * 1.15); // Dorigami : sort suivant une esquive totale
       if (m.mech && m.mech.hardSkin && shieldTotal() <= 0) d = Math.floor(d * m.mech.hardSkin / 100);
       // Dofawa : chaque coup a 0,1 % de chances de tuer net la cible (effet caché rapporté par les joueurs ; le Kralamoure de la Faille est supposé immunisé)
       if (DF.dofawa && d > 0 && !opt.bomb && !m.noOS && RND() < DOFAWA_P) d = m.hp + m.shield;
@@ -1236,7 +1249,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         let back = d; for (const s of P.shields) { const a = Math.min(s.value, back); s.value -= a; back -= a; if (!back) break; }
         P.hp -= back; hpLost += back; return 0;
       }
-      const absorbed = Math.min(m.shield, Math.floor(d * (1 - (S._perfo || 0) / 100))); m.shield -= absorbed; const real = Math.min(m.hp, d - absorbed);
+      const absorbed = Math.min(m.shield, Math.floor(d * (1 - (S._perfo || 0) / 100))); m.shield -= absorbed; if (DF.cacao && absorbed > 0 && m.shield <= 0 && cacaoTurn !== T.round) { cacaoTurn = T.round; healP(Math.floor(maxHp * 0.03)); } /* Cacao : bouclier ennemi brisé → 3 % des PV max (1×/tour) */ const real = Math.min(m.hp, d - absorbed);
       if (opts.log) opts.log.push([T.round, label, m.name, d, !!opt.crit, !!opt.sec]);
       if (DF.glaces && real > 0) m.glaces = T.round + 1;
       m.hp -= real; if (S._ero) m.cap = Math.max(1, m.cap - real * S._ero / 100); dmgDone += real; perCard[label] = (perCard[label] || 0) + real;
@@ -1253,7 +1266,10 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       if (PK && c.hasDmg) { C.att++; C.cur = { portal: PK === 'eliotrope' && C.att % 2 === 0, lance: PK === 'forgelance' && !C.firstDone && !c.weapon }; } else C.cur = null;
       C.inTurn = true;
       let luck = c.handScale ? 1 + HAND_K * Math.max(0, hand.length - 1) : 1; if (ECA && !c.weapon && c.hasDmg) { const r = RND(); luck = r < 0.32 ? 2 : r < 0.34 ? 0.5 : 1; } // Chance d'Ecaflip
-      const spec = !c.weapon && c.hasDmg && RND() < specP;  // Vision spectrale : tout le sort est doublé (toutes cibles et lignes, vérifié dans le journal)
+      const spec = !c.weapon && c.hasDmg && RND() < specP;
+      if (c.hasDmg && !opts.abyss) { const nl = c.chanceLines.length ? 1 : c.dmgLines.length; if (nl > 1) T.olBroken = true; T.olNow = T.olBroken ? 0 : Math.min(150, 50 + 20 * olStreak); } else T.olNow = 0;
+      T.ori = false; if (DF.dorigami && T.oriNext && !c.weapon && c.hasDmg) { T.ori = true; T.oriNext = false; }
+      if (spec && DF.dompin) healP(Math.floor(maxHp * 0.03)); // Dom de Pin : vision spectrale réussie → 3 % des PV max  // Vision spectrale : tout le sort est doublé (toutes cibles et lignes, vérifié dans le journal)
       if (c.hasDmg && !c.weapon) {
         const el = mainEl(c), sh = mv('shockPct', 0);
         if (sh && T.lastEl != null && el === T.lastEl) { let d = Math.floor(maxHp * sh / 100); for (const s2 of P.shields) { const a = Math.min(s2.value, d); s2.value -= a; d -= a; if (!d) break; } P.hp -= d; hpLost += d; }
@@ -1425,10 +1441,10 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     if (objective === 'ascension-burst') return r.winRate * 1000 + 200 * (r.progress || 0) + 20 * (r.avgKills || 0) - hpPct * 0.3 - rounds * 15;
     if (objective === 'equilibre') return r.winRate * 1000 - rounds * 22 - hpPct * 3.5;
     if (objective === 'survie') return r.winRate * 1000 - hpPct * 6 - rounds * 4;
-    if (objective === 'sagesse') return winGate(r) + 500 * Math.log((1 + (S.sagesse || 0) / 100) / rounds);
+    if (objective === 'sagesse') return winGate(r) + 500 * Math.log((1 + (S.sagesse || 0) / 100) * (S._dofus && S._dofus.cawotte ? 1.1 : 1) / rounds); // Cawotte : +10 % d'XP
     // Prospection : d'abord le maximum de PP (gagner reste obligatoire), la vitesse ne sert qu'à départager (avant : PP ÷ tours, qui sacrifiait la PP pour 0,2 tour gagné)
     // Full PP : le maximum de prospection tant qu'on gagne ; la vitesse ne compte presque plus (le joueur veut le butin, pas les dégâts)
-    if (objective === 'pp') return winGate(r) + 3000 * Math.log(S._pp || 100) - 20 * Math.log(rounds);
+    if (objective === 'pp') return winGate(r) + 3000 * Math.log((S._pp || 100) * (S._dofus && S._dofus.dokille ? 1 + 0.05 / Math.max(0.1, S._lootE || 0.5) : 1)) - 20 * Math.log(rounds); // Dokille : 5 % de chances d'un objet en plus par combat ordinaire, ramené à ton butin moyen par combat (0,05 objet de plus quand tu en gagnes ~0,5 = +10 %)
     return r.winRate * 1000 - rounds * 40 - hpPct * 2; // vitesse, mono, multi
   }
   function cardEls(c) { return [...new Set((c.eff || []).filter(l => l.k === 'dmg' || l.k === 'steal' || l.k === 'bomb').map(l => l.el || 0))]; }
@@ -1452,8 +1468,11 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     mono: { label: 'Mono-cible', m: c => (c.eff || []).some(isDmgL) && !(c.eff || []).some(l => isDmgL(l) && l.zone) },
     steal: { label: 'Vol de vie', m: c => (c.eff || []).some(l => l.k === 'steal') },
     sustain: { label: 'Bouclier / Soin', m: c => (c.eff || []).some(l => ['shieldHp', 'shieldLvl', 'heal', 'healPct'].includes(l.k)) },
-    apremove: { label: 'Retrait PA', m: c => (c.eff || []).some(l => l.k === 'apRemove') }
+    apremove: { label: 'Retrait PA', m: c => (c.eff || []).some(l => l.k === 'apRemove') },
+    oneline: { label: '1 ligne', m: c => nLines(c) <= 1 }
   };
+  // Nombre de lignes de dégâts lancées (les lignes « au choix » du hasard ne comptent qu'une fois) : au-delà de 1, le bonus des sorts à une ligne retombe à zéro
+  function nLines(c) { const e = (c && (c.eff || (c.w && c.w.lines))) || []; const d = e.filter(isDmgL); return d.some(l => l.chance) ? 1 : d.length; }
   // strict : chaque sort de dégâts doit être du type choisi (les sorts sans dégâts restent permis) ; préférence : bonus au score par sort du type
   function spellOk(c, f) { if (!f || !f.type || f.mode !== 'strict' || !SPELL_TYPES[f.type]) return true; return !(c.eff || []).some(isDmgL) || SPELL_TYPES[f.type].m(c); }
   function spellPref(data, st, f) { if (!f || !f.type || f.mode !== 'pref' || !SPELL_TYPES[f.type]) return 0; const by = data._cardsByKey || {}; return 25 * (st.deck || []).filter(k => by[k] && SPELL_TYPES[f.type].m(by[k])).length; }
@@ -1603,6 +1622,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const S = R.computeStats(gear, Object.assign({}, ctx, { alloc: st.alloc }));
     const cardsByKey = data._cardsByKey;
     if (ctx.needIni) S._needIni = ctx.needIni;
+    if (ctx.lootE) S._lootE = ctx.lootE;
     const deck = st.deck.map((k, i) => R.prepCard(cardsByKey[k], 'c' + i));
     const weapon = st.gear.arme ? R.weaponCard(st.gear.arme, st.gear.arme.f || 0) : null;
     return { S, deck, weapon };
@@ -1832,14 +1852,15 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       const wts = orientWeights(statWeights(b.deck, b.weapon, b.S, obj === 'survie' || obj === 'equilibre' || obj === 'ascension' || obj === 'ascension-tank'), obj);
       const cands = {};
       for (const [slot, type] of SLOTS) {
-        const list = (pool[type] || []).filter(it => (it.lvl || 0) <= ctx.level && !(NS && it.w && it.w.lines.some(l => l.k === 'steal')));
+        const ONE = opts.spellFilter && opts.spellFilter.type === 'oneline' && opts.spellFilter.mode === 'strict';
+        const list = (pool[type] || []).filter(it => (it.lvl || 0) <= ctx.level && !(NS && it.w && it.w.lines.some(l => l.k === 'steal')) && !(ONE && type === 'arme' && it.w && nLines({ eff: it.w.lines }) > 1)); // 1 ligne strict : pas d'arme à plusieurs lignes (elle casserait le bonus)
         // objets dominés : un autre objet du même emplacement fait au moins aussi bien sur chaque stat (hors armes et panoplies) → inutile de les tester
         const pruned = list.filter(it => it.w || it.setId || (it.s === 'dofus' && Object.keys(R.dofusFx([it.n || ''])).length) || !list.some(o => o !== it && !o.w && dominates(o, it)));
         pruned.sort((x, y) => itemHeur(y, wts) - itemHeur(x, wts));
         cands[slot] = pruned.slice(0, type === 'dofus' ? 12 : 10);
         // Dofus à effet spécial : leurs stats seules ne disent rien, on les teste toujours en simulation
         if (type === 'dofus') for (const it of list) if (Object.keys(R.dofusFx([it.n || ''])).some(k => k !== 'kaliptus') && !cands[slot].includes(it)) cands[slot].push(it);
-        if (cur.gear[slot] && !cands[slot].some(it => it.id === cur.gear[slot].id) && !(NS && slot === 'arme' && weaponSteals(cur.gear[slot]))) cands[slot].push(cur.gear[slot]);
+        if (cur.gear[slot] && !cands[slot].some(it => it.id === cur.gear[slot].id) && !(NS && slot === 'arme' && weaponSteals(cur.gear[slot])) && !(ONE && slot === 'arme' && cur.gear.arme.w && nLines({ eff: cur.gear.arme.w.lines }) > 1)) cands[slot].push(cur.gear[slot]);
       }
       // panoplies : on essaie exprès de porter ensemble les pièces possédées d'une même panoplie
       const bySet = {};
@@ -2177,7 +2198,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
 <script type="text/plain" id="src-userscript">// ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.12.3
+// @version      2.12.6
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -2318,8 +2339,8 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
 
   // gear : [{item, f}] ; ctx : {prestige, discordPct, scrolls, alloc, level, breedId}
   // Dofus à effet spécial (patch du 10/10) : repérés par leur nom
-  const DOFUS_FX = { emeraude: /meraude/i, pourpre: /pourpre/i, turquoise: /turquoise/i, ocre: /ocre/i, vulbis: /vulbis/i, ivoire: /ivoire/i, glaces: /glace/i, ebene: /b[eè]ne/i, kaliptus: /kaliptus/i, tachete: /tachet/i, dofawa: /dofawa/i };
-  function dofusFx(names) { const o = {}; for (const n of names) { if (!/dofus|dofawa|kaliptus/i.test(n)) continue; for (const [k, re] of Object.entries(DOFUS_FX)) if (re.test(n)) o[k] = true; } return o; }
+  const DOFUS_FX = { emeraude: /meraude/i, pourpre: /pourpre/i, turquoise: /turquoise/i, ocre: /ocre/i, vulbis: /vulbis/i, ivoire: /ivoire/i, glaces: /glace/i, ebene: /b[eè]ne/i, kaliptus: /kaliptus/i, tachete: /tachet/i, dofawa: /dofawa/i, jyfus: /jyfus/i, cacao: /cacao/i, cawotte: /cawotte/i, dokille: /dokille/i, dolmanax: /dolmanax/i, veilleurs: /veilleur/i, dotruche: /dotruche/i, domakuro: /domakuro/i, dorigami: /dorigami/i, dofoozbz: /dofoozbz/i, forgelave: /forgelave/i, argente: /argent[ée]/i, cauchemar: /cauchemar/i, dompin: /dom de pin/i, sylvestre: /sylvestre/i }; // patch du 12/10 : passifs des Dofus « mineurs » (hors Abysses)
+  function dofusFx(names) { const o = {}; for (const n of names) { if (!/dofus|dofawa|kaliptus|jyfus|dokille|dolmanax|dotruche|domakuro|dorigami|dofoozbz|dom de pin/i.test(n)) continue; for (const [k, re] of Object.entries(DOFUS_FX)) if (re.test(n)) o[k] = true; } return o; }
   function computeStats(gear, ctx) {
     // Prestige : +25 % par Prestige ; Bouclier de forge : jusqu'à +150 % au niveau 200 (cumul supposé additif, à confirmer)
     const pMult = 1 + 0.25 * (ctx.prestige || 0) + (ctx.forgePct || 0) / 100 + (ctx.companionPct || 0) / 100; // Compagnon (patch du 10/10) : jusqu'à +100 % au niveau 400, cumul supposé additif comme le Bouclier
@@ -2370,6 +2391,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     s._pp = 100 + (s.prospection || 0) + Math.floor((s.chance || 0) / 10);
     s._dofus = dofusFx(gear.filter(g => g && g.item && (g.item.s === 'dofus' || /dofus/i.test(g.item.n || ''))).map(g => g.item.n || ''));
     if (s._dofus.ebene) s._perfo = Math.min(32.5, s._perfo * 1.3);
+    if (s._dofus.forgelave) s._ero = Math.min(32.5, s._ero * 1.3); // Forgelave : érosion ×1,3 (plafond 32,5 %)
     s._surprise = surpriseChance(s.initiative, ctx.level);
     return s;
   }
@@ -2496,6 +2518,11 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const mv = (k, d) => { const x = mk(k); return x ? x[k] : d; };
     const every = (k, round) => k > 0 && round % k === 0;
     const rageAt = opts.rageTurn || 0;
+    const dolEl = DF.dolmanax ? 1 + Math.floor(RND() * 4) : 0; let jyfusUsed = false, cacaoTurn = 0, truche = 0; // Dolmanax : élément du jour (inconnu, tiré au hasard), Jyfus 1×/combat, Cacao 1×/tour, Dotruche : bouclier de surplus de soin
+    if (DF.argente) P.shields.push({ value: Math.floor(maxHp * 0.08), turns: 99 }); // Argenté Scintillant : bouclier de 8 % des PV max au début
+    // Pioches en plus (bouton « Piocher ») : réserve plafonnée par la stat Invocations, qui se recharge de 1 par tour (Dofoozbz : 2)
+    const drawCap = Math.max(1, Math.round(S.invocations || 1)); let drawsLeft = drawCap;
+    let olStreak = 0; // Sorts à une seule ligne (patch du 12/10) : +50 %, puis +20 % par tour sans lancer à plusieurs lignes, +150 % au plus ; un lancer à plusieurs lignes (sort ou corps à corps) remet à zéro jusqu'au tour suivant
     const deckBonus = opts.abyss ? 0 : Math.min(25, 5 * Math.max(0, (opts.deck || []).length - 7)); // patch du 12/10 : +5 % de dégâts des sorts par carte au-delà de 7, +25 % au plus (hors Abysses)
     const surprised = !opts.noSurprise && (S._surprise || 0) > 0 && RND() < S._surprise; // ennemis pris de vitesse : ils passent leur premier tour
     for (let round = 1; round <= (opts.maxRounds || 30); round++) {
@@ -2510,7 +2537,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       while (hand.length < HAND_SIZE + (round === 1 && DF.ocre ? 1 : 0)) { const c = draw(); if (!c) break; hand.push(c); }
       C.firstDone = false; C.ougPa = false; if (PK === 'pandawa' && C.n) P.hp = Math.min(maxHp, P.hp + Math.floor(maxHp * C.n / 100)); // Ivresse : soin non réductible
       T.buffP = 0; T.buffC = 0; T.chainN = 0; T.dmgPct = (S.dmgPctSorts || 0) + deckBonus; S._cb = {};
-      for (const b of pers) if (b.until >= round) { if (b.stat === 'puissance') T.buffP += b.v; else if (b.stat === 'critique') T.buffC += b.v; else if (b.stat === 'dmgPctSorts') T.dmgPct += b.v; else S._cb[b.stat] = (S._cb[b.stat] || 0) + b.v; } T.sustainLeft = SUSTAIN.perTurn; T.weaponUsed = false; T.cards = 0; let drawsLeft = DRAWS_MAX;
+      for (const b of pers) if (b.until >= round) { if (b.stat === 'puissance') T.buffP += b.v; else if (b.stat === 'critique') T.buffC += b.v; else if (b.stat === 'dmgPctSorts') T.dmgPct += b.v; else S._cb[b.stat] = (S._cb[b.stat] || 0) + b.v; } T.sustainLeft = SUSTAIN.perTurn; T.weaponUsed = false; T.cards = 0; if (round > 1) drawsLeft = Math.min(drawCap, drawsLeft + (DF.dofoozbz ? 2 : 1)); T.makuro = !!DF.domakuro; T.makCard = null; T.olBroken = false; T.olNow = 0;
       const invFrom = opts.invertFrom || mv('invertFrom', 0), sealPa = opts.sealPa || mv('sealPa', 0), sealFrom = opts.sealFrom || mv('sealFrom', 1);
       const halfFrom = mv('healHalfFrom', 0);
       T.inv = invFrom > 0 && round >= invFrom; T.invS = T.inv && !!(opts.invertShields || mv('invertShields', false)); T.seal = (sealPa > 0 && round >= sealFrom) ? sealPa : 0;
@@ -2530,13 +2557,13 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       for (const m of mons) if (m.alive && m.bombs.length) { for (const b of m.bombs) { C.cur = null; hit(m, b, 'Bombe', { bomb: true }); if (PK === 'roublard') C.bombN++; } m.bombs = []; }
       for (let guard = 0; guard < 20; guard++) {
         if (!mons.some(m => m.alive)) break;
-        const cost = c => c.ap + (T.seal && !c.weapon ? T.seal : 0);
+        const cost = c => (c === T.makCard ? Math.max(1, c.ap - 1) : c.ap) + (T.seal && !c.weapon ? T.seal : 0);
         const room = paNeed != null && !opts.auto ? ap - paNeed : ap;
         const capped = !opts.auto && T.cards >= furyCap;
         const opts2 = capped ? [] : hand.filter(c => c !== sealedCard).map(c => ({ c, v: opts.auto ? 0 : valueOf(c) })) /* en auto, l'ordre vient de rank() : inutile d'estimer chaque carte deux fois */.filter(o => cost(o.c) <= room && (opts.auto || o.v > 0));
         if (!T.weaponUsed && opts.weapon && opts.weapon.ap <= room && !(opts.auto && wMode === 'never')) { const wv = opts.auto ? 0 : valueOf(opts.weapon); if (opts.auto || wv > 0) opts2.push({ c: opts.weapon, v: wv }); }
         if (!opts2.length) {
-          if (!capped && drawsLeft > 0 && hand.length < 8) { const c = draw(); drawsLeft--; if (c) { hand.push(c); continue; } }
+          if (!capped && drawsLeft > 0 && hand.length < 8) { const c = draw(); drawsLeft--; if (c) { if (T.makuro) { T.makCard = c; T.makuro = false; } hand.push(c); continue; } } // Domakuro : la 1re carte piochée en plus du tour coûte 1 PA de moins
           break;
         }
         if (opts.auto) {
@@ -2568,6 +2595,8 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         ap -= cost(pick); if (!pick.weapon) T.seal = 0;
         if (pick.weapon) T.weaponUsed = true; else { hand.splice(hand.indexOf(pick), 1); discard.push(pick); if (pick.drawN) { if (pick.handScale && HAND_DISCARD) { while (hand.length) discard.push(hand.pop()); } for (let k = 0; k < Math.min(pick.drawN, DRAW_EFF) && hand.length < 9; k++) { const c2 = draw(); if (!c2) break; hand.push(c2); } } }
       }
+      olStreak = T.olBroken ? 0 : olStreak + 1; T.olNow = 0;
+      if (DF.veilleurs && ap > 0) P.apNext += 1; // Veilleurs : 1 PA non utilisé gardé pour le tour suivant
       if (!mons.some(m => m.alive)) return result(true, round);
       // PA comptés : sinon il te pulvérise
       if (paNeed != null && ap !== paNeed && (opts.auto || ap < paNeed)) { hpLost += P.hp; P.hp = 0; return result(false, round); }
@@ -2596,7 +2625,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         // Fureur : observé en Ascension, le coup « déchaîné » vaut ~×fureur l'attaque de base (il remplace le bonus de l'intention)
         const mult = (fury > 1 && intent !== 'drain' ? fury : (INTENT_MULT[intent] || 1)) * (1 + RAGE_STEP * m.rage) * (1 - Math.min(100, m.weaken) / 100) * (DF.glaces && (m.glaces || 0) >= round ? 0.9 : 1); // Glaces : la cible touchée frappe 10 % moins fort pendant 2 tours
         m.weaken = 0;
-        if (RND() * 100 < Math.min(DF.vulbis ? 75 : 100, S._dodge + vulb)) continue;
+        if (RND() * 100 < Math.min(DF.vulbis ? 75 : 100, S._dodge + vulb)) { if (DF.dorigami) T.oriNext = true; continue; }
         if (DF.vulbis) vulb += 2; // Vulbis : +2 % d'esquive par coup non esquivé
         const rf = S[RES_FIX[m.el]] || 0, rp = Math.min(RES_PCT_CAP_PLAYER, S[RES_PCT[m.el]] || 0);
         let dmg = Math.max(0, Math.floor((m.atk * mult * (1 - (S._red || 0) / 100) * (1 - clsTaken() / 100) - rf) * (1 - rp / 100)));
@@ -2604,8 +2633,10 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         if (RND() < MON_CRIT_P) dmg = Math.max(0, Math.floor(dmg * MON_CRIT_MULT) - (S.resCritiques || 0));
         if (opts.mlog) { opts.mlog.hits = (opts.mlog.hits || 0) + 1; opts.mlog.raw = (opts.mlog.raw || 0) + dmg; if (round === 1) opts.mlog.r1 = (opts.mlog.r1 || 0) + 1; }
         for (const s of P.shields) { const a = Math.min(s.value, dmg); s.value -= a; dmg -= a; if (!dmg) break; }
+        if (DF.cauchemar && round <= 2) dmg = Math.floor(dmg * 0.85); // Cauchemar : −15 % de dégâts subis les 2 premiers tours
         if (DF.ivoire) dmg = Math.min(dmg, Math.floor(maxHp * 0.35)); // Ivoire : aucun coup ordinaire au-delà de 35 % des PV max
         P.hp -= dmg; hpLost += dmg;
+        if (DF.jyfus && !jyfusUsed && P.hp > 0 && P.hp < maxHp * 0.3) { jyfusUsed = true; P.hp = Math.min(maxHp, P.hp + Math.floor(maxHp * 0.1)); } // Jyfus : 1×/combat sous 30 % → +10 % des PV max
         if (intent === 'drain') m.hp = Math.min(m.cap, m.hp + dmg);
         if (S.renvoi > 0 && dmg > 0) { const r = Math.min(m.hp, S.renvoi, dmg); /* au plus les dégâts reçus */ m.hp -= r; dmgDone += r; if (m.hp <= 0) { m.hp = 0; down(m); } }
         if (P.hp <= 0 && !saved()) return result(false, round);
@@ -2615,7 +2646,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     return result(false, opts.maxRounds || 30);
 
     function result(win, rounds) { const tm = mons.reduce((a, m) => a + m.maxHp, 0) || 1; return { trace, win, rounds, hpLost, dmgDone, perCard, progress: win ? 1 : 1 - mons.reduce((a, m) => a + (m.alive ? Math.max(0, m.hp) + (m.mech && m.mech.revive && !m.revived ? m.maxHp * (m.mech.revivePct != null ? m.mech.revivePct / 100 : 0.5) : 0) : 0), 0) / tm, kills: mons.filter(m => !m.alive).length }; }
-    function healP(a) { if (T.inv) { P.hp -= a; hpLost += a; } else P.hp = Math.min(maxHp, P.hp + (T.half ? Math.floor(a / 2) : a)); }
+    function healP(a) { if (T.inv) { P.hp -= a; hpLost += a; } else { const h = T.half ? Math.floor(a / 2) : a, over = P.hp + h - maxHp; P.hp = Math.min(maxHp, P.hp + h); if (DF.dotruche && over > 0) { const cap = Math.floor(maxHp * 0.1), add = Math.min(over, cap - truche); if (add > 0) { truche += add; P.shields.push({ value: add, turns: 2 }); } } } } // Dotruche : soin en trop → bouclier (10 % des PV max au plus)
     function draw() { if (!pile.length) { if (!discard.length) return null; pile = shuffle(discard); discard = []; } return pile.pop(); }
     function reflects(m) { return !!(m.mech && m.mech.reflectFrom && T.round >= m.mech.reflectFrom && (!m.mech.reflectTo || T.round <= m.mech.reflectTo)); }
     // Mode auto : le jeu vise le premier boss encore debout. Mode manuel : le plus entamé, en évitant celui qui renvoie les coups.
@@ -2767,10 +2798,13 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     function hit(m, line, label, opt) {
       opt = opt || {};
       const rp = er(m.res[RES_PCT[line.el || 0]] || 0);
-      let d = dmgLine(S, line, opt.crit, T.buffP, T.dmgPct, opt.spec, rp, opt.fixed !== false, opt.weapon, PK ? clsPct(m, opt.card || null, opt.bomb) : 0);
+      let d = dmgLine(S, line, opt.crit, T.buffP, T.dmgPct, opt.spec, rp, opt.fixed !== false, opt.weapon, (PK ? clsPct(m, opt.card || null, opt.bomb) : 0) + (opt.bomb ? 0 : T.olNow || 0));
       if (opt.luck) d = Math.floor(d * opt.luck);
       if (opt.sec) d = Math.floor(d * ZONE_SEC);
       if (opt.x2) d *= 2;
+      if (opt.spec && DF.sylvestre) d = Math.floor(d * 1.125); // Sylvestre : vision spectrale ×2,25 au lieu de ×2
+      if (dolEl && (line.el || 0) === dolEl) d = Math.floor(d * 1.1); // Dolmanax : +10 % dans l'élément du jour
+      if (T.ori && !opt.weapon) d = Math.floor(d * 1.15); // Dorigami : sort suivant une esquive totale
       if (m.mech && m.mech.hardSkin && shieldTotal() <= 0) d = Math.floor(d * m.mech.hardSkin / 100);
       // Dofawa : chaque coup a 0,1 % de chances de tuer net la cible (effet caché rapporté par les joueurs ; le Kralamoure de la Faille est supposé immunisé)
       if (DF.dofawa && d > 0 && !opt.bomb && !m.noOS && RND() < DOFAWA_P) d = m.hp + m.shield;
@@ -2779,7 +2813,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         let back = d; for (const s of P.shields) { const a = Math.min(s.value, back); s.value -= a; back -= a; if (!back) break; }
         P.hp -= back; hpLost += back; return 0;
       }
-      const absorbed = Math.min(m.shield, Math.floor(d * (1 - (S._perfo || 0) / 100))); m.shield -= absorbed; const real = Math.min(m.hp, d - absorbed);
+      const absorbed = Math.min(m.shield, Math.floor(d * (1 - (S._perfo || 0) / 100))); m.shield -= absorbed; if (DF.cacao && absorbed > 0 && m.shield <= 0 && cacaoTurn !== T.round) { cacaoTurn = T.round; healP(Math.floor(maxHp * 0.03)); } /* Cacao : bouclier ennemi brisé → 3 % des PV max (1×/tour) */ const real = Math.min(m.hp, d - absorbed);
       if (opts.log) opts.log.push([T.round, label, m.name, d, !!opt.crit, !!opt.sec]);
       if (DF.glaces && real > 0) m.glaces = T.round + 1;
       m.hp -= real; if (S._ero) m.cap = Math.max(1, m.cap - real * S._ero / 100); dmgDone += real; perCard[label] = (perCard[label] || 0) + real;
@@ -2796,7 +2830,10 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       if (PK && c.hasDmg) { C.att++; C.cur = { portal: PK === 'eliotrope' && C.att % 2 === 0, lance: PK === 'forgelance' && !C.firstDone && !c.weapon }; } else C.cur = null;
       C.inTurn = true;
       let luck = c.handScale ? 1 + HAND_K * Math.max(0, hand.length - 1) : 1; if (ECA && !c.weapon && c.hasDmg) { const r = RND(); luck = r < 0.32 ? 2 : r < 0.34 ? 0.5 : 1; } // Chance d'Ecaflip
-      const spec = !c.weapon && c.hasDmg && RND() < specP;  // Vision spectrale : tout le sort est doublé (toutes cibles et lignes, vérifié dans le journal)
+      const spec = !c.weapon && c.hasDmg && RND() < specP;
+      if (c.hasDmg && !opts.abyss) { const nl = c.chanceLines.length ? 1 : c.dmgLines.length; if (nl > 1) T.olBroken = true; T.olNow = T.olBroken ? 0 : Math.min(150, 50 + 20 * olStreak); } else T.olNow = 0;
+      T.ori = false; if (DF.dorigami && T.oriNext && !c.weapon && c.hasDmg) { T.ori = true; T.oriNext = false; }
+      if (spec && DF.dompin) healP(Math.floor(maxHp * 0.03)); // Dom de Pin : vision spectrale réussie → 3 % des PV max  // Vision spectrale : tout le sort est doublé (toutes cibles et lignes, vérifié dans le journal)
       if (c.hasDmg && !c.weapon) {
         const el = mainEl(c), sh = mv('shockPct', 0);
         if (sh && T.lastEl != null && el === T.lastEl) { let d = Math.floor(maxHp * sh / 100); for (const s2 of P.shields) { const a = Math.min(s2.value, d); s2.value -= a; d -= a; if (!d) break; } P.hp -= d; hpLost += d; }
@@ -4371,11 +4408,13 @@ function markReady(sel,kind){if(!sel)return;try{const l=memoLoad();if(!l.length)
   const note=document.getElementById(kind==='opt'?'oReady':'aReady');if(note)note.textContent=n?`✓ = résultat déjà calculé avec ces réglages (affiché tout de suite). ${n} prêt${n>1?'s':''}.`:''}catch(e){}}
 function memoNote(el,t,rerun){el.innerHTML=`Résultat mémorisé du ${new Date(t).toLocaleString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} : rien n'a changé depuis (équipement, cartes, réglages, modèle). <button type="button">Recalculer quand même</button>`;el.querySelector('button').onclick=rerun}
 // Adversaire choisi selon l'orientation (plus de « groupe de monstres » à régler) : Kralamoure, Ascension (prochain étage) ou tes adversaires habituels
+// Objets gagnés par combat ordinaire gagné (pour estimer ce que vaut le Dokille : +0,05 objet par combat)
+function lootPerFight(){const F=(DATA.fights||[]).filter(f=>!f.boss&&f.status==='won').slice(-1500);if(F.length<50)return 0.5;return Math.max(0.1,Math.round(F.reduce((a,f)=>a+((f.items||[]).length),0)/F.length*100)/100)}
 function pvpPack(){const hp=Math.max(1000,+$('#pvpHp').value||33000)*($('#pvpUlt').checked?2.5:1),rp=Math.max(0,Math.min(50,+$('#pvpRes').value||0));
   return {key:'pvp',label:`Joueur · ${fmt(+$('#pvpHp').value||33000)} PV${$('#pvpUlt').checked?' (Arène Ultime)':''}`,defs:[{name:'Adversaire (joueur)',grade:1,level:200,hpMin:hp,hpMax:hp,atk:1,element:0,pattern:['attack'],stats:{resPctNeutre:rp,resPctTerre:rp,resPctFeu:rp,resPctEau:rp,resPctAir:rp},isBoss:false,fixedStart:false}],fights:[]}}
 function optAutoPack(){const o=$('#oObj').value;if(o==='kralamoure')return kralaPack();if(/^pvp/.test(o))return pvpPack();if(/^ascension/.test(o)){try{return ascPolyPack()}catch(e){}}return polyPack()}
 function optOptsFor(v){const pack=optAutoPack();if(!pack)return null;const mult=1;const deckIdx=+$('#oStart').value;
-  const opts={optGear:$('#oGear').checked,optAlloc:$('#oAlloc').checked,optDeck:$('#oDeck').checked,deckSize:deckSlots(),objective:$('#oObj').value,spellFilter:spellF('o'),sustain:susOf('o'),noSteal:!!$('#oInv').checked,...fightOpts('o'),effort:+segVal('oEffort'),budgetMs:[20,45,260][(+segVal('oEffort')||2)-1]*1000,...lockOpts(),monsters:monstersFor(pack,mult),ctx:/^pvp/.test($('#oObj').value)?Object.assign({},ctx,{needIni:$('#oObj').value==='pvp'?(+$('#pvpIni').value||0):0}):ctx,start:OPT_START?{gear:OPT_START.gear,alloc:OPT_START.alloc,deck:OPT_START.deck}:{gear:curGear,alloc:curAlloc,deck:DATA.meta.decks[deckIdx]}};return {pack,mult,deckIdx,opts}}
+  const opts={optGear:$('#oGear').checked,optAlloc:$('#oAlloc').checked,optDeck:$('#oDeck').checked,deckSize:deckSlots(),objective:$('#oObj').value,spellFilter:spellF('o'),sustain:susOf('o'),noSteal:!!$('#oInv').checked,...fightOpts('o'),effort:+segVal('oEffort'),budgetMs:[20,45,260][(+segVal('oEffort')||2)-1]*1000,...lockOpts(),monsters:monstersFor(pack,mult),ctx:/^pvp/.test($('#oObj').value)?Object.assign({},ctx,{needIni:$('#oObj').value==='pvp'?(+$('#pvpIni').value||0):0}):$('#oObj').value==='pp'?Object.assign({},ctx,{lootE:lootPerFight()}):ctx,start:OPT_START?{gear:OPT_START.gear,alloc:OPT_START.alloc,deck:OPT_START.deck}:{gear:curGear,alloc:curAlloc,deck:DATA.meta.decks[deckIdx]}};return {pack,mult,deckIdx,opts}}
 // Kralamoure de la Faille : boss à ~100 M de PV qu'on ne tue pas ; on cumule un maximum de dégâts en 10 tours.
 // Stats relevées en combat (monstre 423) ; si le perso ne l'a jamais croisé, on prend ces valeurs.
 const KRALA_REF={name:'Kralamoure Géant',grade:1,level:200,hpMin:99999458,hpMax:99999458,atk:383,element:3,pattern:['attack','attack','heavy','rage','attack','heavy'],stats:{resPctNeutre:20,resPctTerre:20,resPctFeu:20,resPctEau:30,resPctAir:20},isBoss:true};
@@ -4451,7 +4490,7 @@ function renderOpt(res,opts,pack,mult,deckIdx){lastOpt=res;
     ['Victoires',fmt(b.winRate*100,1)+' %',`avant ${fmt(a.winRate*100,1)} % · ${delta(a.winRate*100,b.winRate*100,false,1,' pts')}`],
     ['PV perdus',fmt(b.avgHpLost),`avant ${fmt(a.avgHpLost)} · ${delta(a.avgHpLost,b.avgHpLost,true,0)}`],
     ['PV max',fmt(Sb._maxHp),`avant ${fmt(Sa._maxHp)} · ${delta(Sa._maxHp,Sb._maxHp,false,0)}`]
-  ].concat(opts.objective==='sagesse'?[['Sagesse',fmt(Sb.sagesse||0),`avant ${fmt(Sa.sagesse||0)}`],['Rythme d\'XP',fmt((1+(Sb.sagesse||0)/100)/b.avgRounds/((1+(Sa.sagesse||0)/100)/a.avgRounds)*100-100,0)+' %','vs build actuel (sagesse ÷ tours)']]:opts.objective==='pvp-ini'?[['Initiative',fmt(O.iniEst(Sb)),`avant ${fmt(O.iniEst(Sa))} · ${delta(O.iniEst(Sa),O.iniEst(Sb),false,0)}`],['Ennemis surpris (hors arène)',fmt((Sb._surprise||0)*100,1)+' %',`avant ${fmt((Sa._surprise||0)*100,1)} % · 25 % max à 15 000`]]:opts.objective==='pp'?[['Prospection',fmt(Sb._pp),`avant ${fmt(Sa._pp)} · 100 + PP objets + Chance/10`],['Butin par tour',fmt(Sb._pp/b.avgRounds/(Sa._pp/a.avgRounds)*100-100,0)+' %','vs build actuel (PP ÷ tours)']]:[]).map(([x,y,z])=>`<div class="kpi"><span class="lbl">${x}</span><span class="v">${y}</span><span class="d muted">${z}</span></div>`).join('');
+  ].concat(opts.objective==='sagesse'?[['Sagesse',fmt(Sb.sagesse||0),`avant ${fmt(Sa.sagesse||0)}`],['Rythme d\'XP',fmt((1+(Sb.sagesse||0)/100)/b.avgRounds/((1+(Sa.sagesse||0)/100)/a.avgRounds)*100-100,0)+' %','vs build actuel (sagesse ÷ tours)']]:opts.objective==='pvp-ini'?[['Initiative',fmt(O.iniEst(Sb)),`avant ${fmt(O.iniEst(Sa))} · ${delta(O.iniEst(Sa),O.iniEst(Sb),false,0)}`],['Ennemis surpris (hors arène)',fmt((Sb._surprise||0)*100,1)+' %',`avant ${fmt((Sa._surprise||0)*100,1)} % · 25 % max à 15 000`]]:opts.objective==='pp'?[['Prospection',fmt(Sb._pp),`avant ${fmt(Sa._pp)} · 100 + PP objets + Chance/10${Sb._dofus&&Sb._dofus.dokille?` · + Dokille (≈ +${fmt(5/((opts.ctx&&opts.ctx.lootE)||0.5),0)} % d\'objets pour toi)`:''}`],['Butin par tour',fmt(Sb._pp/b.avgRounds/(Sa._pp/a.avgRounds)*100-100,0)+' %','vs build actuel (PP ÷ tours)']]:[]).map(([x,y,z])=>`<div class="kpi"><span class="lbl">${x}</span><span class="v">${y}</span><span class="d muted">${z}</span></div>`).join('');
   const st=res.state;let html='';const lines=[];
   if(res.saturated){$('#oDetails').innerHTML=`<div class="alert"><strong>Adversaire trop facile pour comparer des builds.</strong><span>Ton build actuel gagne déjà ${fmt(a.winRate*100,1)} % des combats en ${fmt(a.avgRounds,2)} tour, sans presque perdre de PV : n'importe quel stuff ou deck ferait pareil, et le Labo ne propose donc aucun changement. Choisis un adversaire plus dur (un boss, un étage, un groupe plus fort) ou monte la difficulté.</span><button class="btn" type="button" id="oForce" style="margin-top:6px;justify-self:start">Optimiser quand même</button></div>`;lastSummary='';$('#oForce').onclick=()=>{window.__forceSat=true;runOpt(true)};return}
   lines.push(`Labo RpgMasters — ${pack.label} ×${mult} — ${(O.ORIENT[opts.objective]||{}).label||opts.objective}`);

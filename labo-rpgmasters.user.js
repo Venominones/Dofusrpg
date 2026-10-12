@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.12.3
+// @version      2.12.6
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -142,8 +142,8 @@
 
   // gear : [{item, f}] ; ctx : {prestige, discordPct, scrolls, alloc, level, breedId}
   // Dofus à effet spécial (patch du 10/10) : repérés par leur nom
-  const DOFUS_FX = { emeraude: /meraude/i, pourpre: /pourpre/i, turquoise: /turquoise/i, ocre: /ocre/i, vulbis: /vulbis/i, ivoire: /ivoire/i, glaces: /glace/i, ebene: /b[eè]ne/i, kaliptus: /kaliptus/i, tachete: /tachet/i, dofawa: /dofawa/i };
-  function dofusFx(names) { const o = {}; for (const n of names) { if (!/dofus|dofawa|kaliptus/i.test(n)) continue; for (const [k, re] of Object.entries(DOFUS_FX)) if (re.test(n)) o[k] = true; } return o; }
+  const DOFUS_FX = { emeraude: /meraude/i, pourpre: /pourpre/i, turquoise: /turquoise/i, ocre: /ocre/i, vulbis: /vulbis/i, ivoire: /ivoire/i, glaces: /glace/i, ebene: /b[eè]ne/i, kaliptus: /kaliptus/i, tachete: /tachet/i, dofawa: /dofawa/i, jyfus: /jyfus/i, cacao: /cacao/i, cawotte: /cawotte/i, dokille: /dokille/i, dolmanax: /dolmanax/i, veilleurs: /veilleur/i, dotruche: /dotruche/i, domakuro: /domakuro/i, dorigami: /dorigami/i, dofoozbz: /dofoozbz/i, forgelave: /forgelave/i, argente: /argent[ée]/i, cauchemar: /cauchemar/i, dompin: /dom de pin/i, sylvestre: /sylvestre/i }; // patch du 12/10 : passifs des Dofus « mineurs » (hors Abysses)
+  function dofusFx(names) { const o = {}; for (const n of names) { if (!/dofus|dofawa|kaliptus|jyfus|dokille|dolmanax|dotruche|domakuro|dorigami|dofoozbz|dom de pin/i.test(n)) continue; for (const [k, re] of Object.entries(DOFUS_FX)) if (re.test(n)) o[k] = true; } return o; }
   function computeStats(gear, ctx) {
     // Prestige : +25 % par Prestige ; Bouclier de forge : jusqu'à +150 % au niveau 200 (cumul supposé additif, à confirmer)
     const pMult = 1 + 0.25 * (ctx.prestige || 0) + (ctx.forgePct || 0) / 100 + (ctx.companionPct || 0) / 100; // Compagnon (patch du 10/10) : jusqu'à +100 % au niveau 400, cumul supposé additif comme le Bouclier
@@ -194,8 +194,13 @@
     s._pp = 100 + (s.prospection || 0) + Math.floor((s.chance || 0) / 10);
     s._dofus = dofusFx(gear.filter(g => g && g.item && (g.item.s === 'dofus' || /dofus/i.test(g.item.n || ''))).map(g => g.item.n || ''));
     if (s._dofus.ebene) s._perfo = Math.min(32.5, s._perfo * 1.3);
+    if (s._dofus.forgelave) s._ero = Math.min(32.5, s._ero * 1.3); // Forgelave : érosion ×1,3 (plafond 32,5 %)
+    s._surprise = surpriseChance(s.initiative, ctx.level);
     return s;
   }
+  // Initiative hors arène (info-bulle du jeu) : au-delà de 5 × niveau, chance que les ennemis passent leur premier tour,
+  // jusqu'à 25 % atteints à 15 fois cette valeur (progression supposée linéaire entre les deux)
+  function surpriseChance(ini, level) { const base = 5 * (level || 200); return 0.25 * Math.max(0, Math.min(1, ((ini || 0) - base) / (14 * base))); }
 
   // Stats de combat telles que le jeu les envoie (combat en cours, builds enregistrés) → champs dérivés du moteur
   function deriveStats(stats, o) {
@@ -316,6 +321,13 @@
     const mv = (k, d) => { const x = mk(k); return x ? x[k] : d; };
     const every = (k, round) => k > 0 && round % k === 0;
     const rageAt = opts.rageTurn || 0;
+    const dolEl = DF.dolmanax ? 1 + Math.floor(RND() * 4) : 0; let jyfusUsed = false, cacaoTurn = 0, truche = 0; // Dolmanax : élément du jour (inconnu, tiré au hasard), Jyfus 1×/combat, Cacao 1×/tour, Dotruche : bouclier de surplus de soin
+    if (DF.argente) P.shields.push({ value: Math.floor(maxHp * 0.08), turns: 99 }); // Argenté Scintillant : bouclier de 8 % des PV max au début
+    // Pioches en plus (bouton « Piocher ») : réserve plafonnée par la stat Invocations, qui se recharge de 1 par tour (Dofoozbz : 2)
+    const drawCap = Math.max(1, Math.round(S.invocations || 1)); let drawsLeft = drawCap;
+    let olStreak = 0; // Sorts à une seule ligne (patch du 12/10) : +50 %, puis +20 % par tour sans lancer à plusieurs lignes, +150 % au plus ; un lancer à plusieurs lignes (sort ou corps à corps) remet à zéro jusqu'au tour suivant
+    const deckBonus = opts.abyss ? 0 : Math.min(25, 5 * Math.max(0, (opts.deck || []).length - 7)); // patch du 12/10 : +5 % de dégâts des sorts par carte au-delà de 7, +25 % au plus (hors Abysses)
+    const surprised = !opts.noSurprise && (S._surprise || 0) > 0 && RND() < S._surprise; // ennemis pris de vitesse : ils passent leur premier tour
     for (let round = 1; round <= (opts.maxRounds || 30); round++) {
       T.round = round;
       // échange de vie au début du tour
@@ -327,8 +339,8 @@
       let ap = S._paTotal + P.apNext + (critTurn ? 1 : 0); P.apNext = 0; critTurn = false; // Turquoise : +1 PA (au-delà du plafond) le tour après un critique
       while (hand.length < HAND_SIZE + (round === 1 && DF.ocre ? 1 : 0)) { const c = draw(); if (!c) break; hand.push(c); }
       C.firstDone = false; C.ougPa = false; if (PK === 'pandawa' && C.n) P.hp = Math.min(maxHp, P.hp + Math.floor(maxHp * C.n / 100)); // Ivresse : soin non réductible
-      T.buffP = 0; T.buffC = 0; T.chainN = 0; T.dmgPct = S.dmgPctSorts || 0; S._cb = {};
-      for (const b of pers) if (b.until >= round) { if (b.stat === 'puissance') T.buffP += b.v; else if (b.stat === 'critique') T.buffC += b.v; else if (b.stat === 'dmgPctSorts') T.dmgPct += b.v; else S._cb[b.stat] = (S._cb[b.stat] || 0) + b.v; } T.sustainLeft = SUSTAIN.perTurn; T.weaponUsed = false; T.cards = 0; let drawsLeft = DRAWS_MAX;
+      T.buffP = 0; T.buffC = 0; T.chainN = 0; T.dmgPct = (S.dmgPctSorts || 0) + deckBonus; S._cb = {};
+      for (const b of pers) if (b.until >= round) { if (b.stat === 'puissance') T.buffP += b.v; else if (b.stat === 'critique') T.buffC += b.v; else if (b.stat === 'dmgPctSorts') T.dmgPct += b.v; else S._cb[b.stat] = (S._cb[b.stat] || 0) + b.v; } T.sustainLeft = SUSTAIN.perTurn; T.weaponUsed = false; T.cards = 0; if (round > 1) drawsLeft = Math.min(drawCap, drawsLeft + (DF.dofoozbz ? 2 : 1)); T.makuro = !!DF.domakuro; T.makCard = null; T.olBroken = false; T.olNow = 0;
       const invFrom = opts.invertFrom || mv('invertFrom', 0), sealPa = opts.sealPa || mv('sealPa', 0), sealFrom = opts.sealFrom || mv('sealFrom', 1);
       const halfFrom = mv('healHalfFrom', 0);
       T.inv = invFrom > 0 && round >= invFrom; T.invS = T.inv && !!(opts.invertShields || mv('invertShields', false)); T.seal = (sealPa > 0 && round >= sealFrom) ? sealPa : 0;
@@ -348,13 +360,13 @@
       for (const m of mons) if (m.alive && m.bombs.length) { for (const b of m.bombs) { C.cur = null; hit(m, b, 'Bombe', { bomb: true }); if (PK === 'roublard') C.bombN++; } m.bombs = []; }
       for (let guard = 0; guard < 20; guard++) {
         if (!mons.some(m => m.alive)) break;
-        const cost = c => c.ap + (T.seal && !c.weapon ? T.seal : 0);
+        const cost = c => (c === T.makCard ? Math.max(1, c.ap - 1) : c.ap) + (T.seal && !c.weapon ? T.seal : 0);
         const room = paNeed != null && !opts.auto ? ap - paNeed : ap;
         const capped = !opts.auto && T.cards >= furyCap;
         const opts2 = capped ? [] : hand.filter(c => c !== sealedCard).map(c => ({ c, v: opts.auto ? 0 : valueOf(c) })) /* en auto, l'ordre vient de rank() : inutile d'estimer chaque carte deux fois */.filter(o => cost(o.c) <= room && (opts.auto || o.v > 0));
         if (!T.weaponUsed && opts.weapon && opts.weapon.ap <= room && !(opts.auto && wMode === 'never')) { const wv = opts.auto ? 0 : valueOf(opts.weapon); if (opts.auto || wv > 0) opts2.push({ c: opts.weapon, v: wv }); }
         if (!opts2.length) {
-          if (!capped && drawsLeft > 0 && hand.length < 8) { const c = draw(); drawsLeft--; if (c) { hand.push(c); continue; } }
+          if (!capped && drawsLeft > 0 && hand.length < 8) { const c = draw(); drawsLeft--; if (c) { if (T.makuro) { T.makCard = c; T.makuro = false; } hand.push(c); continue; } } // Domakuro : la 1re carte piochée en plus du tour coûte 1 PA de moins
           break;
         }
         if (opts.auto) {
@@ -386,6 +398,8 @@
         ap -= cost(pick); if (!pick.weapon) T.seal = 0;
         if (pick.weapon) T.weaponUsed = true; else { hand.splice(hand.indexOf(pick), 1); discard.push(pick); if (pick.drawN) { if (pick.handScale && HAND_DISCARD) { while (hand.length) discard.push(hand.pop()); } for (let k = 0; k < Math.min(pick.drawN, DRAW_EFF) && hand.length < 9; k++) { const c2 = draw(); if (!c2) break; hand.push(c2); } } }
       }
+      olStreak = T.olBroken ? 0 : olStreak + 1; T.olNow = 0;
+      if (DF.veilleurs && ap > 0) P.apNext += 1; // Veilleurs : 1 PA non utilisé gardé pour le tour suivant
       if (!mons.some(m => m.alive)) return result(true, round);
       // PA comptés : sinon il te pulvérise
       if (paNeed != null && ap !== paNeed && (opts.auto || ap < paNeed)) { hpLost += P.hp; P.hp = 0; return result(false, round); }
@@ -397,6 +411,7 @@
       const rg = rageAt || mv('rageTurn', 0);
       if (rg && round >= rg) { hpLost += P.hp; P.hp = 0; return result(false, round); }
       // ----- tour des monstres -----
+      if (surprised && round === 1) continue;
       for (const m of mons) {
         if (!m.alive) continue;
         if (m.poison && m.poison.length) { // Sadida : poison en % des PV max au début du tour du monstre
@@ -413,7 +428,7 @@
         // Fureur : observé en Ascension, le coup « déchaîné » vaut ~×fureur l'attaque de base (il remplace le bonus de l'intention)
         const mult = (fury > 1 && intent !== 'drain' ? fury : (INTENT_MULT[intent] || 1)) * (1 + RAGE_STEP * m.rage) * (1 - Math.min(100, m.weaken) / 100) * (DF.glaces && (m.glaces || 0) >= round ? 0.9 : 1); // Glaces : la cible touchée frappe 10 % moins fort pendant 2 tours
         m.weaken = 0;
-        if (RND() * 100 < Math.min(DF.vulbis ? 75 : 100, S._dodge + vulb)) continue;
+        if (RND() * 100 < Math.min(DF.vulbis ? 75 : 100, S._dodge + vulb)) { if (DF.dorigami) T.oriNext = true; continue; }
         if (DF.vulbis) vulb += 2; // Vulbis : +2 % d'esquive par coup non esquivé
         const rf = S[RES_FIX[m.el]] || 0, rp = Math.min(RES_PCT_CAP_PLAYER, S[RES_PCT[m.el]] || 0);
         let dmg = Math.max(0, Math.floor((m.atk * mult * (1 - (S._red || 0) / 100) * (1 - clsTaken() / 100) - rf) * (1 - rp / 100)));
@@ -421,8 +436,10 @@
         if (RND() < MON_CRIT_P) dmg = Math.max(0, Math.floor(dmg * MON_CRIT_MULT) - (S.resCritiques || 0));
         if (opts.mlog) { opts.mlog.hits = (opts.mlog.hits || 0) + 1; opts.mlog.raw = (opts.mlog.raw || 0) + dmg; if (round === 1) opts.mlog.r1 = (opts.mlog.r1 || 0) + 1; }
         for (const s of P.shields) { const a = Math.min(s.value, dmg); s.value -= a; dmg -= a; if (!dmg) break; }
+        if (DF.cauchemar && round <= 2) dmg = Math.floor(dmg * 0.85); // Cauchemar : −15 % de dégâts subis les 2 premiers tours
         if (DF.ivoire) dmg = Math.min(dmg, Math.floor(maxHp * 0.35)); // Ivoire : aucun coup ordinaire au-delà de 35 % des PV max
         P.hp -= dmg; hpLost += dmg;
+        if (DF.jyfus && !jyfusUsed && P.hp > 0 && P.hp < maxHp * 0.3) { jyfusUsed = true; P.hp = Math.min(maxHp, P.hp + Math.floor(maxHp * 0.1)); } // Jyfus : 1×/combat sous 30 % → +10 % des PV max
         if (intent === 'drain') m.hp = Math.min(m.cap, m.hp + dmg);
         if (S.renvoi > 0 && dmg > 0) { const r = Math.min(m.hp, S.renvoi, dmg); /* au plus les dégâts reçus */ m.hp -= r; dmgDone += r; if (m.hp <= 0) { m.hp = 0; down(m); } }
         if (P.hp <= 0 && !saved()) return result(false, round);
@@ -432,7 +449,7 @@
     return result(false, opts.maxRounds || 30);
 
     function result(win, rounds) { const tm = mons.reduce((a, m) => a + m.maxHp, 0) || 1; return { trace, win, rounds, hpLost, dmgDone, perCard, progress: win ? 1 : 1 - mons.reduce((a, m) => a + (m.alive ? Math.max(0, m.hp) + (m.mech && m.mech.revive && !m.revived ? m.maxHp * (m.mech.revivePct != null ? m.mech.revivePct / 100 : 0.5) : 0) : 0), 0) / tm, kills: mons.filter(m => !m.alive).length }; }
-    function healP(a) { if (T.inv) { P.hp -= a; hpLost += a; } else P.hp = Math.min(maxHp, P.hp + (T.half ? Math.floor(a / 2) : a)); }
+    function healP(a) { if (T.inv) { P.hp -= a; hpLost += a; } else { const h = T.half ? Math.floor(a / 2) : a, over = P.hp + h - maxHp; P.hp = Math.min(maxHp, P.hp + h); if (DF.dotruche && over > 0) { const cap = Math.floor(maxHp * 0.1), add = Math.min(over, cap - truche); if (add > 0) { truche += add; P.shields.push({ value: add, turns: 2 }); } } } } // Dotruche : soin en trop → bouclier (10 % des PV max au plus)
     function draw() { if (!pile.length) { if (!discard.length) return null; pile = shuffle(discard); discard = []; } return pile.pop(); }
     function reflects(m) { return !!(m.mech && m.mech.reflectFrom && T.round >= m.mech.reflectFrom && (!m.mech.reflectTo || T.round <= m.mech.reflectTo)); }
     // Mode auto : le jeu vise le premier boss encore debout. Mode manuel : le plus entamé, en évitant celui qui renvoie les coups.
@@ -584,10 +601,13 @@
     function hit(m, line, label, opt) {
       opt = opt || {};
       const rp = er(m.res[RES_PCT[line.el || 0]] || 0);
-      let d = dmgLine(S, line, opt.crit, T.buffP, T.dmgPct, opt.spec, rp, opt.fixed !== false, opt.weapon, PK ? clsPct(m, opt.card || null, opt.bomb) : 0);
+      let d = dmgLine(S, line, opt.crit, T.buffP, T.dmgPct, opt.spec, rp, opt.fixed !== false, opt.weapon, (PK ? clsPct(m, opt.card || null, opt.bomb) : 0) + (opt.bomb ? 0 : T.olNow || 0));
       if (opt.luck) d = Math.floor(d * opt.luck);
       if (opt.sec) d = Math.floor(d * ZONE_SEC);
       if (opt.x2) d *= 2;
+      if (opt.spec && DF.sylvestre) d = Math.floor(d * 1.125); // Sylvestre : vision spectrale ×2,25 au lieu de ×2
+      if (dolEl && (line.el || 0) === dolEl) d = Math.floor(d * 1.1); // Dolmanax : +10 % dans l'élément du jour
+      if (T.ori && !opt.weapon) d = Math.floor(d * 1.15); // Dorigami : sort suivant une esquive totale
       if (m.mech && m.mech.hardSkin && shieldTotal() <= 0) d = Math.floor(d * m.mech.hardSkin / 100);
       // Dofawa : chaque coup a 0,1 % de chances de tuer net la cible (effet caché rapporté par les joueurs ; le Kralamoure de la Faille est supposé immunisé)
       if (DF.dofawa && d > 0 && !opt.bomb && !m.noOS && RND() < DOFAWA_P) d = m.hp + m.shield;
@@ -596,7 +616,7 @@
         let back = d; for (const s of P.shields) { const a = Math.min(s.value, back); s.value -= a; back -= a; if (!back) break; }
         P.hp -= back; hpLost += back; return 0;
       }
-      const absorbed = Math.min(m.shield, Math.floor(d * (1 - (S._perfo || 0) / 100))); m.shield -= absorbed; const real = Math.min(m.hp, d - absorbed);
+      const absorbed = Math.min(m.shield, Math.floor(d * (1 - (S._perfo || 0) / 100))); m.shield -= absorbed; if (DF.cacao && absorbed > 0 && m.shield <= 0 && cacaoTurn !== T.round) { cacaoTurn = T.round; healP(Math.floor(maxHp * 0.03)); } /* Cacao : bouclier ennemi brisé → 3 % des PV max (1×/tour) */ const real = Math.min(m.hp, d - absorbed);
       if (opts.log) opts.log.push([T.round, label, m.name, d, !!opt.crit, !!opt.sec]);
       if (DF.glaces && real > 0) m.glaces = T.round + 1;
       m.hp -= real; if (S._ero) m.cap = Math.max(1, m.cap - real * S._ero / 100); dmgDone += real; perCard[label] = (perCard[label] || 0) + real;
@@ -613,7 +633,10 @@
       if (PK && c.hasDmg) { C.att++; C.cur = { portal: PK === 'eliotrope' && C.att % 2 === 0, lance: PK === 'forgelance' && !C.firstDone && !c.weapon }; } else C.cur = null;
       C.inTurn = true;
       let luck = c.handScale ? 1 + HAND_K * Math.max(0, hand.length - 1) : 1; if (ECA && !c.weapon && c.hasDmg) { const r = RND(); luck = r < 0.32 ? 2 : r < 0.34 ? 0.5 : 1; } // Chance d'Ecaflip
-      const spec = !c.weapon && c.hasDmg && RND() < specP;  // Vision spectrale : tout le sort est doublé (toutes cibles et lignes, vérifié dans le journal)
+      const spec = !c.weapon && c.hasDmg && RND() < specP;
+      if (c.hasDmg && !opts.abyss) { const nl = c.chanceLines.length ? 1 : c.dmgLines.length; if (nl > 1) T.olBroken = true; T.olNow = T.olBroken ? 0 : Math.min(150, 50 + 20 * olStreak); } else T.olNow = 0;
+      T.ori = false; if (DF.dorigami && T.oriNext && !c.weapon && c.hasDmg) { T.ori = true; T.oriNext = false; }
+      if (spec && DF.dompin) healP(Math.floor(maxHp * 0.03)); // Dom de Pin : vision spectrale réussie → 3 % des PV max  // Vision spectrale : tout le sort est doublé (toutes cibles et lignes, vérifié dans le journal)
       if (c.hasDmg && !c.weapon) {
         const el = mainEl(c), sh = mv('shockPct', 0);
         if (sh && T.lastEl != null && el === T.lastEl) { let d = Math.floor(maxHp * sh / 100); for (const s2 of P.shields) { const a = Math.min(s2.value, d); s2.value -= a; d -= a; if (!d) break; } P.hp -= d; hpLost += d; }
