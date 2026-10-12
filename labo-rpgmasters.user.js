@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.12.20
+// @version      2.12.21
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -158,6 +158,14 @@
       if (R.pct) for (const k in itemSt) { const v = itemSt[k]; if (v > 0 && !FUSION_EXCLUDED.includes(k)) add(k, Math.max(1, Math.round(v * R.pct / 100))); }
       if (R.elem) for (const k of ['dommagesNeutre', 'dommagesTerre', 'dommagesFeu', 'dommagesEau', 'dommagesAir']) if ((itemSt[k] || 0) > 0) add(k, itemSt[k]); }
     return { st: o, pa }; }
+  // Indice de dégâts sans hasard (classement des runes) : dégâts moyens par PA des sorts du deck × PA du tour
+  function dmgIndex(S, deck) { let tot = 0, ap = 0;
+    for (const c of deck || []) { if (!c || !c.dmgLines || !c.dmgLines.length || c.weapon) continue; let e = 0;
+      const cp = c.cc > 0 ? Math.min(1, (c.cc + (S.critique || 0)) / 100) : 0, P = (S.dmgPctSorts || 0) / 100;
+      for (const l of c.dmgLines) { const el = l.el || 0, avg = ((l.min || 0) + (l.max || 0)) / 2, car = 1 + ((S[CARAC_OF_EL[el]] || 0) + (S.puissance || 0)) / 100, fix = (S.dommages || 0) + (S['dommages' + EL_NAMES[el]] || 0);
+        e += (1 - cp) * (avg * car + fix) * (1 + P) + cp * (avg * car * CRIT_MULT + fix + (S.dommagesCritiques || 0)) * (1 + P + (S.dmgPctCrit || 0) / 100); }
+      tot += e; ap += c.ap || 1; }
+    return ap ? tot / ap * (S._paTotal || 7) : 0; }
   function computeStats(gear, ctx) {
     // Prestige : +25 % par Prestige ; Bouclier de forge : jusqu'à +150 % au niveau 200 (cumul supposé additif, à confirmer)
     const pMult = 1 + 0.25 * (ctx.prestige || 0) + (ctx.forgePct || 0) / 100 + (ctx.companionPct || 0) / 100; // Compagnon (patch du 10/10) : jusqu'à +100 % au niveau 400, cumul supposé additif comme le Bouclier
@@ -805,7 +813,7 @@
     if (mech.shockPct) w.push(`l'auto n'alterne pas les éléments (Onde de choc)`);
     return w;
   }
-  const api = { RUNES, RUNE_NAMES, RUNE_RARITY, runeCodes, runeStats, BREED_KEY, BREED_NAME, CLASS_SPECTRAL, deriveStats, setAutoOrder: v => { AUTO_ORDER = v; }, setTuning: o => { if (o.crit != null) CRIT_MULT = o.crit; if (o.zoneSec != null) ZONE_SEC = o.zoneSec; if (o.weaponLast != null) WEAPON_LAST = o.weaponLast; if (o.weaponMode) WEAPON_MODE = o.weaponMode; }, CLASS_PASSIVE, dofusFx, forgePctFor, forgeDaysTo, forgeXpAt, diffForFloor, bestiaryEntries, mechFromEntries, mechText, autoWarnings, itemStats, weaponWithFusion, tierCost, allocCost, pointsTotal, computeStats, prepCard, weaponCard, simulateFight, runMany, STAT_TIERS, CARAC_OF_EL, EL_NAMES, RES_PCT, RES_FIX };
+  const api = { dmgIndex, RUNES, RUNE_NAMES, RUNE_RARITY, runeCodes, runeStats, BREED_KEY, BREED_NAME, CLASS_SPECTRAL, deriveStats, setAutoOrder: v => { AUTO_ORDER = v; }, setTuning: o => { if (o.crit != null) CRIT_MULT = o.crit; if (o.zoneSec != null) ZONE_SEC = o.zoneSec; if (o.weaponLast != null) WEAPON_LAST = o.weaponLast; if (o.weaponMode) WEAPON_MODE = o.weaponMode; }, CLASS_PASSIVE, dofusFx, forgePctFor, forgeDaysTo, forgeXpAt, diffForFloor, bestiaryEntries, mechFromEntries, mechText, autoWarnings, itemStats, weaponWithFusion, tierCost, allocCost, pointsTotal, computeStats, prepCard, weaponCard, simulateFight, runMany, STAT_TIERS, CARAC_OF_EL, EL_NAMES, RES_PCT, RES_FIX };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.RPG = api;
 })(__labo);
   return __labo.RPG; })(); /*__ENGINE_END__*/

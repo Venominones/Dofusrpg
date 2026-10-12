@@ -426,6 +426,7 @@ th,td{border-bottom-color:var(--line)}
       </div>
       <div style="display:grid;gap:14px">
         <div class="panel"><h3 style="margin:0">Stats du build <span class="note">(écart avec ton stuff actuel)</span></h3><div id="mbStats"></div></div>
+        <div class="panel"><h3 style="margin:0">Mes runes <span class="note">(classées pour ce build)</span></h3><div id="mbRunes"></div></div>
         <div class="panel">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><h3 style="margin:0">Objets</h3><div class="seg" id="mbSrc"><button type="button" data-v="inv" aria-pressed="true">Mon inventaire</button><button type="button" data-v="all" aria-pressed="false">Tout le bestiaire</button></div></div>
           <div style="display:flex;gap:6px;flex-wrap:wrap"><input type="search" id="mbQ" placeholder="Nom de l'objet…" style="flex:1;min-width:150px"><select id="mbSlotF"></select><select id="mbStatF" aria-label="Ajouter un filtre de stat"></select></div>
@@ -791,6 +792,14 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       if (R.pct) for (const k in itemSt) { const v = itemSt[k]; if (v > 0 && !FUSION_EXCLUDED.includes(k)) add(k, Math.max(1, Math.round(v * R.pct / 100))); }
       if (R.elem) for (const k of ['dommagesNeutre', 'dommagesTerre', 'dommagesFeu', 'dommagesEau', 'dommagesAir']) if ((itemSt[k] || 0) > 0) add(k, itemSt[k]); }
     return { st: o, pa }; }
+  // Indice de dégâts sans hasard (classement des runes) : dégâts moyens par PA des sorts du deck × PA du tour
+  function dmgIndex(S, deck) { let tot = 0, ap = 0;
+    for (const c of deck || []) { if (!c || !c.dmgLines || !c.dmgLines.length || c.weapon) continue; let e = 0;
+      const cp = c.cc > 0 ? Math.min(1, (c.cc + (S.critique || 0)) / 100) : 0, P = (S.dmgPctSorts || 0) / 100;
+      for (const l of c.dmgLines) { const el = l.el || 0, avg = ((l.min || 0) + (l.max || 0)) / 2, car = 1 + ((S[CARAC_OF_EL[el]] || 0) + (S.puissance || 0)) / 100, fix = (S.dommages || 0) + (S['dommages' + EL_NAMES[el]] || 0);
+        e += (1 - cp) * (avg * car + fix) * (1 + P) + cp * (avg * car * CRIT_MULT + fix + (S.dommagesCritiques || 0)) * (1 + P + (S.dmgPctCrit || 0) / 100); }
+      tot += e; ap += c.ap || 1; }
+    return ap ? tot / ap * (S._paTotal || 7) : 0; }
   function computeStats(gear, ctx) {
     // Prestige : +25 % par Prestige ; Bouclier de forge : jusqu'à +150 % au niveau 200 (cumul supposé additif, à confirmer)
     const pMult = 1 + 0.25 * (ctx.prestige || 0) + (ctx.forgePct || 0) / 100 + (ctx.companionPct || 0) / 100; // Compagnon (patch du 10/10) : jusqu'à +100 % au niveau 400, cumul supposé additif comme le Bouclier
@@ -1438,7 +1447,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     if (mech.shockPct) w.push(`l'auto n'alterne pas les éléments (Onde de choc)`);
     return w;
   }
-  const api = { RUNES, RUNE_NAMES, RUNE_RARITY, runeCodes, runeStats, BREED_KEY, BREED_NAME, CLASS_SPECTRAL, deriveStats, setAutoOrder: v => { AUTO_ORDER = v; }, setTuning: o => { if (o.crit != null) CRIT_MULT = o.crit; if (o.zoneSec != null) ZONE_SEC = o.zoneSec; if (o.weaponLast != null) WEAPON_LAST = o.weaponLast; if (o.weaponMode) WEAPON_MODE = o.weaponMode; }, CLASS_PASSIVE, dofusFx, forgePctFor, forgeDaysTo, forgeXpAt, diffForFloor, bestiaryEntries, mechFromEntries, mechText, autoWarnings, itemStats, weaponWithFusion, tierCost, allocCost, pointsTotal, computeStats, prepCard, weaponCard, simulateFight, runMany, STAT_TIERS, CARAC_OF_EL, EL_NAMES, RES_PCT, RES_FIX };
+  const api = { dmgIndex, RUNES, RUNE_NAMES, RUNE_RARITY, runeCodes, runeStats, BREED_KEY, BREED_NAME, CLASS_SPECTRAL, deriveStats, setAutoOrder: v => { AUTO_ORDER = v; }, setTuning: o => { if (o.crit != null) CRIT_MULT = o.crit; if (o.zoneSec != null) ZONE_SEC = o.zoneSec; if (o.weaponLast != null) WEAPON_LAST = o.weaponLast; if (o.weaponMode) WEAPON_MODE = o.weaponMode; }, CLASS_PASSIVE, dofusFx, forgePctFor, forgeDaysTo, forgeXpAt, diffForFloor, bestiaryEntries, mechFromEntries, mechText, autoWarnings, itemStats, weaponWithFusion, tierCost, allocCost, pointsTotal, computeStats, prepCard, weaponCard, simulateFight, runMany, STAT_TIERS, CARAC_OF_EL, EL_NAMES, RES_PCT, RES_FIX };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.RPG = api;
 })(typeof self !== 'undefined' ? self : this);
 </script>
@@ -2260,7 +2269,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
 <script type="text/plain" id="src-userscript">// ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.12.20
+// @version      2.12.21
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -2417,6 +2426,14 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       if (R.pct) for (const k in itemSt) { const v = itemSt[k]; if (v > 0 && !FUSION_EXCLUDED.includes(k)) add(k, Math.max(1, Math.round(v * R.pct / 100))); }
       if (R.elem) for (const k of ['dommagesNeutre', 'dommagesTerre', 'dommagesFeu', 'dommagesEau', 'dommagesAir']) if ((itemSt[k] || 0) > 0) add(k, itemSt[k]); }
     return { st: o, pa }; }
+  // Indice de dégâts sans hasard (classement des runes) : dégâts moyens par PA des sorts du deck × PA du tour
+  function dmgIndex(S, deck) { let tot = 0, ap = 0;
+    for (const c of deck || []) { if (!c || !c.dmgLines || !c.dmgLines.length || c.weapon) continue; let e = 0;
+      const cp = c.cc > 0 ? Math.min(1, (c.cc + (S.critique || 0)) / 100) : 0, P = (S.dmgPctSorts || 0) / 100;
+      for (const l of c.dmgLines) { const el = l.el || 0, avg = ((l.min || 0) + (l.max || 0)) / 2, car = 1 + ((S[CARAC_OF_EL[el]] || 0) + (S.puissance || 0)) / 100, fix = (S.dommages || 0) + (S['dommages' + EL_NAMES[el]] || 0);
+        e += (1 - cp) * (avg * car + fix) * (1 + P) + cp * (avg * car * CRIT_MULT + fix + (S.dommagesCritiques || 0)) * (1 + P + (S.dmgPctCrit || 0) / 100); }
+      tot += e; ap += c.ap || 1; }
+    return ap ? tot / ap * (S._paTotal || 7) : 0; }
   function computeStats(gear, ctx) {
     // Prestige : +25 % par Prestige ; Bouclier de forge : jusqu'à +150 % au niveau 200 (cumul supposé additif, à confirmer)
     const pMult = 1 + 0.25 * (ctx.prestige || 0) + (ctx.forgePct || 0) / 100 + (ctx.companionPct || 0) / 100; // Compagnon (patch du 10/10) : jusqu'à +100 % au niveau 400, cumul supposé additif comme le Bouclier
@@ -3064,7 +3081,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     if (mech.shockPct) w.push(`l'auto n'alterne pas les éléments (Onde de choc)`);
     return w;
   }
-  const api = { RUNES, RUNE_NAMES, RUNE_RARITY, runeCodes, runeStats, BREED_KEY, BREED_NAME, CLASS_SPECTRAL, deriveStats, setAutoOrder: v => { AUTO_ORDER = v; }, setTuning: o => { if (o.crit != null) CRIT_MULT = o.crit; if (o.zoneSec != null) ZONE_SEC = o.zoneSec; if (o.weaponLast != null) WEAPON_LAST = o.weaponLast; if (o.weaponMode) WEAPON_MODE = o.weaponMode; }, CLASS_PASSIVE, dofusFx, forgePctFor, forgeDaysTo, forgeXpAt, diffForFloor, bestiaryEntries, mechFromEntries, mechText, autoWarnings, itemStats, weaponWithFusion, tierCost, allocCost, pointsTotal, computeStats, prepCard, weaponCard, simulateFight, runMany, STAT_TIERS, CARAC_OF_EL, EL_NAMES, RES_PCT, RES_FIX };
+  const api = { dmgIndex, RUNES, RUNE_NAMES, RUNE_RARITY, runeCodes, runeStats, BREED_KEY, BREED_NAME, CLASS_SPECTRAL, deriveStats, setAutoOrder: v => { AUTO_ORDER = v; }, setTuning: o => { if (o.crit != null) CRIT_MULT = o.crit; if (o.zoneSec != null) ZONE_SEC = o.zoneSec; if (o.weaponLast != null) WEAPON_LAST = o.weaponLast; if (o.weaponMode) WEAPON_MODE = o.weaponMode; }, CLASS_PASSIVE, dofusFx, forgePctFor, forgeDaysTo, forgeXpAt, diffForFloor, bestiaryEntries, mechFromEntries, mechText, autoWarnings, itemStats, weaponWithFusion, tierCost, allocCost, pointsTotal, computeStats, prepCard, weaponCard, simulateFight, runMany, STAT_TIERS, CARAC_OF_EL, EL_NAMES, RES_PCT, RES_FIX };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.RPG = api;
 })(__labo);
   return __labo.RPG; })(); /*__ENGINE_END__*/
@@ -5380,7 +5397,17 @@ function mbSave(){try{localStorage.setItem(MB_KEY,JSON.stringify(MB))}catch(e){}
 function mbGear(g){const A=mbAll().m,o={};for(const [s,x] of Object.entries(g||{})){const it=x&&A[x.id];if(it)o[s]=Object.assign({},it,{f:x.f||0,q:9,slot:s},x.ru&&x.ru.length?{ru:x.ru.slice(0,2)}:{})}return o}
 /* Runes (patch du 12/10) : catalogue du jeu (moteur), stock lu par le script */
 function runeStock(){const h=(DATA&&DATA.meta&&DATA.meta.runesProbe&&DATA.meta.runesProbe.hits)||[];const o={};if(Array.isArray(h))for(const x of h)if(x&&x.rune&&R.RUNES[x.rune])o[x.rune]=Math.max(o[x.rune]||0,+x.qty||0);return o}
-function runeVal(c){const r=R.RUNES[c];if(!r)return '';if(r.pct)return `+${r.pct} % des stats de l'objet`;if(r.elem)return 'double les dommages élémentaires de l\'objet';return Object.entries(r.st).map(([k,v])=>k==='resPctAll'?`+${v} % toutes rés.`:k==='dmgPctCrit'?`+${v} % dommages critiques`:k==='dmgPctSorts'?`+${v} % dommages aux sorts`:`+${v}${/^resPct|critique/.test(k)?' %':''} ${MB_LBL[k]||STAT_LABEL[k]||k}`).join(', ')}
+function runeVal(c){const r=R.RUNES[c];if(!r)return '';if(r.pct)return `+${r.pct} % des stats de l'objet`;if(r.elem)return 'double les dommages élémentaires de l\'objet';return Object.entries(r.st).map(([k,v])=>k==='resPctAll'?`+${v} % toutes rés.`:k==='dmgPctCrit'?`+${v} % dommages critiques`:k==='dmgPctSorts'?`+${v} % dommages aux sorts`:(L=>`+${v}${/^resPct|critique/.test(k)&&!/%/.test(L)?' %':''} ${L}`)(MB_LBL[k]||STAT_LABEL[k]||k)).join(', ')}
+function renderMBRunes(){const box=$('#mbRunes');if(!box)return;const st=runeStock(),own=Object.keys(st).filter(c=>st[c]>0);
+  if(!own.length){box.innerHTML='<p class="note">Aucune rune connue : ouvre l\'onglet Runes de ton inventaire dans le jeu, puis « Envoyer au Labo » (script 2.12.20 ou plus).</p>';return}
+  const b=mbLoad();let base;try{base=mbState(b)}catch(e){box.textContent='Calcul impossible : '+e.message;return}const I0=R.dmgIndex(base.S,base.deck);
+  const slots=Object.keys(b.gear).filter(s=>b.gear[s]&&(b.gear[s].ru||[]).length<2);if(!slots.length){box.innerHTML='<p class="note">Tous les objets ont déjà 2 runes.</p>';return}
+  const A=mbAll().m,try1=(s,c)=>{const g=JSON.parse(JSON.stringify(b.gear));g[s].ru=(g[s].ru||[]).concat([c]);try{const x=mbState(Object.assign({},b,{gear:g}));return R.dmgIndex(x.S,x.deck)/I0-1}catch(e){return 0}};
+  const SURV=/^(vitalite|resPct|soins)/,UTIL=/^(sagesse|prospection|initiative|tacle|fuite|po|pm|invocations)$/;
+  const rows=own.map(c=>{const r=R.RUNES[c];let gain,where=null;if(r.pct||r.elem){gain=-1;for(const s of slots){const v=try1(s,c);if(v>gain){gain=v;where=s}}}else gain=try1(slots[0],c);
+    const keys=Object.keys(r.st||{});const t=gain>=0.04?'S':gain>=0.015?'A':gain>=0.003?'B':keys.some(k=>SURV.test(k))?'Survie':keys.some(k=>UTIL.test(k))?'Selon l\'objectif':'Inutile ici';return {c,t,gain,where}});
+  const ORD=['S','A','B','Survie','Selon l\'objectif','Inutile ici'],HINT={S:'à graver en premier',A:'bon gain de dégâts',B:'petit gain de dégâts',Survie:'PV / résistances / soins : pour les boss qui tapent fort','Selon l\'objectif':'Sagesse (XP), Prospection (butin), Initiative (PvP)…','Inutile ici':'plafond déjà atteint (PA, critique) ou sans effet sur ce build'};
+  box.innerHTML='<div class="tablewrap"><table><tr><th>Tier</th><th>Runes</th></tr>'+ORD.filter(t=>rows.some(r=>r.t===t)).map(t=>`<tr><td><strong>${esc(t)}</strong><div class="note">${esc(HINT[t])}</div></td><td>${rows.filter(r=>r.t===t).sort((x,y)=>y.gain-x.gain).map(r=>`${esc(runeLabel(r.c))} ×${st[r.c]}${r.where&&A[b.gear[r.where].id]?` <span class="note">→ sur ${esc(A[b.gear[r.where].id].n)}</span>`:''}`).join('<br>')}</td></tr>`).join('')+'</table></div><p class="note">Classement des dégâts sans hasard, pour le build affiché ci-dessus (stuff, points, deck). 1 rune d\'Action par personnage.</p>'}
 function runeLabel(c){return `${R.RUNE_NAMES[c]||c} (${runeVal(c)})`}
 const RUNE_ORDER=Object.keys(R.RUNES||{}).sort((a,b)=>({legendaire:0,epique:1}[R.RUNE_RARITY[a]]??2)-({legendaire:0,epique:1}[R.RUNE_RARITY[b]]??2));
 function mbState(b){return O.buildState(DATA,{gear:mbGear(b.gear),alloc:b.alloc||{},deck:(b.deck||[]).filter(k=>cardsByKey[k])},ctx)}
@@ -5406,7 +5433,7 @@ function renderMB(){if(!$('#mb'))return;const b=mbLoad();
   if($('#mbFus'))$('#mbFus').onchange=e=>{b.gear[MB_SEL].f=+e.target.value;mbSave();renderMB()};
   if($('#mbRemove'))$('#mbRemove').onclick=()=>{delete b.gear[MB_SEL];mbSave();renderMB()};
   document.querySelectorAll('[data-mbru]').forEach(el=>el.onchange=()=>{const g=b.gear[MB_SEL];if(!g)return;const r=(g.ru||[]).slice(0,2);r[+el.dataset.mbru]=el.value||null;g.ru=r.filter(Boolean);if(!g.ru.length)delete g.ru;mbSave();renderMB()});
-  renderMBAlloc();renderMBDeck();renderMBStats();renderMBList();renderMBSaves()}
+  renderMBAlloc();renderMBDeck();renderMBStats();renderMBList();renderMBSaves();try{renderMBRunes()}catch(e){}}
 function renderMBAlloc(){const b=mbLoad();const tot=R.pointsTotal(DATA.meta.level);let used=0;try{used=R.allocCost(b.alloc)}catch(e){}
   $('#mbPtsLeft').textContent=`(${fmt(tot-used)} restants sur ${fmt(tot)})`;$('#mbPtsLeft').style.color=tot-used<0?'var(--bad)':'';
   $('#mbAlloc').innerHTML=['vitalite','sagesse','force','intelligence','chance','agilite'].map(k=>`<div style="border:1px solid var(--line);border-radius:8px;padding:6px;background:var(--bg)"><div style="display:flex;justify-content:space-between"><span>${STAT_LABEL[k]}</span><input type="number" min="0" step="1" value="${b.alloc[k]||0}" data-mbal="${k}" style="width:4.6em"></div><div style="display:flex;gap:3px;margin-top:4px">${[-10,1,10,100].map(d=>`<button class="btn" type="button" data-mbadd="${k}:${d}" style="padding:1px 6px;font-size:12px">${d>0?'+':''}${d}</button>`).join('')}</div></div>`).join('');
