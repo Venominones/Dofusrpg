@@ -2198,7 +2198,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
 <script type="text/plain" id="src-userscript">// ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.12.6
+// @version      2.12.8
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -3346,7 +3346,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       bestFetching = true; bestTriedAt = Date.now(); fetchBestiary(false).then(() => { bestFetching = false; lastWarnSig = null; maybeWarn(st, root); }).catch(() => { bestFetching = false; });
     }
     const hidden = [...new Set(mons.filter(m => m.isBoss).map(m => m.name))].map(n => ({ n, e: bestEntriesFor(n, flN) })).filter(x => x.e && x.e.length);
-    const g = guardCheck(st, root, flN, () => { lastWarnSig = null; maybeWarn(st, root); });
+    const g = null; // v2.12.8 : plus d'estimation de victoire affichée en combat (la simulation reste approximative ; le panneau montre les mécaniques connues)
     if (!known.length && !builds.length && !(fl && fl.attempts) && !hidden.length && !g) return;
     showBanner(known, builds, fl, hidden, flN, !!(st.auto || st.autoUsed), false, g);
   }
@@ -3388,7 +3388,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       h += `<div style="margin-top:6px"><strong>${esc(m.name)}</strong>${m.isBoss ? ' <span style="color:#ec7a70">boss</span>' : ''} · vu ${m.seen || 1} fois${lines.length ? '<ul style="margin:3px 0 0 18px;padding:0">' + lines.map(l => `<li>${esc(l)}</li>`).join('') + '</ul>' : '<div style="color:#a89a85">Aucune mécanique spéciale relevée pour l’instant.</div>'}</div>`;
     }
     for (const b of builds.slice(0, 2)) {
-      h += `<div style="margin-top:8px;border-top:1px solid #4a3f30;padding-top:6px"><strong>Build conseillé : ${esc(b.label || 'sans nom')}</strong>${b.winRate != null ? ` · ${Math.round(b.winRate * 100)} % de victoires estimées` : ''}${b.note ? `<div style="color:#a89a85">${esc(b.note)}</div>` : ''}
+      h += `<div style="margin-top:8px;border-top:1px solid #4a3f30;padding-top:6px"><strong>Build conseillé : ${esc(b.label || 'sans nom')}</strong>${b.note ? `<div style="color:#a89a85">${esc(b.note)}</div>` : ''}
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${b.gearCode ? `<button data-copy="${esc(b.gearCode)}" style="${btn(true)}">Copier le code d’équipement</button>` : ''}${b.deckCode ? `<button data-copy="${esc(b.deckCode)}" style="${btn()}">Copier le code de deck</button>` : ''}</div>${b.points ? `<div style="color:#a89a85;margin-top:3px">Points : ${esc(b.points)}</div>` : ''}</div>`;
     }
     h += `<div data-msg style="color:#a89a85;min-height:1em;margin-top:4px"></div>`;
@@ -3479,12 +3479,13 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const col = w => w >= 0.99 ? '#8fc98a' : w >= 0.9 ? '#e0b04f' : '#ec7a70';
     const pc = w => (w >= 0.995 && w < 1 ? '>99' : Math.round(w * 100)) + ' %';
     const a = g.auto.winRate, m = g.manual ? g.manual.winRate : null;
-    let h = `<div style="margin-bottom:3px">Victoire estimée : <strong style="color:${col(a)}">${pc(a)} en auto</strong>${m != null ? ` · <strong style="color:${col(m)}">${pc(m)} à la main</strong>` : g.pending ? ' · à la main : calcul…' : ''}</div>`;
+    const lvl = w => w >= 0.99 ? 'faible' : w >= 0.9 ? 'modéré' : 'élevé'; // pas de pourcentage affiché : la simulation reste approximative
+    let h = `<div style="margin-bottom:3px">Risque estimé : <strong style="color:${col(a)}">${lvl(a)} en auto</strong>${m != null ? ` · <strong style="color:${col(m)}">${lvl(m)} à la main</strong>` : g.pending ? ' · à la main : calcul…' : ''}</div>`;
     const best = Math.max(a, m != null ? m : 0);
-    if (PROFILE === 'saison' && (m != null ? best : a) < 0.99) h += `<div style="color:#ec7a70;font-weight:700;margin-bottom:3px">Risque de mort définitive : ${Math.round((1 - (m != null ? best : a)) * 100)} % au mieux. Ne joue pas ce combat avec ce build : quitte-le si le jeu le permet sans pénalité, puis prépare un build dans le Labo (onglet Ascension).</div>`;
-    else if (m != null && m - a >= 0.05) h += `<div style="color:#e0b04f;margin-bottom:3px">Mieux à la main (+${Math.round((m - a) * 100)} points) : évite le mode auto ici.</div>`;
+    if (PROFILE === 'saison' && (m != null ? best : a) < 0.99) h += `<div style="color:#ec7a70;font-weight:700;margin-bottom:3px">Risque de mort définitive. Ne joue pas ce combat avec ce build : quitte-le si le jeu le permet sans pénalité, puis prépare un build dans le Labo (onglet Ascension).</div>`;
+    else if (m != null && m - a >= 0.05) h += `<div style="color:#e0b04f;margin-bottom:3px">Mieux à la main : évite le mode auto ici.</div>`;
     if (g.missing) h += `<div style="color:#a89a85">${g.missing} carte${g.missing > 1 ? 's' : ''} non reconnue${g.missing > 1 ? 's' : ''}, estimation moins sûre.</div>`;
-    return h + `<div style="color:#a89a85;font-size:11px;margin-bottom:4px">Simulation du Labo (marge d'environ 5 %), mécaniques du bestiaire comprises.</div>`;
+    return h + `<div style="color:#a89a85;font-size:11px;margin-bottom:4px">Simulation du Labo, approximative, mécaniques du bestiaire comprises.</div>`;
   }
 
   // Calibrage : on garde une fois les stats de combat et le deck de chaque build utilisé (pour comparer simulation et réalité)
@@ -3967,11 +3968,11 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     if (cmp.status === 'load') return head + `<div style="color:#a89a85">Lecture de l'inventaire, du deck et du personnage…</div>`;
     if (cmp.status === 'err') return head + `<div style="color:#ec7a70">Comparaison impossible : ${esc(cmp.msg)}</div><div style="margin-top:6px"><button data-a="cmprun" style="${btn()}">Réessayer</button></div>`;
     const b = cmp.base.r, pc = x => Math.round(x * 100) + ' %';
-    let h = head + `<div style="color:#a89a85">Contre <strong>${esc(cmp.bench.label)}</strong> (ton groupe le plus combattu) · build actuel : ${pc(b.winRate)} de victoires, ${isFinite(b.avgRounds) ? b.avgRounds.toFixed(2) : '—'} tours, ${Math.round(b.avgHpLost)} PV perdus</div>`;
+    let h = head + `<div style="color:#a89a85">Contre <strong>${esc(cmp.bench.label)}</strong> (ton groupe le plus combattu).</div>`;
     if (cmp.status === 'run') return h + `<div style="margin-top:6px">Calcul… ${cmp.done} / ${cmp.of} essais</div><div style="height:4px;background:#4a3f30;border-radius:3px;margin-top:4px"><div style="height:4px;width:${Math.round(cmp.done / Math.max(1, cmp.of) * 100)}%;background:#e0b04f;border-radius:3px"></div></div>`;
     if (!cmp.rows.length) return h + `<div style="margin-top:6px;color:#8fc98a">Aucun objet de ton inventaire ne fait mieux en échange simple : ton équipement est déjà le meilleur contre ce groupe.</div><div style="margin-top:6px"><button data-a="cmprun" style="${btn()}">Relancer</button></div>`;
     h += `<div style="margin-top:6px;display:grid;gap:4px">` + cmp.rows.map(({ j, e }) => { const r = e.r; const dT = (isFinite(r.avgRounds) && isFinite(b.avgRounds)) ? r.avgRounds - b.avgRounds : null; const dH = r.avgHpLost - b.avgHpLost; const dW = r.winRate - b.winRate;
-      return `<div style="border:1px solid #4a3f30;border-radius:8px;padding:4px 8px"><div><strong>${esc(j.it.n)}</strong>${j.it.f ? ' +' + j.it.f : ''} <span style="color:#a89a85">(${L[j.sl] || esc(j.sl)}${j.cur ? ', à la place de ' + esc(j.cur.n) : ''})</span></div><div style="color:#8fc98a">${dW > 0.004 ? '+' + pc(dW) + ' de victoires · ' : ''}${dT != null && Math.abs(dT) >= 0.01 ? (dT < 0 ? '' : '+') + dT.toFixed(2) + ' tours · ' : ''}${Math.abs(dH) >= 1 ? (dH < 0 ? '' : '+') + Math.round(dH) + ' PV perdus' : ''}</div></div>`; }).join('') + `</div><div style="color:#a89a85;margin-top:4px">Échange d'un seul objet à la fois, ${cmp.of} essais en ${Math.round(cmp.ms / 1000)} s. Pour des changements combinés (panoplies, deck, points), utilise l'Optimiseur du Labo.</div><div style="margin-top:6px"><button data-a="cmprun" style="${btn()}">Relancer</button></div>`;
+      return `<div style="border:1px solid #4a3f30;border-radius:8px;padding:4px 8px"><div><strong>${esc(j.it.n)}</strong>${j.it.f ? ' +' + j.it.f : ''} <span style="color:#a89a85">(${L[j.sl] || esc(j.sl)}${j.cur ? ', à la place de ' + esc(j.cur.n) : ''})</span></div><div style="color:#8fc98a">${dT != null && dT < -0.01 ? 'plus rapide' : dH < -1 ? 'plus solide' : 'meilleur'} selon la simulation</div></div>`; }).join('') + `</div><div style="color:#a89a85;margin-top:4px">Échange d'un seul objet à la fois, ${cmp.of} essais en ${Math.round(cmp.ms / 1000)} s. Pour des changements combinés (panoplies, deck, points), utilise l'Optimiseur du Labo.</div><div style="margin-top:6px"><button data-a="cmprun" style="${btn()}">Relancer</button></div>`;
     return h;
   }
 
@@ -4461,10 +4462,10 @@ function runOpt(force){
   if(MEM.seed)opts.seed=MEM.seed;
   const renderOpt0=renderOpt;const renderOpt1=(res,...a)=>{memoPut('opt',MEM.key,opts,res);renderOpt0(res,...a)};
   const btn=$('#oRun');btn.disabled=true;$('#oBar').style.width='2%';$('#oStatus').textContent='Démarrage…';runUI(true);const T0=Date.now();
-  const stopMsg=res=>`Recherche arrêtée à ta demande après ${res.evals} essais : meilleur build trouvé jusque-là. Les chiffres « après » sont estimés sur moins de combats que d'habitude.`;
+  const stopMsg=res=>`Recherche arrêtée à ta demande après ${res.evals} essais : meilleur build trouvé jusque-là.`;
   const phases=['Points de caractéristiques','Équipement','Deck'];
-  const runHere=()=>{runUI(false);$('#oStatus').textContent='Calcul en cours dans la page (elle peut se figer quelques secondes)…';setTimeout(()=>{try{const slim=optData();const res=O.optimizeDeep(slim,opts);btn.disabled=false;$('#oBar').style.width='100%';$('#oStatus').textContent=`Terminé en ${res.evals} essais. Résultats vérifiés sur 2 500 combats.`;renderOpt1(res,opts,pack,mult,deckIdx)}catch(err){btn.disabled=false;$('#oStatus').textContent='Le calcul a échoué : '+err.message}},50)};
-  if(deepParallel(optData(),opts,$('#oStatus'),$('#oBar'),res=>{runUI(false);btn.disabled=false;$('#oBar').style.width='100%';if(res.stopped){$('#oStatus').textContent=stopMsg(res);memoPut('opt',MEM.key+'|stop',opts,res);renderOpt0(res,opts,pack,mult,deckIdx);return}$('#oStatus').textContent=`Terminé en ${res.evals} essais, réparti sur ${res.cores} cœurs. Résultats vérifiés sur 2 500 combats.`;renderOpt1(res,opts,pack,mult,deckIdx)},err=>{runUI(false);btn.disabled=false;$('#oStatus').textContent='Le calcul a échoué : '+err}))return;
+  const runHere=()=>{runUI(false);$('#oStatus').textContent='Calcul en cours dans la page (elle peut se figer quelques secondes)…';setTimeout(()=>{try{const slim=optData();const res=O.optimizeDeep(slim,opts);btn.disabled=false;$('#oBar').style.width='100%';$('#oStatus').textContent=`Terminé en ${res.evals} essais.`;renderOpt1(res,opts,pack,mult,deckIdx)}catch(err){btn.disabled=false;$('#oStatus').textContent='Le calcul a échoué : '+err.message}},50)};
+  if(deepParallel(optData(),opts,$('#oStatus'),$('#oBar'),res=>{runUI(false);btn.disabled=false;$('#oBar').style.width='100%';if(res.stopped){$('#oStatus').textContent=stopMsg(res);memoPut('opt',MEM.key+'|stop',opts,res);renderOpt0(res,opts,pack,mult,deckIdx);return}$('#oStatus').textContent=`Terminé en ${res.evals} essais, réparti sur ${res.cores} cœurs.`;renderOpt1(res,opts,pack,mult,deckIdx)},err=>{runUI(false);btn.disabled=false;$('#oStatus').textContent='Le calcul a échoué : '+err}))return;
   let w;try{if(worker)worker.terminate();w=worker=makeWorker();}catch(e){runHere();return}
   let sBest=null,sEv=0,sStop=false,sBase=0,sLast=0;
   RUNCTL={best:()=>sBest,stop(){if(sStop)return;sStop=true;try{w.terminate()}catch(e){}if(!sBest){runUI(false);btn.disabled=false;$('#oStatus').textContent='Arrêté trop tôt : aucun build complet testé pour l\'instant.';return}$('#oStatus').textContent='Arrêt : mesure de ton build actuel pour comparer…';
@@ -4472,7 +4473,7 @@ function runOpt(force){
   w.onmessage=e=>{const m=e.data;if(sStop)return;
     if(m.type==='best'){if(!sBest||m.b.final.score>sBest.final.score)sBest=m.b;return}
     if(m.type==='progress'){const p=m.p;const pe=p.evals||0;if(pe<sLast)sBase+=sLast;sLast=pe;sEv=sBase+pe;const pi=Math.max(0,phases.indexOf(p.phase));const frac=p.phase==='Terminé'?1:/\(\d+\/\d+\)/.test(p.phase)?Math.min(1,p.done/Math.max(1,p.of)):(pi+Math.min(1,p.done/Math.max(1,p.of)))/3;progressUI($('#oBar'),$('#oStatus'),frac,T0,opts.budgetMs,sEv,'',sBest)}
-    if(m.type==='done'){runUI(false);btn.disabled=false;$('#oBar').style.width='100%';$('#oStatus').textContent=`Terminé en ${m.res.evals} essais. Résultats vérifiés sur 2 500 combats.`;renderOpt1(m.res,opts,pack,mult,deckIdx)}};
+    if(m.type==='done'){runUI(false);btn.disabled=false;$('#oBar').style.width='100%';$('#oStatus').textContent=`Terminé en ${m.res.evals} essais.`;renderOpt1(m.res,opts,pack,mult,deckIdx)}};
   let gotMsg=false;const prevOn=w.onmessage;w.onmessage=e=>{gotMsg=true;prevOn(e)};
   w.onerror=()=>{if(sStop)return;if(!gotMsg){w.terminate();runHere();return}runUI(false);btn.disabled=false;$('#oStatus').textContent='Le calcul a échoué. Réessaie avec l\'effort Rapide.'};
   const slim=optData();
@@ -4483,18 +4484,18 @@ let lastSummary='';
 let lastOpt=null;
 function renderOpt(res,opts,pack,mult,deckIdx){lastOpt=res;
   const a=res.start.r,b=res.final.r,Sa=res.start.S,Sb=res.final.S;
-  if(/^pvp/.test(opts.objective)){const H=(pack.defs&&pack.defs[0]&&pack.defs[0].hpMax)||1,need=(opts.ctx&&opts.ctx.needIni)||0;$('#oKpis').innerHTML=[['Tué au tour 1',fmt(b.winRate*100,0)+' %',`avant ${fmt(a.winRate*100,0)} %`],['Dégâts du tour 1',fmt(b.avgDmg||0),`sur ${fmt(H)} PV${H!==(+$('#pvpHp').value||H)?' (Ultime : ×2,5)':''} · avant ${fmt(a.avgDmg||0)}`],['Initiative',fmt(O.iniEst(Sb)),need?(O.iniEst(Sb)>need?`<span class="up">plus rapide que lui (${fmt(need)})</span>`:`<span class="down">plus lent que lui (${fmt(need)})</span>`):`avant ${fmt(O.iniEst(Sa))}`],['PV max',fmt(Sb._maxHp),`avant ${fmt(Sa._maxHp)}`]].map(([x,y,z])=>`<div class="kpi"><span class="lbl">${x}</span><span class="v">${y}</span><span class="d muted">${z}</span></div>`).join('')}
-  else if(opts.objective==='kralamoure'){const T=10,da=a.avgDmg||0,db=b.avgDmg||0;$('#oKpis').innerHTML=[['Dégâts en '+T+' tours',fmt(db),`avant ${fmt(da)} · ${delta(da,db,false,0)}`],['Par tour',fmt(db/T),`avant ${fmt(da/T)}`],['Gain',da?fmt((db/da-1)*100,1)+' %':'—','vs build actuel'],['PV perdus',fmt(b.avgHpLost),`avant ${fmt(a.avgHpLost)} · PV max ${fmt(Sb._maxHp)}`]].map(([x,y,z])=>`<div class="kpi"><span class="lbl">${x}</span><span class="v">${y}</span><span class="d muted">${z}</span></div>`).join('')}
-  else $('#oKpis').innerHTML=[
-    ['Tours moyens',isFinite(b.avgRounds)?fmt(b.avgRounds,2):'—',`avant ${isFinite(a.avgRounds)?fmt(a.avgRounds,2):'—'} · ${delta(a.avgRounds,b.avgRounds,true)}`],
-    ['Victoires',fmt(b.winRate*100,1)+' %',`avant ${fmt(a.winRate*100,1)} % · ${delta(a.winRate*100,b.winRate*100,false,1,' pts')}`],
-    ['PV perdus',fmt(b.avgHpLost),`avant ${fmt(a.avgHpLost)} · ${delta(a.avgHpLost,b.avgHpLost,true,0)}`],
-    ['PV max',fmt(Sb._maxHp),`avant ${fmt(Sa._maxHp)} · ${delta(Sa._maxHp,Sb._maxHp,false,0)}`]
-  ].concat(opts.objective==='sagesse'?[['Sagesse',fmt(Sb.sagesse||0),`avant ${fmt(Sa.sagesse||0)}`],['Rythme d\'XP',fmt((1+(Sb.sagesse||0)/100)/b.avgRounds/((1+(Sa.sagesse||0)/100)/a.avgRounds)*100-100,0)+' %','vs build actuel (sagesse ÷ tours)']]:opts.objective==='pvp-ini'?[['Initiative',fmt(O.iniEst(Sb)),`avant ${fmt(O.iniEst(Sa))} · ${delta(O.iniEst(Sa),O.iniEst(Sb),false,0)}`],['Ennemis surpris (hors arène)',fmt((Sb._surprise||0)*100,1)+' %',`avant ${fmt((Sa._surprise||0)*100,1)} % · 25 % max à 15 000`]]:opts.objective==='pp'?[['Prospection',fmt(Sb._pp),`avant ${fmt(Sa._pp)} · 100 + PP objets + Chance/10${Sb._dofus&&Sb._dofus.dokille?` · + Dokille (≈ +${fmt(5/((opts.ctx&&opts.ctx.lootE)||0.5),0)} % d\'objets pour toi)`:''}`],['Butin par tour',fmt(Sb._pp/b.avgRounds/(Sa._pp/a.avgRounds)*100-100,0)+' %','vs build actuel (PP ÷ tours)']]:[]).map(([x,y,z])=>`<div class="kpi"><span class="lbl">${x}</span><span class="v">${y}</span><span class="d muted">${z}</span></div>`).join('');
+  // Pas de statistiques de combat affichées (tours, PV perdus, dégâts, victoires) : la simulation sert à choisir le build, pas à promettre un résultat
+  {const iniTxt=()=>{const need=(opts.ctx&&opts.ctx.needIni)||0;return need?(O.iniEst(Sb)>need?`<span class="up">au-dessus de la sienne (${fmt(need)})</span>`:`<span class="down">en dessous de la sienne (${fmt(need)})</span>`):`avant ${fmt(O.iniEst(Sa))}`};
+   const mainCar=['force','intelligence','chance','agilite'].reduce((x,y)=>(Sb[y]||0)>(Sb[x]||0)?y:x,'force'),CL={force:'Force',intelligence:'Intelligence',chance:'Chance',agilite:'Agilité'};
+   const k=[['PV max',fmt(Sb._maxHp),`avant ${fmt(Sa._maxHp)}`],['PA',fmt(Sb._paTotal),`avant ${fmt(Sa._paTotal)}`],[CL[mainCar],fmt(Sb[mainCar]||0),`avant ${fmt(Sa[mainCar]||0)}`]];
+   if(opts.objective==='pp')k.unshift(['Prospection',fmt(Sb._pp),`avant ${fmt(Sa._pp)}${Sb._dofus&&Sb._dofus.dokille?' · + Dokille':''}`]);
+   else if(opts.objective==='sagesse')k.unshift(['Sagesse',fmt(Sb.sagesse||0),`avant ${fmt(Sa.sagesse||0)}`]);
+   else if(/^pvp/.test(opts.objective))k.unshift(['Initiative',fmt(O.iniEst(Sb)),iniTxt()]);
+   else k.push(['Puissance',fmt(Sb.puissance||0),`avant ${fmt(Sa.puissance||0)}`]);
+   $('#oKpis').innerHTML=k.map(([x,y,z])=>`<div class="kpi"><span class="lbl">${x}</span><span class="v">${y}</span><span class="d muted">${z}</span></div>`).join('')}
   const st=res.state;let html='';const lines=[];
-  if(res.saturated){$('#oDetails').innerHTML=`<div class="alert"><strong>Adversaire trop facile pour comparer des builds.</strong><span>Ton build actuel gagne déjà ${fmt(a.winRate*100,1)} % des combats en ${fmt(a.avgRounds,2)} tour, sans presque perdre de PV : n'importe quel stuff ou deck ferait pareil, et le Labo ne propose donc aucun changement. Choisis un adversaire plus dur (un boss, un étage, un groupe plus fort) ou monte la difficulté.</span><button class="btn" type="button" id="oForce" style="margin-top:6px;justify-self:start">Optimiser quand même</button></div>`;lastSummary='';$('#oForce').onclick=()=>{window.__forceSat=true;runOpt(true)};return}
+  if(res.saturated){$('#oDetails').innerHTML=`<div class="alert"><strong>Adversaire trop facile pour comparer des builds.</strong><span>Ton build actuel règle déjà ces combats sans difficulté : n'importe quel stuff ou deck ferait pareil, et le Labo ne propose donc aucun changement. Choisis un adversaire plus dur (un boss, un étage, un groupe plus fort) ou monte la difficulté.</span><button class="btn" type="button" id="oForce" style="margin-top:6px;justify-self:start">Optimiser quand même</button></div>`;lastSummary='';$('#oForce').onclick=()=>{window.__forceSat=true;runOpt(true)};return}
   lines.push(`Labo RpgMasters — ${pack.label} ×${mult} — ${(O.ORIENT[opts.objective]||{}).label||opts.objective}`);
-  lines.push(opts.objective==='kralamoure'?`Dégâts en 10 tours ${fmt(a.avgDmg||0)} → ${fmt(b.avgDmg||0)}`:`Tours ${fmt(a.avgRounds,2)} → ${fmt(b.avgRounds,2)} · victoires ${fmt(a.winRate*100,1)} % → ${fmt(b.winRate*100,1)} %`);
   if(opts.optGear){
     let rows='',n=0;
     for(const [s] of O.SLOTS){const x=(opts.start&&opts.start.gear||curGear)[s],y=st.gear[s];const ch=(x&&x.id)!==(y&&y.id)||(x&&x.f)!==(y&&y.f);if(ch){n++;lines.push(`${SLOT_LABEL[s]} : ${x?x.n:'vide'} → ${y?y.n+(y.f?' '+tierLabel(y.f):''):'vide'}`)}
@@ -4594,7 +4595,7 @@ function farmHtml(st){const miss=O.SLOTS.map(([s])=>st.gear[s]).filter(it=>it&&i
 // Trois builds au choix : le plus rapide, le plus sûr, le meilleur compromis
 function choicesHtml(res){if(!res||!res.archs||res.archs.length<2||!res.archs[0].state)return '';const A=res.archs.filter(a=>a.state);const best=A[0];const top=A.filter(a=>a.winRate>=best.winRate-0.02);
   const fast=top.slice().sort((a,b)=>a.avgRounds-b.avgRounds)[0],safe=top.slice().sort((a,b)=>a.avgHpLost-b.avgHpLost)[0];
-  const card=(t,a,why)=>`<div class="kpi"><span class="lbl">${t}</span><span class="v" style="font-size:1.05rem">${esc(a.label)}</span><span class="d muted">${fmt(a.winRate*100,0)} % · ${isFinite(a.avgRounds)?fmt(a.avgRounds,2):'—'} tours · ${fmt(a.avgHpLost)} PV perdus${a.confirmed?' · confirmé':''}</span><span class="d muted">${why}</span><span class="d"><button class="btn ghost" type="button" data-copy="${O.encodeGear(a.state.gear)}">Équipement</button> <button class="btn ghost" type="button" data-copy="${O.encodeDeck(a.state.deck,DATA.meta.breedId)}">Deck</button></span><span class="d muted">Points : ${esc(allocText(a.state.alloc))}</span></div>`;
+  const card=(t,a,why)=>`<div class="kpi"><span class="lbl">${t}</span><span class="v" style="font-size:1.05rem">${esc(a.label)}</span><span class="d muted">${a.confirmed?'confirmé':''}</span><span class="d muted">${why}</span><span class="d"><button class="btn ghost" type="button" data-copy="${O.encodeGear(a.state.gear)}">Équipement</button> <button class="btn ghost" type="button" data-copy="${O.encodeDeck(a.state.deck,DATA.meta.breedId)}">Deck</button></span><span class="d muted">Points : ${esc(allocText(a.state.alloc))}</span></div>`;
   return `<h3>Trois builds au choix</h3><div class="kpis">${card('Meilleur compromis',best,'le build retenu ci-dessus')}${card('Le plus rapide',fast,'pour farmer')}${card('Le plus sûr',safe,'pour le contenu dur')}</div>`}
 
 /* ---------- Fiabilité : simulation contre combats réels ---------- */
@@ -4807,8 +4808,8 @@ function runAsc(force){
   const slim=Object.assign({},DATA);delete slim._cardsByKey;w.postMessage({data:slim,opts});
 }
 let lastAsc=null;
-function archTable(res){if(!res||!res.archs||res.archs.length<2)return '';return `<h3>Comparaison des éléments</h3><p class="note">Un build complet a été cherché pour chaque élément ; le meilleur est retenu : <strong>${esc(res.archetype)}</strong>.</p><div class="tablewrap"><table><tr><th>Archétype</th><th class="num">Victoires</th><th class="num">Tours</th><th class="num">PV perdus</th><th class="num">Score</th></tr>${res.archs.map((a,i)=>`<tr class="${i===0?'changed':''}"><td>${i===0?'<strong>'+esc(a.label)+'</strong>':esc(a.label)}</td><td class="num">${fmt(a.winRate*100,0)} %</td><td class="num">${isFinite(a.avgRounds)?fmt(a.avgRounds,2):'—'}</td><td class="num">${fmt(a.avgHpLost)}</td><td class="num">${fmt(a.score,0)}</td></tr>`).join('')}</table></div>`}
-function scenTable(r){if(!r||!r.scenarios)return '';return `<h3>Détail par adversaire</h3><div class="tablewrap"><table><tr><th>Adversaire</th><th class="num">Victoires</th><th class="num">Tours</th><th class="num">PV perdus</th></tr>${r.scenarios.map(x=>`<tr><td>${esc(x.label)}</td><td class="num ${x.winRate>=0.9?'up':x.winRate<0.6?'down':''}"><strong>${fmt(x.winRate*100,0)} %</strong></td><td class="num">${isFinite(x.avgRounds)?fmt(x.avgRounds,1):'—'}</td><td class="num">${fmt(x.avgHpLost)}</td></tr>`).join('')}</table></div><p class="note">Pire cas : ${fmt(r.minWin*100,0)} % de victoires.</p>`}
+function archTable(res){if(!res||!res.archs||res.archs.length<2)return '';return `<h3>Pistes explorées</h3><p class="note">Un build complet a été cherché pour chaque piste ; celui retenu : <strong>${esc(res.archetype)}</strong>. Autres pistes : ${res.archs.slice(1).map(a=>esc(a.label)).join(', ')}.</p>`}
+function scenTable(r){return ''}
 function renderAscResult(res,pack,mult,su){
   if(res.saturated){$('#aResult').innerHTML=`<div class="alert"><strong>Adversaire trop facile pour comparer des builds.</strong><span>Ton build actuel gagne déjà ${fmt(res.start.r.winRate*100,0)} % en ${fmt(res.start.r.avgRounds,1)} tour sans perdre de PV : rien à améliorer à ce niveau. Monte « Étage de référence » ou le renfort pour tester un étage plus dur.</span><button class="btn" type="button" id="aForce" style="margin-top:6px;justify-self:start">Optimiser quand même</button></div>`;$('#aForce').onclick=()=>{window.__forceSatA=true;runAsc(true)};return}
   const b=res.final.r,a=res.start.r;const st=res.state;
@@ -5195,15 +5196,15 @@ function optSummary(st,Sb,b,opts,res){const o=opts.objective,lab=(O.ORIENT[o]||{
   const resAvg=Math.round(EL_NAME.reduce((a,e)=>a+Math.min(50,Sb['resPct'+e]||0),0)/5);const deck=st.deck.map(k=>cardsByKey[k]).filter(Boolean);
   const per=Object.entries(b.perCard||{}).sort((p,q)=>q[1]-p[1]);const tot=per.reduce((a,x)=>a+x[1],0)||1;const topC=per.filter(([n])=>n!==(st.weapon&&st.weapon.n)).slice(0,2).map(x=>x[0]);
   const sh=deck.filter(c=>(c.eff||[]).some(l=>l.k==='shieldHp'||l.k==='shieldLvl')).map(c=>c.n);
-  const res1=o==='kralamoure'?`${fmt(b.avgDmg||0)} dégâts en 10 tours`:`${fmt(b.winRate*100,0)} % de victoires en ${isFinite(b.avgRounds)?fmt(b.avgRounds,1):'—'} tours`;
-  const short=`${lab} ${elTxt} : ${fmt(Sb._maxHp)} PV, ${Sb._paTotal} PA, ${resAvg} % de résistance moyenne ; deck de ${deck.length} sorts porté par ${topC.join(' et ')||'l\'arme'}${sh.length?', avec '+sh.join(' et ')+' pour tenir':''}. ${res1}.`;
+  const res1='';
+  const short=`${lab} ${elTxt} : ${fmt(Sb._maxHp)} PV, ${Sb._paTotal} PA, ${resAvg} % de résistance moyenne ; deck de ${deck.length} sorts porté par ${topC.join(' et ')||'l\'arme'}${sh.length?', avec '+sh.join(' et ')+' pour tenir':''}.`;
   const w=statW(o,Sb);const SN={};for(const it of Object.values(st.gear||{}))if(it&&it.setId){const k=mbSetName(it);SN[k]=(SN[k]||0)+1}
   const gearL=O.SLOTS.map(([s])=>[s,st.gear[s]]).filter(([,it])=>it).map(([s,it])=>{const why=whyItem(it,it.f,w);const set=it.setId&&SN[mbSetName(it)]>=2?` · bonus de ${esc(mbSetName(it))} (${SN[mbSetName(it)]} pièces)`:'';const fx=it.s==='dofus'?fxOf(it)[0]:'';return `<li><strong>${esc(it.n)}</strong> <span class="dim">(${esc(SLOT_LABEL[s]||s)}${it.f?', '+MB_FUS[it.f]:''})</span> : ${why?esc(why):'stats d\'appoint'}${set}${fx?' · effet : '+esc(fx):''}</li>`}).join('');
-  const cardsL=per.slice(0,5).map(([n,v])=>`${esc(n)} (${fmt(v/tot*100,0)} % des dégâts)`).join(', ');
+  const cardsL=per.slice(0,5).map(([n])=>esc(n)).join(', ');
   const long=`<p><strong>Principe.</strong> ${OBJ_PRINC[o]||(/^mono:/.test(o)?'Mono-élément : toutes les stats de dégâts sur un seul élément, pour que chaque point compte.':'')} ${els.length>1?'Éléments principaux':'Élément principal'} : ${elTxt}.</p>
-  <p><strong>Chiffres.</strong> ${fmt(Sb._maxHp)} PV, ${Sb._paTotal} PA, ${Sb.pm||0} PM, Puissance ${fmt(Sb.puissance||0)}, ${fmt(Sb.critique||0)} % de critique, résistance moyenne ${resAvg} % (plafond 50 %). Résultat simulé : ${res1}.</p>
+  <p><strong>Chiffres.</strong> ${fmt(Sb._maxHp)} PV, ${Sb._paTotal} PA, ${Sb.pm||0} PM, Puissance ${fmt(Sb.puissance||0)}, ${fmt(Sb.critique||0)} % de critique, résistance moyenne ${resAvg} % (plafond 50 %).</p>
   <p><strong>Pourquoi ces objets</strong> (les stats qui comptent le plus pour cet objectif) :</p><ul>${gearL}</ul>
-  <p><strong>Sorts.</strong> ${cardsL||'—'}.${sh.length?' Bouclier : '+sh.map(esc).join(', ')+'.':''}</p>
+  <p><strong>Sorts</strong> (les plus utiles en premier) : ${cardsL||'—'}.${sh.length?' Bouclier : '+sh.map(esc).join(', ')+'.':''}</p>
   <p><strong>Points.</strong> ${esc(allocText(st.alloc||{})||'—')}.</p>`;
   return {short,long}}
 function packMechs(pack){const L=[];for(const sc of (pack&&pack.scenarios)||[{monsters:(pack&&pack.defs)||[]}])for(const m of sc.monsters||[])if(m&&m.mech)L.push(m.mech);return L}
@@ -5220,7 +5221,7 @@ function compoChecks(st,Sb,b,opts,pack){const o=opts.objective,asc=/^ascension/.
   const zoneOnly=dmgC.length&&dmgC.every(c=>(c.eff||[]).some(l=>(l.k==='dmg'||l.k==='steal')&&l.zone));if(has('reflectFrom')||asc)add(zoneOnly?'ko':'ok',zoneOnly?'Que des sorts de zone : pendant un Miroir, tu touches forcément le boss qui renvoie les coups. Garde un sort mono-cible.':'Sorts mono-cible disponibles pour les tours de Miroir.');
   const over=EL_NAME.filter(e=>(Sb['resPct'+e]||0)>50);if(over.length)add('ko',`Résistances au-dessus du plafond de 50 % : ${over.map(e=>e+' '+Sb['resPct'+e]+' %').join(', ')}. C'est normal : le prestige multiplie les stats des objets (×${fmt(1+0.25*(DATA.meta.prestige||0),2)} au prestige ${DATA.meta.prestige||0}), le jeu affiche la même valeur. Le surplus ne sert à rien en combat et l'Optimiseur ne le compte pas : un objet qui apporte surtout de la résistance dans ces éléments vaut moins qu'il n'en a l'air.`);else add('ok','Aucune résistance gaspillée au-dessus de 50 %.');
   const slots=opts.deckSize||DATA.meta.deckSize||9;if(deck.length<7)add('bad',`Deck de ${deck.length} cartes : 7 minimum.`);else add('ok',`Deck de ${deck.length} cartes sur ${slots} emplacements${deck.length<slots?' (moins de cartes = tu pioches plus souvent tes meilleures)':''}.`);
-  if(o!=='kralamoure'){if(b.winRate<0.6)add('bad',`Seulement ${fmt(b.winRate*100,0)} % de victoires simulées : vise un étage plus bas ou une orientation plus tank.`);else if(b.winRate<0.9)add('ko',`${fmt(b.winRate*100,0)} % de victoires simulées : jouable, avec du risque.`);else add('ok',`${fmt(b.winRate*100,0)} % de victoires simulées.`)}
+  
   return `<ul class="ochecks">${out.join('')}</ul>`}
 // ---------- Build manuel (style éditeur de stuff : emplacements, liste d'objets filtrable, stats en direct) ----------
 const MB_KEY='labo-manual-v1',MB_SAVES='labo-manual-saves';
@@ -5377,7 +5378,7 @@ const PRE_SHORT={farm:'Farm rapide, deck court et rentable.',equilibre:'Polyvale
 const PRE_ORDER=['equilibre','farm','tank','krala','pp','zone'];
 let PRE_SEL=null,PRE_TAB='car';
 function preList(){const tier=segVal('preTier')||'budget';return PRE_ORDER.map(a=>PREBUILDS.find(b=>b.arch===a&&b.tier===tier)).filter(Boolean)}
-function preKpi(b){return b.arch==='krala'?[fmt(b.r.dmg),'dégâts / 10 tours']:b.arch==='pp'?[fmt(b.r.pp),'prospection']:b.arch==='tank'||b.arch==='equilibre'?[fmt(b.r.win*100,0)+' %','victoires étages 31-45']:[isFinite(b.r.rounds)?fmt(b.r.rounds,1):'—','tours par combat']}
+function preKpi(b){return b.arch==='pp'?[fmt(b.r.pp),'prospection']:[fmt(b.r.hp),'PV · '+(b.r.pa||'?')+' PA']}
 function preGear(b){const g={};for(const [s,x] of Object.entries(b.gear||{}))if(x)g[s]={id:x.id,f:x.f||0};return g}
 function preDeckKeys(b){const byId={};for(const c of DATA.cards)byId[c.id]=c.key;return (b.deck||[]).map(c=>byId[c.id]).filter(Boolean)}
 function preIc(s,x,own,cls){const it=x&&mbAll().m[x.id];if(!it)return `<span class="${cls}" title="${esc(SLOT_LABEL[s]||s)}"></span>`;const src=mbIcon(it);

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.12.6
+// @version      2.12.8
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -1149,7 +1149,7 @@
       bestFetching = true; bestTriedAt = Date.now(); fetchBestiary(false).then(() => { bestFetching = false; lastWarnSig = null; maybeWarn(st, root); }).catch(() => { bestFetching = false; });
     }
     const hidden = [...new Set(mons.filter(m => m.isBoss).map(m => m.name))].map(n => ({ n, e: bestEntriesFor(n, flN) })).filter(x => x.e && x.e.length);
-    const g = guardCheck(st, root, flN, () => { lastWarnSig = null; maybeWarn(st, root); });
+    const g = null; // v2.12.8 : plus d'estimation de victoire affichée en combat (la simulation reste approximative ; le panneau montre les mécaniques connues)
     if (!known.length && !builds.length && !(fl && fl.attempts) && !hidden.length && !g) return;
     showBanner(known, builds, fl, hidden, flN, !!(st.auto || st.autoUsed), false, g);
   }
@@ -1191,7 +1191,7 @@
       h += `<div style="margin-top:6px"><strong>${esc(m.name)}</strong>${m.isBoss ? ' <span style="color:#ec7a70">boss</span>' : ''} · vu ${m.seen || 1} fois${lines.length ? '<ul style="margin:3px 0 0 18px;padding:0">' + lines.map(l => `<li>${esc(l)}</li>`).join('') + '</ul>' : '<div style="color:#a89a85">Aucune mécanique spéciale relevée pour l’instant.</div>'}</div>`;
     }
     for (const b of builds.slice(0, 2)) {
-      h += `<div style="margin-top:8px;border-top:1px solid #4a3f30;padding-top:6px"><strong>Build conseillé : ${esc(b.label || 'sans nom')}</strong>${b.winRate != null ? ` · ${Math.round(b.winRate * 100)} % de victoires estimées` : ''}${b.note ? `<div style="color:#a89a85">${esc(b.note)}</div>` : ''}
+      h += `<div style="margin-top:8px;border-top:1px solid #4a3f30;padding-top:6px"><strong>Build conseillé : ${esc(b.label || 'sans nom')}</strong>${b.note ? `<div style="color:#a89a85">${esc(b.note)}</div>` : ''}
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${b.gearCode ? `<button data-copy="${esc(b.gearCode)}" style="${btn(true)}">Copier le code d’équipement</button>` : ''}${b.deckCode ? `<button data-copy="${esc(b.deckCode)}" style="${btn()}">Copier le code de deck</button>` : ''}</div>${b.points ? `<div style="color:#a89a85;margin-top:3px">Points : ${esc(b.points)}</div>` : ''}</div>`;
     }
     h += `<div data-msg style="color:#a89a85;min-height:1em;margin-top:4px"></div>`;
@@ -1282,12 +1282,13 @@
     const col = w => w >= 0.99 ? '#8fc98a' : w >= 0.9 ? '#e0b04f' : '#ec7a70';
     const pc = w => (w >= 0.995 && w < 1 ? '>99' : Math.round(w * 100)) + ' %';
     const a = g.auto.winRate, m = g.manual ? g.manual.winRate : null;
-    let h = `<div style="margin-bottom:3px">Victoire estimée : <strong style="color:${col(a)}">${pc(a)} en auto</strong>${m != null ? ` · <strong style="color:${col(m)}">${pc(m)} à la main</strong>` : g.pending ? ' · à la main : calcul…' : ''}</div>`;
+    const lvl = w => w >= 0.99 ? 'faible' : w >= 0.9 ? 'modéré' : 'élevé'; // pas de pourcentage affiché : la simulation reste approximative
+    let h = `<div style="margin-bottom:3px">Risque estimé : <strong style="color:${col(a)}">${lvl(a)} en auto</strong>${m != null ? ` · <strong style="color:${col(m)}">${lvl(m)} à la main</strong>` : g.pending ? ' · à la main : calcul…' : ''}</div>`;
     const best = Math.max(a, m != null ? m : 0);
-    if (PROFILE === 'saison' && (m != null ? best : a) < 0.99) h += `<div style="color:#ec7a70;font-weight:700;margin-bottom:3px">Risque de mort définitive : ${Math.round((1 - (m != null ? best : a)) * 100)} % au mieux. Ne joue pas ce combat avec ce build : quitte-le si le jeu le permet sans pénalité, puis prépare un build dans le Labo (onglet Ascension).</div>`;
-    else if (m != null && m - a >= 0.05) h += `<div style="color:#e0b04f;margin-bottom:3px">Mieux à la main (+${Math.round((m - a) * 100)} points) : évite le mode auto ici.</div>`;
+    if (PROFILE === 'saison' && (m != null ? best : a) < 0.99) h += `<div style="color:#ec7a70;font-weight:700;margin-bottom:3px">Risque de mort définitive. Ne joue pas ce combat avec ce build : quitte-le si le jeu le permet sans pénalité, puis prépare un build dans le Labo (onglet Ascension).</div>`;
+    else if (m != null && m - a >= 0.05) h += `<div style="color:#e0b04f;margin-bottom:3px">Mieux à la main : évite le mode auto ici.</div>`;
     if (g.missing) h += `<div style="color:#a89a85">${g.missing} carte${g.missing > 1 ? 's' : ''} non reconnue${g.missing > 1 ? 's' : ''}, estimation moins sûre.</div>`;
-    return h + `<div style="color:#a89a85;font-size:11px;margin-bottom:4px">Simulation du Labo (marge d'environ 5 %), mécaniques du bestiaire comprises.</div>`;
+    return h + `<div style="color:#a89a85;font-size:11px;margin-bottom:4px">Simulation du Labo, approximative, mécaniques du bestiaire comprises.</div>`;
   }
 
   // Calibrage : on garde une fois les stats de combat et le deck de chaque build utilisé (pour comparer simulation et réalité)
@@ -1770,11 +1771,11 @@
     if (cmp.status === 'load') return head + `<div style="color:#a89a85">Lecture de l'inventaire, du deck et du personnage…</div>`;
     if (cmp.status === 'err') return head + `<div style="color:#ec7a70">Comparaison impossible : ${esc(cmp.msg)}</div><div style="margin-top:6px"><button data-a="cmprun" style="${btn()}">Réessayer</button></div>`;
     const b = cmp.base.r, pc = x => Math.round(x * 100) + ' %';
-    let h = head + `<div style="color:#a89a85">Contre <strong>${esc(cmp.bench.label)}</strong> (ton groupe le plus combattu) · build actuel : ${pc(b.winRate)} de victoires, ${isFinite(b.avgRounds) ? b.avgRounds.toFixed(2) : '—'} tours, ${Math.round(b.avgHpLost)} PV perdus</div>`;
+    let h = head + `<div style="color:#a89a85">Contre <strong>${esc(cmp.bench.label)}</strong> (ton groupe le plus combattu).</div>`;
     if (cmp.status === 'run') return h + `<div style="margin-top:6px">Calcul… ${cmp.done} / ${cmp.of} essais</div><div style="height:4px;background:#4a3f30;border-radius:3px;margin-top:4px"><div style="height:4px;width:${Math.round(cmp.done / Math.max(1, cmp.of) * 100)}%;background:#e0b04f;border-radius:3px"></div></div>`;
     if (!cmp.rows.length) return h + `<div style="margin-top:6px;color:#8fc98a">Aucun objet de ton inventaire ne fait mieux en échange simple : ton équipement est déjà le meilleur contre ce groupe.</div><div style="margin-top:6px"><button data-a="cmprun" style="${btn()}">Relancer</button></div>`;
     h += `<div style="margin-top:6px;display:grid;gap:4px">` + cmp.rows.map(({ j, e }) => { const r = e.r; const dT = (isFinite(r.avgRounds) && isFinite(b.avgRounds)) ? r.avgRounds - b.avgRounds : null; const dH = r.avgHpLost - b.avgHpLost; const dW = r.winRate - b.winRate;
-      return `<div style="border:1px solid #4a3f30;border-radius:8px;padding:4px 8px"><div><strong>${esc(j.it.n)}</strong>${j.it.f ? ' +' + j.it.f : ''} <span style="color:#a89a85">(${L[j.sl] || esc(j.sl)}${j.cur ? ', à la place de ' + esc(j.cur.n) : ''})</span></div><div style="color:#8fc98a">${dW > 0.004 ? '+' + pc(dW) + ' de victoires · ' : ''}${dT != null && Math.abs(dT) >= 0.01 ? (dT < 0 ? '' : '+') + dT.toFixed(2) + ' tours · ' : ''}${Math.abs(dH) >= 1 ? (dH < 0 ? '' : '+') + Math.round(dH) + ' PV perdus' : ''}</div></div>`; }).join('') + `</div><div style="color:#a89a85;margin-top:4px">Échange d'un seul objet à la fois, ${cmp.of} essais en ${Math.round(cmp.ms / 1000)} s. Pour des changements combinés (panoplies, deck, points), utilise l'Optimiseur du Labo.</div><div style="margin-top:6px"><button data-a="cmprun" style="${btn()}">Relancer</button></div>`;
+      return `<div style="border:1px solid #4a3f30;border-radius:8px;padding:4px 8px"><div><strong>${esc(j.it.n)}</strong>${j.it.f ? ' +' + j.it.f : ''} <span style="color:#a89a85">(${L[j.sl] || esc(j.sl)}${j.cur ? ', à la place de ' + esc(j.cur.n) : ''})</span></div><div style="color:#8fc98a">${dT != null && dT < -0.01 ? 'plus rapide' : dH < -1 ? 'plus solide' : 'meilleur'} selon la simulation</div></div>`; }).join('') + `</div><div style="color:#a89a85;margin-top:4px">Échange d'un seul objet à la fois, ${cmp.of} essais en ${Math.round(cmp.ms / 1000)} s. Pour des changements combinés (panoplies, deck, points), utilise l'Optimiseur du Labo.</div><div style="margin-top:6px"><button data-a="cmprun" style="${btn()}">Relancer</button></div>`;
     return h;
   }
 
