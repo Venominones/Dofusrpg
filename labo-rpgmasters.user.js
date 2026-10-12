@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.12.14
+// @version      2.12.15
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -183,7 +183,7 @@
     let cap = 12; for (const [p, c] of PA_CAPS) if ((ctx.prestige || 0) >= p) cap = Math.max(cap, c);
     s._paTotal = Math.min(cap, ((ctx.level || 200) >= 100 ? 7 : 6) + s.pa);
     s._maxHp = 50 + 5 * (ctx.level || 200) + (s.vitalite || 0);
-    s._breed = ctx.breedId;
+    s._breed = ctx.breedId; s._prestige = ctx.prestige || 0;
     s._spectral = Math.min(SPECTRAL_MAX, (CLASS_SPECTRAL[ctx.breedId] || 0) + SPECTRAL_PER_PO * (s.po || 0));
     s._dodge = Math.min(50, Math.max(0, 3 + (s.pm || 0)));
     // Règles de la fiche personnage
@@ -247,7 +247,7 @@
     const eff = (c.eff || []).map(l => l.k === 'apGain' ? Object.assign({}, l, { now: !apLater }) : l);
     const chanceLines = eff.filter(l => l.chance);
     return {
-      uid, id: c.id, name: c.n || c.name, ap: c.ap, cc: c.cc || 0, eff, crit: c.crit || null,
+      uid, id: c.id, cls: c.cls != null ? c.cls : null, name: c.n || c.name, ap: c.ap, cc: c.cc || 0, eff, crit: c.crit || null,
       weapon: !!c.weapon, chanceLines,
       // Bluff & co : « Pioche N » (refait la main) et dégâts « augmentés selon les Cartes » dans la main (calibré sur les combats réels)
       drawN: +((String(c.d || c.desc || '').match(/Pioche (\d+)/i) || [])[1] || 0), handScale: /augment[ée]s selon les Cartes/i.test(String(c.d || c.desc || '')),
@@ -273,11 +273,19 @@
   }
 
   // opts: {S, deck:[cards], weapon, monsters:[defs], maxRounds}
+  // Prestige (patch du 12/10) : sorts de sa classe et passif de classe +10 % par Prestige (+200 % au P20) ; réductions de dégâts et chances de déclenchement inchangées
+  const CLS_SCALE_K = ['dmg', 'steal', 'heal', 'healPct', 'shieldHp', 'shieldLvl', 'bomb', 'dmgCasterHp'];
+  function clsScale(c, pm) {
+    const sc = l => CLS_SCALE_K.includes(l.k) ? Object.assign({}, l, { min: Math.round((l.min || 0) * pm), max: Math.round((l.max || 0) * pm) }) : l;
+    const eff = c.eff.map(sc), isDmg = l => l.k === 'dmg' || l.k === 'steal';
+    return Object.assign({}, c, { eff, dmgLines: eff.filter(isDmg), chanceLines: eff.filter(l => l.chance), summon: c.summon ? Object.assign({}, c.summon, { min: Math.round(c.summon.min * pm), max: Math.round(c.summon.max * pm) }) : null });
+  }
   function simulateFight(opts) {
     const S = opts.S, maxHp = S._maxHp;
+    const PM = 1 + 0.1 * Math.min(20, S._prestige || 0);
     const P = { hp: Math.min(maxHp, opts.startHp > 0 ? opts.startHp : maxHp), shields: [], apNext: 0 };
     const mons = opts.monsters.map(makeMonster);
-    let pile = shuffle(opts.deck.slice()), discard = [], hand = [];
+    let pile = shuffle(opts.deck.map(c => PM > 1 && c.cls != null && c.cls === S._breed ? clsScale(c, PM) : c)), discard = [], hand = [];
     const shieldCap = Math.floor(maxHp * SUSTAIN.maxPctHp / 100);
     const specP = S._spectral / 100;
     let dmgDone = 0, hpLost = 0;
@@ -293,7 +301,8 @@
     const C = { n: 0, prey: null, preyN: 0, att: 0, runes: new Set(), cur: null, firstDone: false, ougPa: false, bombN: 0 };
     const missPct = () => Math.max(0, 100 - P.hp * 100 / maxHp);
     // bonus % de dégâts du passif contre m (c = carte jouée, null pour une bombe qui explose)
-    const clsPct = (m, c, bomb) => {
+    const clsPct = (m, c, bomb) => PM * clsPct0(m, c, bomb); // bonus de dégâts du passif × Prestige
+    const clsPct0 = (m, c, bomb) => {
       if (!PK) return 0; const w = c && c.weapon, cur = C.cur || {};
       switch (PK) {
         case 'feca': return 6 * C.n;
@@ -327,7 +336,7 @@
     if (DF.argente) P.shields.push({ value: Math.floor(maxHp * 0.08), turns: 99 }); // Argenté Scintillant : bouclier de 8 % des PV max au début
     // Pioches en plus (bouton « Piocher ») : réserve plafonnée par la stat Invocations, qui se recharge de 1 par tour (Dofoozbz : 2)
     const drawCap = opts.abyss ? 0 : Math.min(4, Math.max(0, Math.round(S.invocations || 0))); let drawsLeft = drawCap; // stat Invocations : 1 pioche en plus par point, 4 au plus, pas dans les Abysses
-    const summons = []; const sumMult = () => PK === 'osamodas' ? 2 : PK === 'roublard' ? 1.5 : PK === 'steamer' ? 1 + 0.07 * Math.min(6, Math.max(0, T.round - 1)) : 1; // Dompteur ×2, Artificier +50 %, Évolution du Steamer // invocations actives : { name, min, max, el, left } — attaquent au début de tes tours
+    const summons = []; const sumMult = () => PK === 'osamodas' ? 1 + PM : PK === 'roublard' ? 1 + 0.5 * PM : PK === 'steamer' ? 1 + 0.07 * PM * Math.min(6, Math.max(0, T.round - 1)) : 1; // Dompteur ×2, Artificier +50 %, Évolution du Steamer // invocations actives : { name, min, max, el, left } — attaquent au début de tes tours
     let olStreak = 0; // Sorts à une seule ligne (patch du 12/10) : +50 %, puis +20 % par tour sans lancer à plusieurs lignes, +150 % au plus ; un lancer à plusieurs lignes (sort ou corps à corps) remet à zéro jusqu'au tour suivant
     const deckBonus = opts.abyss ? 0 : Math.min(25, 5 * Math.max(0, (opts.deck || []).length - 7)); // patch du 12/10 : +5 % de dégâts des sorts par carte au-delà de 7, +25 % au plus (hors Abysses)
     const surprised = !opts.noSurprise && (S._surprise || 0) > 0 && RND() < S._surprise; // ennemis pris de vitesse : ils passent leur premier tour
@@ -454,7 +463,7 @@
     return result(false, opts.maxRounds || 30);
 
     function result(win, rounds) { const tm = mons.reduce((a, m) => a + m.maxHp, 0) || 1; return { trace, win, rounds, hpLost, dmgDone, perCard, progress: win ? 1 : 1 - mons.reduce((a, m) => a + (m.alive ? Math.max(0, m.hp) + (m.mech && m.mech.revive && !m.revived ? m.maxHp * (m.mech.revivePct != null ? m.mech.revivePct / 100 : 0.5) : 0) : 0), 0) / tm, kills: mons.filter(m => !m.alive).length }; }
-    function healP(a) { if (T.inv) { P.hp -= a; hpLost += a; } else { a = PK === 'eniripsa' ? Math.floor(a * (1 + 0.09 * C.n)) : a; const h = T.half ? Math.floor(a / 2) : a, over = P.hp + h - maxHp; P.hp = Math.min(maxHp, P.hp + h); if (DF.dotruche && over > 0) { const cap = Math.floor(maxHp * 0.1), add = Math.min(over, cap - truche); if (add > 0) { truche += add; P.shields.push({ value: add, turns: 2 }); } } } } // Dotruche : soin en trop → bouclier (10 % des PV max au plus)
+    function healP(a) { if (T.inv) { P.hp -= a; hpLost += a; } else { a = PK === 'eniripsa' ? Math.floor(a * (1 + 0.09 * PM * C.n)) : a; const h = T.half ? Math.floor(a / 2) : a, over = P.hp + h - maxHp; P.hp = Math.min(maxHp, P.hp + h); if (DF.dotruche && over > 0) { const cap = Math.floor(maxHp * 0.1), add = Math.min(over, cap - truche); if (add > 0) { truche += add; P.shields.push({ value: add, turns: 2 }); } } } } // Dotruche : soin en trop → bouclier (10 % des PV max au plus)
     function draw() { if (!pile.length) { if (!discard.length) return null; pile = shuffle(discard); discard = []; } return pile.pop(); }
     function reflects(m) { return !!(m.mech && m.mech.reflectFrom && T.round >= m.mech.reflectFrom && (!m.mech.reflectTo || T.round <= m.mech.reflectTo)); }
     // Mode auto : le jeu vise le premier boss encore debout. Mode manuel : le plus entamé, en évitant celui qui renvoie les coups.
@@ -583,7 +592,7 @@
       if (PK === 'ouginak' && !w && m !== C.prey) v = 0;
       C.cur = sv; return v;
     }
-    function ecaF(c) { return ECA && !c.weapon && c.hasDmg ? 1.31 : 1; }
+    function ecaF(c) { return ECA && !c.weapon && c.hasDmg ? 0.67 + 0.32 * (1 + PM) : 1; }
     // charges du passif après un sort
     function passiveAfter(c) {
       if (!PK) return; const w = c.weapon;
@@ -640,7 +649,7 @@
       if (PK && c.hasDmg) { C.att++; C.cur = { portal: PK === 'eliotrope' && C.att % 2 === 0, lance: PK === 'forgelance' && !C.firstDone && !c.weapon }; } else C.cur = null;
       C.inTurn = true;
       if (c.summon) summons.push(Object.assign({}, c.summon, { from: T.round }));
-      let luck = c.handScale ? 1 + HAND_K * Math.max(0, hand.length - 1) : 1; if (ECA && !c.weapon && c.hasDmg) { const r = RND(); luck = r < 0.32 ? 2 : r < 0.34 ? 0.5 : 1; } // Chance d'Ecaflip
+      let luck = c.handScale ? 1 + HAND_K * Math.max(0, hand.length - 1) : 1; if (ECA && !c.weapon && c.hasDmg) { const r = RND(); luck = r < 0.32 ? 1 + PM : r < 0.34 ? 0.5 : 1; } // Chance d'Ecaflip
       const spec = !c.weapon && c.hasDmg && RND() < specP;
       if (c.hasDmg && !opts.abyss) { const nl = c.chanceLines.length ? 1 : c.dmgLines.length; if (nl > 1) T.olBroken = true; T.olNow = T.olBroken ? 0 : Math.min(150, 50 + 20 * olStreak); } else T.olNow = 0;
       T.ori = false; if (DF.dorigami && T.oriNext && !c.weapon && c.hasDmg) { T.ori = true; T.oriNext = false; }
