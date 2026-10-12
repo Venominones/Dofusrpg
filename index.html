@@ -343,15 +343,19 @@ th,td{border-bottom-color:var(--line)}
         <div class="field"><label for="oObj">Orientation du build</label>
           <select id="oObj">
             <optgroup label="Général"><option value="equilibre" selected>Équilibré</option><option value="vitesse">Farm rapide</option><option value="survie">Tank</option></optgroup>
-            <optgroup label="Farm"><option value="sagesse">XP</option><option value="pp">Drop (PP)</option></optgroup>
+            <optgroup label="Farm"><option value="sagesse">XP</option><option value="pp">Full PP (butin)</option></optgroup>
             <optgroup label="Éléments"><option value="mono:1">Full Terre</option><option value="mono:2">Full Feu</option><option value="mono:3">Full Eau</option><option value="mono:4">Full Air</option><option value="multi">Multi</option></optgroup>
             <optgroup label="Contenu dur"><option value="ascension">Ascension</option><option value="ascension-tank">Ascension Tank</option><option value="ascension-burst">Ascension Burst</option><option value="kralamoure">Kralamoure DPS</option></optgroup>
-            <optgroup label="PvP"><option value="pvp-ini">PvP Initiative</option></optgroup>
+            <optgroup label="PvP"><option value="pvp">PvP One-shot tour 1</option><option value="pvp-ini">PvP Full initiative</option></optgroup>
           </select>
           <span class="note" id="oObjNote"></span>
         </div>
         <div class="field" hidden><select id="oPack"></select><input type="range" id="oDiff" min="1" max="6" step="0.25" value="1"><span id="oDiffV"></span></div>
         <div class="field"><span class="lbl">Adversaire simulé</span><span class="note" id="oTargetNote">Choisi selon l'orientation.</span></div>
+        <div class="field" id="oPvpWrap" hidden><span class="lbl">Adversaire PvP</span>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><label class="note">PV <input type="number" id="pvpHp" min="1000" step="500" value="33000" style="width:6.5em!important"></label><label class="note">Initiative <input type="number" id="pvpIni" min="0" step="100" value="0" style="width:6em!important"></label><label class="note">Rés. % <input type="number" id="pvpRes" min="0" max="50" value="0" style="width:4.2em!important"></label></div>
+          <label class="chk"><input type="checkbox" id="pvpUlt">Arène Ultime (dégâts −60 %)</label>
+          <span class="note">Le Labo cherche le build qui le tue avant qu'il joue : dégâts du tour 1 et initiative au-dessus de la sienne (0 = inconnue, l'initiative compte alors un peu). Rés. % : moyenne de ses résistances.</span></div>
         <div class="field" id="oFloorWrap" hidden><label for="oFloor">Étage visé (Ascension)</label><input type="number" id="oFloor" min="1" max="200" placeholder="auto"><span class="note">Vide = l'étage qui suit ton record. Les boss de tes derniers étages sont ramenés à la puissance de cet étage, avec toutes les mécaniques.</span></div>
 <div class="field"><span class="lbl">Survie autorisée</span><label class="chk"><input type="checkbox" id="oHeal" checked>Soins</label><label class="chk"><input type="checkbox" id="oShield" checked>Boucliers</label><label class="chk"><input type="checkbox" id="oSteal" checked>Vol de vie (cartes et arme)</label></div>
         <div class="field" hidden><span class="lbl">Mécanique de boss</span><label class="chk"><input type="checkbox" id="oInv">Soins inversés à partir du tour <input type="number" id="oInvT" min="1" max="30" value="3" style="width:4.2em;padding:3px 6px"></label><label class="chk"><input type="checkbox" id="oInvS">Les boucliers blessent aussi</label><span class="note">Le vol de vie et les soins te retirent des PV au lieu d'en rendre.</span></div>
@@ -949,6 +953,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const mv = (k, d) => { const x = mk(k); return x ? x[k] : d; };
     const every = (k, round) => k > 0 && round % k === 0;
     const rageAt = opts.rageTurn || 0;
+    const deckBonus = opts.abyss ? 0 : Math.min(25, 5 * Math.max(0, (opts.deck || []).length - 7)); // patch du 12/10 : +5 % de dégâts des sorts par carte au-delà de 7, +25 % au plus (hors Abysses)
     const surprised = !opts.noSurprise && (S._surprise || 0) > 0 && RND() < S._surprise; // ennemis pris de vitesse : ils passent leur premier tour
     for (let round = 1; round <= (opts.maxRounds || 30); round++) {
       T.round = round;
@@ -961,7 +966,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       let ap = S._paTotal + P.apNext + (critTurn ? 1 : 0); P.apNext = 0; critTurn = false; // Turquoise : +1 PA (au-delà du plafond) le tour après un critique
       while (hand.length < HAND_SIZE + (round === 1 && DF.ocre ? 1 : 0)) { const c = draw(); if (!c) break; hand.push(c); }
       C.firstDone = false; C.ougPa = false; if (PK === 'pandawa' && C.n) P.hp = Math.min(maxHp, P.hp + Math.floor(maxHp * C.n / 100)); // Ivresse : soin non réductible
-      T.buffP = 0; T.buffC = 0; T.chainN = 0; T.dmgPct = S.dmgPctSorts || 0; S._cb = {};
+      T.buffP = 0; T.buffC = 0; T.chainN = 0; T.dmgPct = (S.dmgPctSorts || 0) + deckBonus; S._cb = {};
       for (const b of pers) if (b.until >= round) { if (b.stat === 'puissance') T.buffP += b.v; else if (b.stat === 'critique') T.buffC += b.v; else if (b.stat === 'dmgPctSorts') T.dmgPct += b.v; else S._cb[b.stat] = (S._cb[b.stat] || 0) + b.v; } T.sustainLeft = SUSTAIN.perTurn; T.weaponUsed = false; T.cards = 0; let drawsLeft = DRAWS_MAX;
       const invFrom = opts.invertFrom || mv('invertFrom', 0), sealPa = opts.sealPa || mv('sealPa', 0), sealFrom = opts.sealFrom || mv('sealFrom', 1);
       const halfFrom = mv('healHalfFrom', 0);
@@ -1398,7 +1403,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   // Orientations : vitesse, survie, sagesse, pp, mono:<el>, multi, ascension
   const ORIENT = {
     equilibre: { label: 'Équilibré' }, vitesse: { label: 'Farm rapide' }, survie: { label: 'Tank' }, sagesse: { label: 'XP', focus: 'sagesse' },
-    pp: { label: 'Drop (PP)', focus: 'chance' }, 'pvp-ini': { label: 'PvP Initiative' }, multi: { label: 'Multi' }, ascension: { label: 'Ascension' }, 'ascension-tank': { label: 'Ascension Tank' }, 'ascension-burst': { label: 'Ascension Burst' }, kralamoure: { label: 'Kralamoure DPS' },
+    pp: { label: 'Drop (PP)', focus: 'chance' }, 'pvp-ini': { label: 'PvP Initiative' }, pvp: { label: 'PvP One-shot T1' }, multi: { label: 'Multi' }, ascension: { label: 'Ascension' }, 'ascension-tank': { label: 'Ascension Tank' }, 'ascension-burst': { label: 'Ascension Burst' }, kralamoure: { label: 'Kralamoure DPS' },
     'mono:1': { label: 'Full Terre', el: 1 }, 'mono:2': { label: 'Full Feu', el: 2 }, 'mono:3': { label: 'Full Eau', el: 3 }, 'mono:4': { label: 'Full Air', el: 4 }
   };
   const KRALA_TURNS = 10;
@@ -1411,7 +1416,9 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     // Kralamoure de la Faille : on ne le tue pas, on cumule un maximum de dégâts sur 10 tours (mourir avant coupe le compteur)
     if (objective === 'kralamoure') return (r.avgDmg || 0) / 100;
     // PvP : celui qui a l'initiative joue le premier ; on maximise l'initiative estimée, le combat simulé ne sert qu'à garder un build qui tient la route
-    if (objective === 'pvp-ini') return iniEst(S) / 5 + r.winRate * 100 - rounds * 2 - hpPct * 0.5;
+    if (objective === 'pvp-ini') return iniEst(S) / 5 + r.winRate * 300 + 100 * (r.progress || 0);
+    // PvP one-shot : tuer l'adversaire au tour 1 (winRate = chance de le tuer avant qu'il joue), en ayant plus d'initiative que lui pour jouer en premier
+    if (objective === 'pvp') { const need = S._needIni || 0, ini = iniEst(S); const iniPart = !need ? ini / 200 : ini > need ? 400 + (ini - need) / 400 : 400 * ini / need - 200; return r.winRate * 1000 + 300 * (r.progress || 0) + iniPart; }
     if (objective === 'ascension') return r.winRate * 1000 + 150 * (r.progress || 0) + 15 * (r.avgKills || 0) - hpPct * 0.5 - rounds * 1;
     // Styles d'Ascension : tank (survie, PV gardés, boucliers) ou burst (finir vite avant les mécaniques des tours 3-4)
     if (objective === 'ascension-tank') return r.winRate * 1000 + 100 * (r.progress || 0) - hpPct * 4 - rounds * 0.5;
@@ -1420,7 +1427,8 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     if (objective === 'survie') return r.winRate * 1000 - hpPct * 6 - rounds * 4;
     if (objective === 'sagesse') return winGate(r) + 500 * Math.log((1 + (S.sagesse || 0) / 100) / rounds);
     // Prospection : d'abord le maximum de PP (gagner reste obligatoire), la vitesse ne sert qu'à départager (avant : PP ÷ tours, qui sacrifiait la PP pour 0,2 tour gagné)
-    if (objective === 'pp') return winGate(r) + 2000 * Math.log(S._pp || 100) - 300 * Math.log(rounds);
+    // Full PP : le maximum de prospection tant qu'on gagne ; la vitesse ne compte presque plus (le joueur veut le butin, pas les dégâts)
+    if (objective === 'pp') return winGate(r) + 3000 * Math.log(S._pp || 100) - 20 * Math.log(rounds);
     return r.winRate * 1000 - rounds * 40 - hpPct * 2; // vitesse, mono, multi
   }
   function cardEls(c) { return [...new Set((c.eff || []).filter(l => l.k === 'dmg' || l.k === 'steal' || l.k === 'bomb').map(l => l.el || 0))]; }
@@ -1456,7 +1464,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     if (o.el !== undefined) return els.length === 0 || els.every(e => e === o.el);
     if (objective === 'multi') return els.length === 0 || els.length >= 2;
     // Kralamoure : il ne frappe presque pas (34 dégâts en 10 tours relevés en jeu) → pas de carte purement défensive, chaque place sert aux dégâts
-    if (objective === 'kralamoure' && (c.eff || []).length && c.eff.every(l => ['shieldHp', 'shieldLvl', 'heal', 'healPct'].includes(l.k) || (l.k === 'buff' && /^res/.test(l.stat || '')))) return false;
+    if ((objective === 'kralamoure' || objective === 'pvp') && (c.eff || []).length && c.eff.every(l => ['shieldHp', 'shieldLvl', 'heal', 'healPct'].includes(l.k) || (l.k === 'buff' && /^res/.test(l.stat || '')))) return false;
     return true;
   }
 
@@ -1521,7 +1529,8 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const o = ORIENT[objective] || {};
     if (objective === 'sagesse') w.sagesse = (w.sagesse || 0) + 1.5;
     if (objective === 'pvp-ini') w.initiative = (w.initiative || 0) + 0.6;
-    if (objective === 'pp') { w.prospection = (w.prospection || 0) + 1.5; w.chance = (w.chance || 0) + 0.15; }
+    if (objective === 'pvp') w.initiative = (w.initiative || 0) + 0.15;
+    if (objective === 'pp') { w.prospection = (w.prospection || 0) + 4; w.chance = (w.chance || 0) + 0.4; }
     if (o.el !== undefined) { for (let e = 1; e <= 4; e++) if (e !== o.el) { const car = R.CARAC_OF_EL[e]; if (car !== R.CARAC_OF_EL[o.el]) w[car] = (w[car] || 0) * 0.2; } }
     return w;
   }
@@ -1593,6 +1602,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const gear = SLOTS.map(s => st.gear[s[0]] ? { item: st.gear[s[0]], f: st.gear[s[0]].f || 0 } : null);
     const S = R.computeStats(gear, Object.assign({}, ctx, { alloc: st.alloc }));
     const cardsByKey = data._cardsByKey;
+    if (ctx.needIni) S._needIni = ctx.needIni;
     const deck = st.deck.map((k, i) => R.prepCard(cardsByKey[k], 'c' + i));
     const weapon = st.gear.arme ? R.weaponCard(st.gear.arme, st.gear.arme.f || 0) : null;
     return { S, deck, weapon };
@@ -1676,7 +1686,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     if (HASLK) cur = forceLocks(data, cur, LK, opts.deckSize);
     const total = R.pointsTotal(ctx.level);
     const tick = (phase, done, of, best) => opts.onProgress && opts.onProgress({ phase, done, of, best, evals: ev, state: cur });
-    const FO = { invertFrom: opts.invertFrom || 0, invertShields: !!opts.invertShields, auto: !!opts.auto, weaponMode: opts.weaponMode, plan: (opts.effort || 2) >= 3, seed: 1, maxRounds: opts.maxRounds || (obj === 'kralamoure' ? KRALA_TURNS : undefined) }; const SU = opts.sustain || 'all', NS = !normSus(opts.sustain, opts.noSteal).steal;
+    const FO = { invertFrom: opts.invertFrom || 0, invertShields: !!opts.invertShields, auto: !!opts.auto, weaponMode: opts.weaponMode, plan: (opts.effort || 2) >= 3, seed: 1, maxRounds: opts.maxRounds || (obj === 'kralamoure' ? KRALA_TURNS : /^pvp/.test(obj) ? 1 : undefined), noSurprise: /^pvp/.test(obj) }; const SU = opts.sustain || 'all', NS = !normSus(opts.sustain, opts.noSteal).steal;
     const s0 = opts.start0 || opts.start; const start0 = { gear: Object.assign({}, s0.gear), deck: s0.deck.slice() };
     const changes = st => SLOTS.filter(([s]) => (st.gear[s] && st.gear[s].id) !== (start0.gear[s] && start0.gear[s].id)).length + st.deck.filter(k => !start0.deck.includes(k)).length;
     // Ascension : à efficacité égale, on préfère le build qui change le moins de choses
@@ -1982,7 +1992,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     if (seed) runs.unshift({ id: 'memo', label: 'Reprise du dernier build trouvé', arch: null, start: seed });
     return runs;
   }
-  const FINAL_FO = opts => ({ invertFrom: opts.invertFrom || 0, invertShields: !!opts.invertShields, auto: !!opts.auto, weaponMode: opts.weaponMode, plan: true, seed: 7919, maxRounds: opts.maxRounds || (opts.objective === 'kralamoure' ? KRALA_TURNS : undefined) }); // autre graine que la recherche : pas de build « chanceux »
+  const FINAL_FO = opts => ({ invertFrom: opts.invertFrom || 0, invertShields: !!opts.invertShields, auto: !!opts.auto, weaponMode: opts.weaponMode, plan: true, seed: 7919, maxRounds: opts.maxRounds || (opts.objective === 'kralamoure' ? KRALA_TURNS : /^pvp/.test(opts.objective) ? 1 : undefined), noSurprise: /^pvp/.test(opts.objective) }); // autre graine que la recherche : pas de build « chanceux »
   // Une partie des recherches (ids), avec confirmation (Approfondi) et vérification sur 2 500 combats de ses meilleurs résultats
   function deepPart(data, opts, ids, keep) {
     data._cardsByKey = data._cardsByKey || Object.fromEntries(data.cards.map(c => [c.key, c]));
@@ -2486,6 +2496,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const mv = (k, d) => { const x = mk(k); return x ? x[k] : d; };
     const every = (k, round) => k > 0 && round % k === 0;
     const rageAt = opts.rageTurn || 0;
+    const deckBonus = opts.abyss ? 0 : Math.min(25, 5 * Math.max(0, (opts.deck || []).length - 7)); // patch du 12/10 : +5 % de dégâts des sorts par carte au-delà de 7, +25 % au plus (hors Abysses)
     const surprised = !opts.noSurprise && (S._surprise || 0) > 0 && RND() < S._surprise; // ennemis pris de vitesse : ils passent leur premier tour
     for (let round = 1; round <= (opts.maxRounds || 30); round++) {
       T.round = round;
@@ -2498,7 +2509,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       let ap = S._paTotal + P.apNext + (critTurn ? 1 : 0); P.apNext = 0; critTurn = false; // Turquoise : +1 PA (au-delà du plafond) le tour après un critique
       while (hand.length < HAND_SIZE + (round === 1 && DF.ocre ? 1 : 0)) { const c = draw(); if (!c) break; hand.push(c); }
       C.firstDone = false; C.ougPa = false; if (PK === 'pandawa' && C.n) P.hp = Math.min(maxHp, P.hp + Math.floor(maxHp * C.n / 100)); // Ivresse : soin non réductible
-      T.buffP = 0; T.buffC = 0; T.chainN = 0; T.dmgPct = S.dmgPctSorts || 0; S._cb = {};
+      T.buffP = 0; T.buffC = 0; T.chainN = 0; T.dmgPct = (S.dmgPctSorts || 0) + deckBonus; S._cb = {};
       for (const b of pers) if (b.until >= round) { if (b.stat === 'puissance') T.buffP += b.v; else if (b.stat === 'critique') T.buffC += b.v; else if (b.stat === 'dmgPctSorts') T.dmgPct += b.v; else S._cb[b.stat] = (S._cb[b.stat] || 0) + b.v; } T.sustainLeft = SUSTAIN.perTurn; T.weaponUsed = false; T.cards = 0; let drawsLeft = DRAWS_MAX;
       const invFrom = opts.invertFrom || mv('invertFrom', 0), sealPa = opts.sealPa || mv('sealPa', 0), sealFrom = opts.sealFrom || mv('sealFrom', 1);
       const halfFrom = mv('healHalfFrom', 0);
@@ -4360,9 +4371,11 @@ function markReady(sel,kind){if(!sel)return;try{const l=memoLoad();if(!l.length)
   const note=document.getElementById(kind==='opt'?'oReady':'aReady');if(note)note.textContent=n?`✓ = résultat déjà calculé avec ces réglages (affiché tout de suite). ${n} prêt${n>1?'s':''}.`:''}catch(e){}}
 function memoNote(el,t,rerun){el.innerHTML=`Résultat mémorisé du ${new Date(t).toLocaleString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} : rien n'a changé depuis (équipement, cartes, réglages, modèle). <button type="button">Recalculer quand même</button>`;el.querySelector('button').onclick=rerun}
 // Adversaire choisi selon l'orientation (plus de « groupe de monstres » à régler) : Kralamoure, Ascension (prochain étage) ou tes adversaires habituels
-function optAutoPack(){const o=$('#oObj').value;if(o==='kralamoure')return kralaPack();if(/^ascension/.test(o)){try{return ascPolyPack()}catch(e){}}return polyPack()}
+function pvpPack(){const hp=Math.max(1000,+$('#pvpHp').value||33000)*($('#pvpUlt').checked?2.5:1),rp=Math.max(0,Math.min(50,+$('#pvpRes').value||0));
+  return {key:'pvp',label:`Joueur · ${fmt(+$('#pvpHp').value||33000)} PV${$('#pvpUlt').checked?' (Arène Ultime)':''}`,defs:[{name:'Adversaire (joueur)',grade:1,level:200,hpMin:hp,hpMax:hp,atk:1,element:0,pattern:['attack'],stats:{resPctNeutre:rp,resPctTerre:rp,resPctFeu:rp,resPctEau:rp,resPctAir:rp},isBoss:false,fixedStart:false}],fights:[]}}
+function optAutoPack(){const o=$('#oObj').value;if(o==='kralamoure')return kralaPack();if(/^pvp/.test(o))return pvpPack();if(/^ascension/.test(o)){try{return ascPolyPack()}catch(e){}}return polyPack()}
 function optOptsFor(v){const pack=optAutoPack();if(!pack)return null;const mult=1;const deckIdx=+$('#oStart').value;
-  const opts={optGear:$('#oGear').checked,optAlloc:$('#oAlloc').checked,optDeck:$('#oDeck').checked,deckSize:deckSlots(),objective:$('#oObj').value,spellFilter:spellF('o'),sustain:susOf('o'),noSteal:!!$('#oInv').checked,...fightOpts('o'),effort:+segVal('oEffort'),budgetMs:[20,45,260][(+segVal('oEffort')||2)-1]*1000,...lockOpts(),monsters:monstersFor(pack,mult),ctx,start:OPT_START?{gear:OPT_START.gear,alloc:OPT_START.alloc,deck:OPT_START.deck}:{gear:curGear,alloc:curAlloc,deck:DATA.meta.decks[deckIdx]}};return {pack,mult,deckIdx,opts}}
+  const opts={optGear:$('#oGear').checked,optAlloc:$('#oAlloc').checked,optDeck:$('#oDeck').checked,deckSize:deckSlots(),objective:$('#oObj').value,spellFilter:spellF('o'),sustain:susOf('o'),noSteal:!!$('#oInv').checked,...fightOpts('o'),effort:+segVal('oEffort'),budgetMs:[20,45,260][(+segVal('oEffort')||2)-1]*1000,...lockOpts(),monsters:monstersFor(pack,mult),ctx:/^pvp/.test($('#oObj').value)?Object.assign({},ctx,{needIni:$('#oObj').value==='pvp'?(+$('#pvpIni').value||0):0}):ctx,start:OPT_START?{gear:OPT_START.gear,alloc:OPT_START.alloc,deck:OPT_START.deck}:{gear:curGear,alloc:curAlloc,deck:DATA.meta.decks[deckIdx]}};return {pack,mult,deckIdx,opts}}
 // Kralamoure de la Faille : boss à ~100 M de PV qu'on ne tue pas ; on cumule un maximum de dégâts en 10 tours.
 // Stats relevées en combat (monstre 423) ; si le perso ne l'a jamais croisé, on prend ces valeurs.
 const KRALA_REF={name:'Kralamoure Géant',grade:1,level:200,hpMin:99999458,hpMax:99999458,atk:383,element:3,pattern:['attack','attack','heavy','rage','attack','heavy'],stats:{resPctNeutre:20,resPctTerre:20,resPctFeu:20,resPctEau:30,resPctAir:20},isBoss:true};
@@ -4431,7 +4444,8 @@ let lastSummary='';
 let lastOpt=null;
 function renderOpt(res,opts,pack,mult,deckIdx){lastOpt=res;
   const a=res.start.r,b=res.final.r,Sa=res.start.S,Sb=res.final.S;
-  if(opts.objective==='kralamoure'){const T=10,da=a.avgDmg||0,db=b.avgDmg||0;$('#oKpis').innerHTML=[['Dégâts en '+T+' tours',fmt(db),`avant ${fmt(da)} · ${delta(da,db,false,0)}`],['Par tour',fmt(db/T),`avant ${fmt(da/T)}`],['Gain',da?fmt((db/da-1)*100,1)+' %':'—','vs build actuel'],['PV perdus',fmt(b.avgHpLost),`avant ${fmt(a.avgHpLost)} · PV max ${fmt(Sb._maxHp)}`]].map(([x,y,z])=>`<div class="kpi"><span class="lbl">${x}</span><span class="v">${y}</span><span class="d muted">${z}</span></div>`).join('')}
+  if(/^pvp/.test(opts.objective)){const H=(pack.defs&&pack.defs[0]&&pack.defs[0].hpMax)||1,need=(opts.ctx&&opts.ctx.needIni)||0;$('#oKpis').innerHTML=[['Tué au tour 1',fmt(b.winRate*100,0)+' %',`avant ${fmt(a.winRate*100,0)} %`],['Dégâts du tour 1',fmt(b.avgDmg||0),`sur ${fmt(H)} PV${H!==(+$('#pvpHp').value||H)?' (Ultime : ×2,5)':''} · avant ${fmt(a.avgDmg||0)}`],['Initiative',fmt(O.iniEst(Sb)),need?(O.iniEst(Sb)>need?`<span class="up">plus rapide que lui (${fmt(need)})</span>`:`<span class="down">plus lent que lui (${fmt(need)})</span>`):`avant ${fmt(O.iniEst(Sa))}`],['PV max',fmt(Sb._maxHp),`avant ${fmt(Sa._maxHp)}`]].map(([x,y,z])=>`<div class="kpi"><span class="lbl">${x}</span><span class="v">${y}</span><span class="d muted">${z}</span></div>`).join('')}
+  else if(opts.objective==='kralamoure'){const T=10,da=a.avgDmg||0,db=b.avgDmg||0;$('#oKpis').innerHTML=[['Dégâts en '+T+' tours',fmt(db),`avant ${fmt(da)} · ${delta(da,db,false,0)}`],['Par tour',fmt(db/T),`avant ${fmt(da/T)}`],['Gain',da?fmt((db/da-1)*100,1)+' %':'—','vs build actuel'],['PV perdus',fmt(b.avgHpLost),`avant ${fmt(a.avgHpLost)} · PV max ${fmt(Sb._maxHp)}`]].map(([x,y,z])=>`<div class="kpi"><span class="lbl">${x}</span><span class="v">${y}</span><span class="d muted">${z}</span></div>`).join('')}
   else $('#oKpis').innerHTML=[
     ['Tours moyens',isFinite(b.avgRounds)?fmt(b.avgRounds,2):'—',`avant ${isFinite(a.avgRounds)?fmt(a.avgRounds,2):'—'} · ${delta(a.avgRounds,b.avgRounds,true)}`],
     ['Victoires',fmt(b.winRate*100,1)+' %',`avant ${fmt(a.winRate*100,1)} % · ${delta(a.winRate*100,b.winRate*100,false,1,' pts')}`],
@@ -4521,10 +4535,10 @@ $('#simCodeLoad').onclick=()=>{const msg=$('#simCodeMsg');try{const d=O.decodeCo
   else{const keys=d.ids.map(i=>DATA.cards.find(c=>c.id===i)).filter(Boolean).map(c=>c.key);simOverride.deck=keys;const vc=Object.fromEntries((vitrineData().cards||[]).map(c=>[c.id,c]));const missing=d.ids.filter(i=>!DATA.cards.some(c=>c.id===i)).map(i=>vc[i]?vc[i].n:'#'+i);msg.textContent=`Deck chargé : ${keys.length} cartes sur ${d.ids.length} présentes dans ta collection`+(missing.length?` (absentes : ${missing.join(', ')})`:'')+'.'}
   runSim()}catch(e){msg.textContent='Code refusé : '+e.message}};
 $('#simCodeReset').onclick=()=>{simOverride={gear:null,deck:null};$('#simCodeMsg').textContent='Ton build actuel est rétabli.';runSim()};
-const OBJ_NOTES={'pvp-ini':'Arène : le plus rapide joue en premier (égalité : celui qui attaque), et le premier gagne presque toujours. Maximise l\'Initiative (ligne « Initiative » des objets, Prestige, forge et compagnon compris), en gardant un build qui tient en combat.',kralamoure:'Full DPS : maximise les dégâts cumulés en 10 tours sur le Kralamoure de la Faille (il ne meurt pas). La survie ne compte que si tu risques de mourir avant la fin. Le groupe de monstres et la difficulté sont ignorés.',equilibre:'Équilibre entre finir vite et perdre peu de PV, testé aussi sur ton adversaire le plus dur renforcé : un build qui farme vite sans casser sur un mauvais tirage.',vitesse:'Minimise le nombre de tours pour gagner.',survie:'Minimise les PV perdus, quitte à taper moins fort.',sagesse:'Maximise sagesse ÷ tours, avec au moins 95 % de victoires. Hypothèse : l\'XP gagnée suit la sagesse comme sur Dofus.',pp:'Maximise la prospection (le Dofus Kaliptus compte), avec au moins 95 % de victoires ; la vitesse ne sert qu\'à départager deux builds proches. Prospection = 100 + PP des objets + Chance/10 (510 pour toi, comme affiché en jeu).',multi:'Deck limité aux cartes qui tapent dans 2 éléments ou plus (plus les cartes utilitaires).',ascension:'Survie face à des monstres renforcés : la difficulté passe à ×3, ajuste-la selon ton étage.'};
+const OBJ_NOTES={'pvp':'Arène : objectif tuer l\'adversaire au tour 1, avant qu\'il joue. Le Labo maximise tes dégâts du tour 1 (sur une cible aux PV et résistances indiqués) tout en gardant plus d\'initiative que lui. Mets les valeurs de ton adversaire ci-dessous.','pvp-ini':'Arène : le plus rapide joue en premier (égalité : celui qui attaque), et le premier gagne presque toujours. Maximise l\'Initiative (ligne « Initiative » des objets, Prestige, forge et compagnon compris), en gardant un build qui tient en combat.',kralamoure:'Full DPS : maximise les dégâts cumulés en 10 tours sur le Kralamoure de la Faille (il ne meurt pas). La survie ne compte que si tu risques de mourir avant la fin. Le groupe de monstres et la difficulté sont ignorés.',equilibre:'Équilibre entre finir vite et perdre peu de PV, testé aussi sur ton adversaire le plus dur renforcé : un build qui farme vite sans casser sur un mauvais tirage.',vitesse:'Minimise le nombre de tours pour gagner.',survie:'Minimise les PV perdus, quitte à taper moins fort.',sagesse:'Maximise sagesse ÷ tours, avec au moins 95 % de victoires. Hypothèse : l\'XP gagnée suit la sagesse comme sur Dofus.',pp:'Full PP : le maximum de prospection (Chance comprise, 10 Chance = 1 PP, et le Dofus Kaliptus), du moment que tu gagnes au moins 95 % des combats. Les dégâts et la vitesse ne comptent presque plus.'à départager deux builds proches. Prospection = 100 + PP des objets + Chance/10 (510 pour toi, comme affiché en jeu).',multi:'Deck limité aux cartes qui tapent dans 2 éléments ou plus (plus les cartes utilitaires).',ascension:'Survie face à des monstres renforcés : la difficulté passe à ×3, ajuste-la selon ton étage.'};
 ['1','2','3','4'].forEach(e=>OBJ_NOTES['mono:'+e]='Deck limité aux cartes d\'un seul élément (plus les cartes utilitaires sans dégâts). Les cartes interdites de ton deck de départ sont remplacées.');
 function optTargetNote(){try{const p=optAutoPack();$('#oTargetNote').textContent=p?p.label:'—'}catch(e){}}
-$('#oObj').onchange=e=>{const v=e.target.value;$('#oObjNote').textContent=OBJ_NOTES[v]||'';$('#oFloorWrap').hidden=!/^ascension/.test(v);optTargetNote()};
+$('#oObj').onchange=e=>{const v=e.target.value;$('#oObjNote').textContent=OBJ_NOTES[v]||'';$('#oFloorWrap').hidden=!/^ascension/.test(v);$('#oPvpWrap').hidden=!/^pvp/.test(v);optTargetNote()};
 $('#oFloor').addEventListener('input',()=>{const a=$('#aFloorT');if(a){a.value=$('#oFloor').value;a.dispatchEvent(new Event('input'))}optTargetNote()});
 $('#oObjNote').textContent=OBJ_NOTES.equilibre;
 
