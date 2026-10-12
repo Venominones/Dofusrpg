@@ -346,6 +346,7 @@ th,td{border-bottom-color:var(--line)}
             <optgroup label="Farm"><option value="sagesse">XP</option><option value="pp">Drop (PP)</option></optgroup>
             <optgroup label="Éléments"><option value="mono:1">Full Terre</option><option value="mono:2">Full Feu</option><option value="mono:3">Full Eau</option><option value="mono:4">Full Air</option><option value="multi">Multi</option></optgroup>
             <optgroup label="Contenu dur"><option value="ascension">Ascension</option><option value="ascension-tank">Ascension Tank</option><option value="ascension-burst">Ascension Burst</option><option value="kralamoure">Kralamoure DPS</option></optgroup>
+            <optgroup label="PvP"><option value="pvp-ini">PvP Initiative</option></optgroup>
           </select>
           <span class="note" id="oObjNote"></span>
         </div>
@@ -822,8 +823,12 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     s._pp = 100 + (s.prospection || 0) + Math.floor((s.chance || 0) / 10);
     s._dofus = dofusFx(gear.filter(g => g && g.item && (g.item.s === 'dofus' || /dofus/i.test(g.item.n || ''))).map(g => g.item.n || ''));
     if (s._dofus.ebene) s._perfo = Math.min(32.5, s._perfo * 1.3);
+    s._surprise = surpriseChance(s.initiative, ctx.level);
     return s;
   }
+  // Initiative hors arène (info-bulle du jeu) : au-delà de 5 × niveau, chance que les ennemis passent leur premier tour,
+  // jusqu'à 25 % atteints à 15 fois cette valeur (progression supposée linéaire entre les deux)
+  function surpriseChance(ini, level) { const base = 5 * (level || 200); return 0.25 * Math.max(0, Math.min(1, ((ini || 0) - base) / (14 * base))); }
 
   // Stats de combat telles que le jeu les envoie (combat en cours, builds enregistrés) → champs dérivés du moteur
   function deriveStats(stats, o) {
@@ -944,6 +949,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const mv = (k, d) => { const x = mk(k); return x ? x[k] : d; };
     const every = (k, round) => k > 0 && round % k === 0;
     const rageAt = opts.rageTurn || 0;
+    const surprised = !opts.noSurprise && (S._surprise || 0) > 0 && RND() < S._surprise; // ennemis pris de vitesse : ils passent leur premier tour
     for (let round = 1; round <= (opts.maxRounds || 30); round++) {
       T.round = round;
       // échange de vie au début du tour
@@ -1025,6 +1031,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       const rg = rageAt || mv('rageTurn', 0);
       if (rg && round >= rg) { hpLost += P.hp; P.hp = 0; return result(false, round); }
       // ----- tour des monstres -----
+      if (surprised && round === 1) continue;
       for (const m of mons) {
         if (!m.alive) continue;
         if (m.poison && m.poison.length) { // Sadida : poison en % des PV max au début du tour du monstre
@@ -1391,16 +1398,20 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   // Orientations : vitesse, survie, sagesse, pp, mono:<el>, multi, ascension
   const ORIENT = {
     equilibre: { label: 'Équilibré' }, vitesse: { label: 'Farm rapide' }, survie: { label: 'Tank' }, sagesse: { label: 'XP', focus: 'sagesse' },
-    pp: { label: 'Drop (PP)', focus: 'chance' }, multi: { label: 'Multi' }, ascension: { label: 'Ascension' }, 'ascension-tank': { label: 'Ascension Tank' }, 'ascension-burst': { label: 'Ascension Burst' }, kralamoure: { label: 'Kralamoure DPS' },
+    pp: { label: 'Drop (PP)', focus: 'chance' }, 'pvp-ini': { label: 'PvP Initiative' }, multi: { label: 'Multi' }, ascension: { label: 'Ascension' }, 'ascension-tank': { label: 'Ascension Tank' }, 'ascension-burst': { label: 'Ascension Burst' }, kralamoure: { label: 'Kralamoure DPS' },
     'mono:1': { label: 'Full Terre', el: 1 }, 'mono:2': { label: 'Full Feu', el: 2 }, 'mono:3': { label: 'Full Eau', el: 3 }, 'mono:4': { label: 'Full Air', el: 4 }
   };
   const KRALA_TURNS = 10;
+  // Initiative (règle du jeu) : uniquement la ligne « Initiative » des objets, Prestige, forge et compagnon compris ; en arène le plus rapide joue en premier
+  function iniEst(S) { return Math.round(S.initiative || 0); }
   function winGate(r) { return r.winRate >= 0.95 ? 1000 : r.winRate * 1000 - 200; }
   function score(r, S, objective) {
     const hpPct = r.avgHpLost / S._maxHp * 100;
     const rounds = isFinite(r.avgRounds) ? r.avgRounds : 30;
     // Kralamoure de la Faille : on ne le tue pas, on cumule un maximum de dégâts sur 10 tours (mourir avant coupe le compteur)
     if (objective === 'kralamoure') return (r.avgDmg || 0) / 100;
+    // PvP : celui qui a l'initiative joue le premier ; on maximise l'initiative estimée, le combat simulé ne sert qu'à garder un build qui tient la route
+    if (objective === 'pvp-ini') return iniEst(S) / 5 + r.winRate * 100 - rounds * 2 - hpPct * 0.5;
     if (objective === 'ascension') return r.winRate * 1000 + 150 * (r.progress || 0) + 15 * (r.avgKills || 0) - hpPct * 0.5 - rounds * 1;
     // Styles d'Ascension : tank (survie, PV gardés, boucliers) ou burst (finir vite avant les mécaniques des tours 3-4)
     if (objective === 'ascension-tank') return r.winRate * 1000 + 100 * (r.progress || 0) - hpPct * 4 - rounds * 0.5;
@@ -1444,6 +1455,8 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const els = cardEls(c);
     if (o.el !== undefined) return els.length === 0 || els.every(e => e === o.el);
     if (objective === 'multi') return els.length === 0 || els.length >= 2;
+    // Kralamoure : il ne frappe presque pas (34 dégâts en 10 tours relevés en jeu) → pas de carte purement défensive, chaque place sert aux dégâts
+    if (objective === 'kralamoure' && (c.eff || []).length && c.eff.every(l => ['shieldHp', 'shieldLvl', 'heal', 'healPct'].includes(l.k) || (l.k === 'buff' && /^res/.test(l.stat || '')))) return false;
     return true;
   }
 
@@ -1507,6 +1520,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   function orientWeights(w, objective) {
     const o = ORIENT[objective] || {};
     if (objective === 'sagesse') w.sagesse = (w.sagesse || 0) + 1.5;
+    if (objective === 'pvp-ini') w.initiative = (w.initiative || 0) + 0.6;
     if (objective === 'pp') { w.prospection = (w.prospection || 0) + 1.5; w.chance = (w.chance || 0) + 0.15; }
     if (o.el !== undefined) { for (let e = 1; e <= 4; e++) if (e !== o.el) { const car = R.CARAC_OF_EL[e]; if (car !== R.CARAC_OF_EL[o.el]) w[car] = (w[car] || 0) * 0.2; } }
     return w;
@@ -2110,7 +2124,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const off = 100 * Math.log(o1 / o0), def = 100 * Math.log(d1 / d0);
     return { v: off + lam * def, off, def };
   }
-  const api = { SPELL_TYPES, statWeights, valueProfile, itemValue, optimizeDeep, deepRuns, deepPart, deepStart, deepMerge, ARCHS, weaponSteals, normSus, encodeGear, encodeDeck, decodeCode, sustainAllowed, SLOTS, ORIENT, optimize, evaluate, buildState, itemPool, allocTemplates, score, cardAllowed };
+  const api = { iniEst, SPELL_TYPES, statWeights, valueProfile, itemValue, optimizeDeep, deepRuns, deepPart, deepStart, deepMerge, ARCHS, weaponSteals, normSus, encodeGear, encodeDeck, decodeCode, sustainAllowed, SLOTS, ORIENT, optimize, evaluate, buildState, itemPool, allocTemplates, score, cardAllowed };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.OPT = api;
 })(typeof self !== 'undefined' ? self : this);
 </script>
@@ -2346,8 +2360,12 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     s._pp = 100 + (s.prospection || 0) + Math.floor((s.chance || 0) / 10);
     s._dofus = dofusFx(gear.filter(g => g && g.item && (g.item.s === 'dofus' || /dofus/i.test(g.item.n || ''))).map(g => g.item.n || ''));
     if (s._dofus.ebene) s._perfo = Math.min(32.5, s._perfo * 1.3);
+    s._surprise = surpriseChance(s.initiative, ctx.level);
     return s;
   }
+  // Initiative hors arène (info-bulle du jeu) : au-delà de 5 × niveau, chance que les ennemis passent leur premier tour,
+  // jusqu'à 25 % atteints à 15 fois cette valeur (progression supposée linéaire entre les deux)
+  function surpriseChance(ini, level) { const base = 5 * (level || 200); return 0.25 * Math.max(0, Math.min(1, ((ini || 0) - base) / (14 * base))); }
 
   // Stats de combat telles que le jeu les envoie (combat en cours, builds enregistrés) → champs dérivés du moteur
   function deriveStats(stats, o) {
@@ -2468,6 +2486,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const mv = (k, d) => { const x = mk(k); return x ? x[k] : d; };
     const every = (k, round) => k > 0 && round % k === 0;
     const rageAt = opts.rageTurn || 0;
+    const surprised = !opts.noSurprise && (S._surprise || 0) > 0 && RND() < S._surprise; // ennemis pris de vitesse : ils passent leur premier tour
     for (let round = 1; round <= (opts.maxRounds || 30); round++) {
       T.round = round;
       // échange de vie au début du tour
@@ -2549,6 +2568,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       const rg = rageAt || mv('rageTurn', 0);
       if (rg && round >= rg) { hpLost += P.hp; P.hp = 0; return result(false, round); }
       // ----- tour des monstres -----
+      if (surprised && round === 1) continue;
       for (const m of mons) {
         if (!m.alive) continue;
         if (m.poison && m.poison.length) { // Sadida : poison en % des PV max au début du tour du monstre
@@ -4417,7 +4437,7 @@ function renderOpt(res,opts,pack,mult,deckIdx){lastOpt=res;
     ['Victoires',fmt(b.winRate*100,1)+' %',`avant ${fmt(a.winRate*100,1)} % · ${delta(a.winRate*100,b.winRate*100,false,1,' pts')}`],
     ['PV perdus',fmt(b.avgHpLost),`avant ${fmt(a.avgHpLost)} · ${delta(a.avgHpLost,b.avgHpLost,true,0)}`],
     ['PV max',fmt(Sb._maxHp),`avant ${fmt(Sa._maxHp)} · ${delta(Sa._maxHp,Sb._maxHp,false,0)}`]
-  ].concat(opts.objective==='sagesse'?[['Sagesse',fmt(Sb.sagesse||0),`avant ${fmt(Sa.sagesse||0)}`],['Rythme d\'XP',fmt((1+(Sb.sagesse||0)/100)/b.avgRounds/((1+(Sa.sagesse||0)/100)/a.avgRounds)*100-100,0)+' %','vs build actuel (sagesse ÷ tours)']]:opts.objective==='pp'?[['Prospection',fmt(Sb._pp),`avant ${fmt(Sa._pp)} · 100 + PP objets + Chance/10`],['Butin par tour',fmt(Sb._pp/b.avgRounds/(Sa._pp/a.avgRounds)*100-100,0)+' %','vs build actuel (PP ÷ tours)']]:[]).map(([x,y,z])=>`<div class="kpi"><span class="lbl">${x}</span><span class="v">${y}</span><span class="d muted">${z}</span></div>`).join('');
+  ].concat(opts.objective==='sagesse'?[['Sagesse',fmt(Sb.sagesse||0),`avant ${fmt(Sa.sagesse||0)}`],['Rythme d\'XP',fmt((1+(Sb.sagesse||0)/100)/b.avgRounds/((1+(Sa.sagesse||0)/100)/a.avgRounds)*100-100,0)+' %','vs build actuel (sagesse ÷ tours)']]:opts.objective==='pvp-ini'?[['Initiative',fmt(O.iniEst(Sb)),`avant ${fmt(O.iniEst(Sa))} · ${delta(O.iniEst(Sa),O.iniEst(Sb),false,0)}`],['Ennemis surpris (hors arène)',fmt((Sb._surprise||0)*100,1)+' %',`avant ${fmt((Sa._surprise||0)*100,1)} % · 25 % max à 15 000`]]:opts.objective==='pp'?[['Prospection',fmt(Sb._pp),`avant ${fmt(Sa._pp)} · 100 + PP objets + Chance/10`],['Butin par tour',fmt(Sb._pp/b.avgRounds/(Sa._pp/a.avgRounds)*100-100,0)+' %','vs build actuel (PP ÷ tours)']]:[]).map(([x,y,z])=>`<div class="kpi"><span class="lbl">${x}</span><span class="v">${y}</span><span class="d muted">${z}</span></div>`).join('');
   const st=res.state;let html='';const lines=[];
   if(res.saturated){$('#oDetails').innerHTML=`<div class="alert"><strong>Adversaire trop facile pour comparer des builds.</strong><span>Ton build actuel gagne déjà ${fmt(a.winRate*100,1)} % des combats en ${fmt(a.avgRounds,2)} tour, sans presque perdre de PV : n'importe quel stuff ou deck ferait pareil, et le Labo ne propose donc aucun changement. Choisis un adversaire plus dur (un boss, un étage, un groupe plus fort) ou monte la difficulté.</span><button class="btn" type="button" id="oForce" style="margin-top:6px;justify-self:start">Optimiser quand même</button></div>`;lastSummary='';$('#oForce').onclick=()=>{window.__forceSat=true;runOpt(true)};return}
   lines.push(`Labo RpgMasters — ${pack.label} ×${mult} — ${(O.ORIENT[opts.objective]||{}).label||opts.objective}`);
@@ -4501,7 +4521,7 @@ $('#simCodeLoad').onclick=()=>{const msg=$('#simCodeMsg');try{const d=O.decodeCo
   else{const keys=d.ids.map(i=>DATA.cards.find(c=>c.id===i)).filter(Boolean).map(c=>c.key);simOverride.deck=keys;const vc=Object.fromEntries((vitrineData().cards||[]).map(c=>[c.id,c]));const missing=d.ids.filter(i=>!DATA.cards.some(c=>c.id===i)).map(i=>vc[i]?vc[i].n:'#'+i);msg.textContent=`Deck chargé : ${keys.length} cartes sur ${d.ids.length} présentes dans ta collection`+(missing.length?` (absentes : ${missing.join(', ')})`:'')+'.'}
   runSim()}catch(e){msg.textContent='Code refusé : '+e.message}};
 $('#simCodeReset').onclick=()=>{simOverride={gear:null,deck:null};$('#simCodeMsg').textContent='Ton build actuel est rétabli.';runSim()};
-const OBJ_NOTES={kralamoure:'Full DPS : maximise les dégâts cumulés en 10 tours sur le Kralamoure de la Faille (il ne meurt pas). La survie ne compte que si tu risques de mourir avant la fin. Le groupe de monstres et la difficulté sont ignorés.',equilibre:'Équilibre entre finir vite et perdre peu de PV, testé aussi sur ton adversaire le plus dur renforcé : un build qui farme vite sans casser sur un mauvais tirage.',vitesse:'Minimise le nombre de tours pour gagner.',survie:'Minimise les PV perdus, quitte à taper moins fort.',sagesse:'Maximise sagesse ÷ tours, avec au moins 95 % de victoires. Hypothèse : l\'XP gagnée suit la sagesse comme sur Dofus.',pp:'Maximise la prospection (le Dofus Kaliptus compte), avec au moins 95 % de victoires ; la vitesse ne sert qu\'à départager deux builds proches. Prospection = 100 + PP des objets + Chance/10 (510 pour toi, comme affiché en jeu).',multi:'Deck limité aux cartes qui tapent dans 2 éléments ou plus (plus les cartes utilitaires).',ascension:'Survie face à des monstres renforcés : la difficulté passe à ×3, ajuste-la selon ton étage.'};
+const OBJ_NOTES={'pvp-ini':'Arène : le plus rapide joue en premier (égalité : celui qui attaque), et le premier gagne presque toujours. Maximise l\'Initiative (ligne « Initiative » des objets, Prestige, forge et compagnon compris), en gardant un build qui tient en combat.',kralamoure:'Full DPS : maximise les dégâts cumulés en 10 tours sur le Kralamoure de la Faille (il ne meurt pas). La survie ne compte que si tu risques de mourir avant la fin. Le groupe de monstres et la difficulté sont ignorés.',equilibre:'Équilibre entre finir vite et perdre peu de PV, testé aussi sur ton adversaire le plus dur renforcé : un build qui farme vite sans casser sur un mauvais tirage.',vitesse:'Minimise le nombre de tours pour gagner.',survie:'Minimise les PV perdus, quitte à taper moins fort.',sagesse:'Maximise sagesse ÷ tours, avec au moins 95 % de victoires. Hypothèse : l\'XP gagnée suit la sagesse comme sur Dofus.',pp:'Maximise la prospection (le Dofus Kaliptus compte), avec au moins 95 % de victoires ; la vitesse ne sert qu\'à départager deux builds proches. Prospection = 100 + PP des objets + Chance/10 (510 pour toi, comme affiché en jeu).',multi:'Deck limité aux cartes qui tapent dans 2 éléments ou plus (plus les cartes utilitaires).',ascension:'Survie face à des monstres renforcés : la difficulté passe à ×3, ajuste-la selon ton étage.'};
 ['1','2','3','4'].forEach(e=>OBJ_NOTES['mono:'+e]='Deck limité aux cartes d\'un seul élément (plus les cartes utilitaires sans dégâts). Les cartes interdites de ton deck de départ sont remplacées.');
 function optTargetNote(){try{const p=optAutoPack();$('#oTargetNote').textContent=p?p.label:'—'}catch(e){}}
 $('#oObj').onchange=e=>{const v=e.target.value;$('#oObjNote').textContent=OBJ_NOTES[v]||'';$('#oFloorWrap').hidden=!/^ascension/.test(v);optTargetNote()};
