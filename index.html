@@ -757,10 +757,10 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   // Bouclier de forge (page Forgemagie, « Paliers du bouclier ») : courbe exponentielle, ×1,287 tous les 10 niveaux,
   // +1,25 % au niv. 10, +12,1 % au niv. 100, +150 % au niv. 200 (écart < 0,05 point sur les 20 paliers). Additif au Prestige, hors PA/PM/PO/invocations.
   const FORGE_K = Math.log(150 / 1.25) / 190;
-  // XP de l'Infini cumulée pour atteindre chaque dizaine de niveaux (page Forgemagie) ; plafond 2 500 orbes/jour
+  // XP de l'Infini cumulée pour atteindre chaque dizaine de niveaux (page Forgemagie) ; plafond 8 000 orbes versées par jour dans le Bouclier (patch du 12/10)
   const FORGE_XP = { 1: 0, 10: 247, 20: 816, 30: 1606, 40: 2580, 50: 3717, 60: 5003, 70: 6428, 80: 7982, 90: 9659, 100: 11453, 110: 13359, 120: 15374, 130: 17492, 140: 19712, 150: 22029, 160: 24442, 170: 26948, 180: 29544, 190: 32229, 200: 35000 };
   function forgeXpAt(level) { const L = Math.max(1, Math.min(200, level)); const a = L <= 10 ? 1 : Math.floor(L / 10) * 10, b = Math.min(200, a === 1 ? 10 : a + 10); if (L === a) return FORGE_XP[a]; return FORGE_XP[a] + (FORGE_XP[b] - FORGE_XP[a]) * (L - a) / (b - a); }
-  function forgeDaysTo(target, level, xp) { const need = Math.max(0, forgeXpAt(target) - forgeXpAt(level) - (xp || 0)); return Math.ceil(need / 2500); }
+  function forgeDaysTo(target, level, xp) { const need = Math.max(0, forgeXpAt(target) - forgeXpAt(level) - (xp || 0)); return Math.ceil(need / 8000); }
   function forgePctFor(level, known) {
     if (known != null && isFinite(known)) return known;
     const L = Math.max(0, Math.min(200, level || 0));
@@ -2231,7 +2231,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
 <script type="text/plain" id="src-userscript">// ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.12.12
+// @version      2.12.13
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -2354,10 +2354,10 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   // Bouclier de forge (page Forgemagie, « Paliers du bouclier ») : courbe exponentielle, ×1,287 tous les 10 niveaux,
   // +1,25 % au niv. 10, +12,1 % au niv. 100, +150 % au niv. 200 (écart < 0,05 point sur les 20 paliers). Additif au Prestige, hors PA/PM/PO/invocations.
   const FORGE_K = Math.log(150 / 1.25) / 190;
-  // XP de l'Infini cumulée pour atteindre chaque dizaine de niveaux (page Forgemagie) ; plafond 2 500 orbes/jour
+  // XP de l'Infini cumulée pour atteindre chaque dizaine de niveaux (page Forgemagie) ; plafond 8 000 orbes versées par jour dans le Bouclier (patch du 12/10)
   const FORGE_XP = { 1: 0, 10: 247, 20: 816, 30: 1606, 40: 2580, 50: 3717, 60: 5003, 70: 6428, 80: 7982, 90: 9659, 100: 11453, 110: 13359, 120: 15374, 130: 17492, 140: 19712, 150: 22029, 160: 24442, 170: 26948, 180: 29544, 190: 32229, 200: 35000 };
   function forgeXpAt(level) { const L = Math.max(1, Math.min(200, level)); const a = L <= 10 ? 1 : Math.floor(L / 10) * 10, b = Math.min(200, a === 1 ? 10 : a + 10); if (L === a) return FORGE_XP[a]; return FORGE_XP[a] + (FORGE_XP[b] - FORGE_XP[a]) * (L - a) / (b - a); }
-  function forgeDaysTo(target, level, xp) { const need = Math.max(0, forgeXpAt(target) - forgeXpAt(level) - (xp || 0)); return Math.ceil(need / 2500); }
+  function forgeDaysTo(target, level, xp) { const need = Math.max(0, forgeXpAt(target) - forgeXpAt(level) - (xp || 0)); return Math.ceil(need / 8000); }
   function forgePctFor(level, known) {
     if (known != null && isFinite(known)) return known;
     const L = Math.max(0, Math.min(200, level || 0));
