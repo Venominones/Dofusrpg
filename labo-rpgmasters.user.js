@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.12.9
+// @version      2.12.10
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -296,7 +296,7 @@
       if (!PK) return 0; const w = c && c.weapon, cur = C.cur || {};
       switch (PK) {
         case 'feca': return 6 * C.n;
-        case 'osamodas': return 25 * Math.max(1, Math.round(S.invocations || 1)); // Attaques coordonnées (patch du 12/10) : chaque invocation répercute 25 % de tes dégâts (supposé : une par point d'Invocations)
+        case 'osamodas': return 25; // Attaques coordonnées (patch du 12/10) : ses invocations répercutent 25 % de ses dégâts (la stat Invocations sert à la pioche, pas au nombre d'invocations)
         case 'enutrof': return 5 * C.n;
         case 'xelor': return 6 * C.n;
         case 'eniripsa': return 9 * C.n;
@@ -325,7 +325,7 @@
     const dolEl = DF.dolmanax ? 1 + Math.floor(RND() * 4) : 0; let jyfusUsed = false, cacaoTurn = 0, truche = 0; // Dolmanax : élément du jour (inconnu, tiré au hasard), Jyfus 1×/combat, Cacao 1×/tour, Dotruche : bouclier de surplus de soin
     if (DF.argente) P.shields.push({ value: Math.floor(maxHp * 0.08), turns: 99 }); // Argenté Scintillant : bouclier de 8 % des PV max au début
     // Pioches en plus (bouton « Piocher ») : réserve plafonnée par la stat Invocations, qui se recharge de 1 par tour (Dofoozbz : 2)
-    const drawCap = Math.max(1, Math.round(S.invocations || 1)); let drawsLeft = drawCap;
+    const drawCap = opts.abyss ? 0 : Math.min(4, Math.max(0, Math.round(S.invocations || 0))); let drawsLeft = drawCap; // stat Invocations : 1 pioche en plus par point, 4 au plus, pas dans les Abysses
     let olStreak = 0; // Sorts à une seule ligne (patch du 12/10) : +50 %, puis +20 % par tour sans lancer à plusieurs lignes, +150 % au plus ; un lancer à plusieurs lignes (sort ou corps à corps) remet à zéro jusqu'au tour suivant
     const deckBonus = opts.abyss ? 0 : Math.min(25, 5 * Math.max(0, (opts.deck || []).length - 7)); // patch du 12/10 : +5 % de dégâts des sorts par carte au-delà de 7, +25 % au plus (hors Abysses)
     const surprised = !opts.noSurprise && (S._surprise || 0) > 0 && RND() < S._surprise; // ennemis pris de vitesse : ils passent leur premier tour
