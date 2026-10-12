@@ -344,7 +344,6 @@ th,td{border-bottom-color:var(--line)}
           <select id="oObj">
             <optgroup label="Général"><option value="equilibre" selected>Équilibré</option><option value="vitesse">Farm rapide</option><option value="survie">Tank</option></optgroup>
             <optgroup label="Farm"><option value="sagesse">XP</option><option value="pp">Full PP (butin)</option></optgroup>
-            <optgroup label="Éléments"><option value="mono:1">Full Terre</option><option value="mono:2">Full Feu</option><option value="mono:3">Full Eau</option><option value="mono:4">Full Air</option><option value="multi">Multi</option></optgroup>
             <optgroup label="Contenu dur"><option value="ascension">Ascension</option><option value="ascension-tank">Ascension Tank</option><option value="ascension-burst">Ascension Burst</option><option value="kralamoure">Kralamoure DPS</option></optgroup>
             <optgroup label="PvP"><option value="pvp">PvP One-shot tour 1</option><option value="pvp-ini">PvP Full initiative</option></optgroup>
           </select>
@@ -352,6 +351,7 @@ th,td{border-bottom-color:var(--line)}
         </div>
         <div class="field" hidden><select id="oPack"></select><input type="range" id="oDiff" min="1" max="6" step="0.25" value="1"><span id="oDiffV"></span></div>
         <div class="field"><span class="lbl">Adversaire simulé</span><span class="note" id="oTargetNote">Choisi selon l'orientation.</span></div>
+        <div class="field"><label for="oElem">Éléments</label><select id="oElem"><option value="">Libre (le Labo choisit)</option><optgroup label="Mono-élément"><option value="mono:1">Full Terre</option><option value="mono:2">Full Feu</option><option value="mono:3">Full Eau</option><option value="mono:4">Full Air</option></optgroup><option value="multi">Multi-élément (sorts à 2 éléments ou plus)</option></select><span class="note">Se combine avec n'importe quelle orientation : par exemple Ascension en Full Eau, ou Kralamoure en multi.</span></div>
         <div class="field" id="oPvpWrap" hidden><span class="lbl">Adversaire PvP</span>
           <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><label class="note">PV <input type="number" id="pvpHp" min="1000" step="500" value="33000" style="width:6.5em!important"></label><label class="note">Initiative <input type="number" id="pvpIni" min="0" step="100" value="0" style="width:6em!important"></label><label class="note">Rés. % <input type="number" id="pvpRes" min="0" max="50" value="0" style="width:4.2em!important"></label></div>
           <label class="chk"><input type="checkbox" id="pvpUlt">Arène Ultime (dégâts −60 %)</label>
@@ -1484,12 +1484,15 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   // strict : chaque sort de dégâts doit être du type choisi (les sorts sans dégâts restent permis) ; préférence : bonus au score par sort du type
   function spellOk(c, f) { if (!f || !f.type || f.mode !== 'strict' || !SPELL_TYPES[f.type]) return true; return !(c.eff || []).some(isDmgL) || SPELL_TYPES[f.type].m(c); }
   function spellPref(data, st, f) { if (!f || !f.type || f.mode !== 'pref' || !SPELL_TYPES[f.type]) return 0; const by = data._cardsByKey || {}; return 25 * (st.deck || []).filter(k => by[k] && SPELL_TYPES[f.type].m(by[k])).length; }
-  function cardAllowed(c, objective, sustain, noSteal) {
+  // Choix d'éléments indépendant de l'objectif : '' (libre), 'mono:1'..'mono:4' ou 'multi'
+  function elemOf(objective, elem) { const o = ORIENT[objective] || {}; if (elem && /^mono:[1-4]$/.test(elem)) return { el: +elem.slice(5) }; if (elem === 'multi' || objective === 'multi') return { multi: true }; return o.el !== undefined ? { el: o.el } : {}; }
+  function cardAllowed(c, objective, sustain, noSteal, elem) {
     if (!c || !sustainAllowed(c, sustain, noSteal)) return false;
     const o = ORIENT[objective] || {};
     const els = cardEls(c);
-    if (o.el !== undefined) return els.length === 0 || els.every(e => e === o.el);
-    if (objective === 'multi') return els.length === 0 || els.length >= 2;
+    const E = elemOf(objective, elem);
+    if (E.el !== undefined) return els.length === 0 || els.every(e => e === E.el);
+    if (E.multi) return els.length === 0 || els.length >= 2;
     // Kralamoure : il ne frappe presque pas (34 dégâts en 10 tours relevés en jeu) → pas de carte purement défensive, chaque place sert aux dégâts
     if ((objective === 'kralamoure' || objective === 'pvp') && (c.eff || []).length && c.eff.every(l => ['shieldHp', 'shieldLvl', 'heal', 'healPct'].includes(l.k) || (l.k === 'buff' && /^res/.test(l.stat || '')))) return false;
     return true;
@@ -1552,13 +1555,13 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     w.po = 2 + (S && S._breed === 9 && (S._spectral || 0) < 60 ? tot * 0.4 / 100 : 0); // Crâ : chaque PO = +0,4 % de vision spectrale
     return w;
   }
-  function orientWeights(w, objective) {
+  function orientWeights(w, objective, elem) {
     const o = ORIENT[objective] || {};
     if (objective === 'sagesse') w.sagesse = (w.sagesse || 0) + 1.5;
     if (objective === 'pvp-ini') w.initiative = (w.initiative || 0) + 0.6;
     if (objective === 'pvp') w.initiative = (w.initiative || 0) + 0.15;
     if (objective === 'pp') { w.prospection = (w.prospection || 0) + 4; w.chance = (w.chance || 0) + 0.4; }
-    if (o.el !== undefined) { for (let e = 1; e <= 4; e++) if (e !== o.el) { const car = R.CARAC_OF_EL[e]; if (car !== R.CARAC_OF_EL[o.el]) w[car] = (w[car] || 0) * 0.2; } }
+    const E = elemOf(objective, elem); if (E.el !== undefined) { for (let e = 1; e <= 4; e++) if (e !== E.el) { const car = R.CARAC_OF_EL[e]; if (car !== R.CARAC_OF_EL[E.el]) w[car] = (w[car] || 0) * 0.2; } }
     return w;
   }
   function dominates(a, b) {
@@ -1746,7 +1749,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     // Archétype d'élément imposé (recherche approfondie) : sorts de ces éléments, sorts multi-éléments (3+) et sorts utilitaires
     const ARCH = opts.arch || null;
     const archOk = c => { if (!ARCH) return true; const els = cardEls(c); return !els.length || els.length >= 3 || els.every(e => ARCH.els.includes(e)); };
-    const allowed = c => cardAllowed(c, obj, SU, NS) && archOk(c) && spellOk(c, opts.spellFilter);
+    const allowed = c => cardAllowed(c, obj, SU, NS, opts.elem) && archOk(c) && spellOk(c, opts.spellFilter);
     const useful = owned.filter(c => allowed(c) && c.eff.some(l => ['dmg', 'steal', 'bomb', 'dmgCasterHp', 'buff', 'shieldHp', 'shieldLvl', 'heal', 'healPct', 'apRemove', 'apGain'].includes(l.k)));
     function deckPass(iters) {
       if (!useful.length) return;
@@ -1857,7 +1860,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const gearStage = () => { if (!opts.optGear) return;
       const pool = itemPool(data);
       const b = buildState(data, cur, ctx);
-      const wts = orientWeights(statWeights(b.deck, b.weapon, b.S, obj === 'survie' || obj === 'equilibre' || obj === 'ascension' || obj === 'ascension-tank'), obj);
+      const wts = orientWeights(statWeights(b.deck, b.weapon, b.S, obj === 'survie' || obj === 'equilibre' || obj === 'ascension' || obj === 'ascension-tank'), obj, opts.elem);
       const cands = {};
       for (const [slot, type] of SLOTS) {
         const ONE = opts.spellFilter && opts.spellFilter.type === 'oneline' && opts.spellFilter.mode === 'strict';
@@ -2013,9 +2016,10 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const count = a => owned.filter(c => { const e = cardEls(c); return e.length && (e.length >= 3 || e.every(x => a.els.includes(x))); }).length;
     const multiCount = owned.filter(c => cardEls(c).length >= 3).length;
     let archs = ARCHS.filter(a => a.id === 'multi' ? multiCount >= 2 : count(a) >= 4);
-    if (o.el !== undefined) archs = archs.filter(a => a.els.includes(o.el));           // orientation mono : seulement l'élément choisi
-    if (opts.objective === 'multi') archs = archs.filter(a => a.id === 'multi');
-    const runs = [{ id: 'libre', label: 'Libre (sans contrainte d\'élément)', arch: null }].concat(archs.map(a => ({ id: a.id, label: a.label, arch: a })));
+    const E = elemOf(opts.objective, opts.elem);
+    if (E.el !== undefined) archs = archs.filter(a => a.id !== 'multi' && a.els.includes(E.el));           // mono : seulement l'élément choisi
+    if (E.multi) archs = archs.filter(a => a.id === 'multi');
+    const runs = [{ id: 'libre', label: E.el !== undefined ? ['', 'Full Terre', 'Full Feu', 'Full Eau', 'Full Air'][E.el] + ' (deck libre)' : E.multi ? 'Multi (deck libre)' : 'Libre (sans contrainte d\'élément)', arch: null }].concat(archs.map(a => ({ id: a.id, label: a.label, arch: a })));
     // Reprise : le dernier build trouvé (mémorisé par le Labo) sert de point de départ supplémentaire, s'il est encore possible
     const seed = sanitizeSeed(data, opts);
     if (seed) runs.unshift({ id: 'memo', label: 'Reprise du dernier build trouvé', arch: null, start: seed });
@@ -4431,7 +4435,7 @@ function pvpPack(){const hp=Math.max(1000,+$('#pvpHp').value||33000)*($('#pvpUlt
   return {key:'pvp',label:`Joueur · ${fmt(+$('#pvpHp').value||33000)} PV${$('#pvpUlt').checked?' (Arène Ultime)':''}`,defs:[{name:'Adversaire (joueur)',grade:1,level:200,hpMin:hp,hpMax:hp,atk:1,element:0,pattern:['attack'],stats:{resPctNeutre:rp,resPctTerre:rp,resPctFeu:rp,resPctEau:rp,resPctAir:rp},isBoss:false,fixedStart:false}],fights:[]}}
 function optAutoPack(){const o=$('#oObj').value;if(o==='kralamoure')return kralaPack();if(/^pvp/.test(o))return pvpPack();if(/^ascension/.test(o)){try{return ascPolyPack()}catch(e){}}return polyPack()}
 function optOptsFor(v){const pack=optAutoPack();if(!pack)return null;const mult=1;const deckIdx=+$('#oStart').value;
-  const opts={optGear:$('#oGear').checked,optAlloc:$('#oAlloc').checked,optDeck:$('#oDeck').checked,deckSize:deckSlots(),objective:$('#oObj').value,spellFilter:spellF('o'),sustain:susOf('o'),noSteal:!!$('#oInv').checked,...fightOpts('o'),effort:+segVal('oEffort'),budgetMs:[20,45,555][(+segVal('oEffort')||2)-1]*1000,...lockOpts(),monsters:monstersFor(pack,mult),ctx:/^pvp/.test($('#oObj').value)?Object.assign({},ctx,{needIni:$('#oObj').value==='pvp'?(+$('#pvpIni').value||0):0}):$('#oObj').value==='pp'?Object.assign({},ctx,{lootE:lootPerFight()}):ctx,start:OPT_START?{gear:OPT_START.gear,alloc:OPT_START.alloc,deck:OPT_START.deck}:{gear:curGear,alloc:curAlloc,deck:DATA.meta.decks[deckIdx]}};return {pack,mult,deckIdx,opts}}
+  const opts={optGear:$('#oGear').checked,optAlloc:$('#oAlloc').checked,optDeck:$('#oDeck').checked,deckSize:deckSlots(),objective:$('#oObj').value,...($('#oElem').value?{elem:$('#oElem').value}:{}),spellFilter:spellF('o'),sustain:susOf('o'),noSteal:!!$('#oInv').checked,...fightOpts('o'),effort:+segVal('oEffort'),budgetMs:[20,45,555][(+segVal('oEffort')||2)-1]*1000,...lockOpts(),monsters:monstersFor(pack,mult),ctx:/^pvp/.test($('#oObj').value)?Object.assign({},ctx,{needIni:$('#oObj').value==='pvp'?(+$('#pvpIni').value||0):0}):$('#oObj').value==='pp'?Object.assign({},ctx,{lootE:lootPerFight()}):ctx,start:OPT_START?{gear:OPT_START.gear,alloc:OPT_START.alloc,deck:OPT_START.deck}:{gear:curGear,alloc:curAlloc,deck:DATA.meta.decks[deckIdx]}};return {pack,mult,deckIdx,opts}}
 // Kralamoure de la Faille : boss à ~100 M de PV qu'on ne tue pas ; on cumule un maximum de dégâts en 10 tours.
 // Stats relevées en combat (monstre 423) ; si le perso ne l'a jamais croisé, on prend ces valeurs.
 const KRALA_REF={name:'Kralamoure Géant',grade:1,level:200,hpMin:99999458,hpMax:99999458,atk:383,element:3,pattern:['attack','attack','heavy','rage','attack','heavy'],stats:{resPctNeutre:20,resPctTerre:20,resPctFeu:20,resPctEau:30,resPctAir:20},isBoss:true};
