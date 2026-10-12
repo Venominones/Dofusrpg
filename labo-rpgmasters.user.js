@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.12.18
+// @version      2.12.19
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -1475,11 +1475,14 @@
     let runesProbe = (() => { try { const hits = runeHits(inv); const j = JSON.stringify(hits); return { invKeys: Object.keys(I), hits: j.length < 300000 ? hits : j.slice(0, 300000) }; } catch (e) { return { err: String(e) }; } })();
     if (!(runesProbe.hits || []).length) for (const path of ['/inventaire?onglet=runes', '/inventaire?tab=runes', '/inventaire/runes']) { try { const pg = await rsc(path); const h = runeHits(pg); if (h.length) { const j = JSON.stringify(h); runesProbe.hits = j.length < 300000 ? h : j.slice(0, 300000); runesProbe.from = path; break; } } catch (e) {} }
     try { runesProbe.snap = JSON.parse(localStorage.getItem(RUNE_SNAP) || 'null'); } catch (e) {}
-    // Définitions des runes (valeurs) : dans le code du jeu (fichiers JS publics de la page), lues une fois puis gardées une semaine
-    try { let defs = null; try { defs = JSON.parse(localStorage.getItem('labo-rune-defs') || 'null'); } catch (e) {}
-      if (!defs || Date.now() - defs.t > 7 * 864e5) { const html = await origFetch('/inventaire?onglet=runes', { credentials: 'include' }).then(r => r.text()); const srcs = [...new Set([...html.matchAll(/\/_next\/static\/[^"' ]+?\.js/g)].map(m => m[0]))].slice(0, 80); const found = [];
-        for (const src of srcs) { let t = ''; try { t = await origFetch(src).then(r => r.text()); } catch (e) { continue; } const i = t.search(/["']?rall["']?\s*:/); if (i >= 0 && /["']?dso["']?\s*:/.test(t)) found.push({ src: src.slice(-60), ex: t.slice(Math.max(0, i - 6000), i + 6000) }); if (found.length >= 2) break; }
-        defs = { t: Date.now(), n: srcs.length, found }; try { localStorage.setItem('labo-rune-defs', JSON.stringify(defs)); } catch (e) {} }
+    // Définitions des runes (valeurs) : dans le code du jeu (fichiers JS publics), lues une fois puis gardées une semaine
+    try { let defs = null; try { defs = JSON.parse(localStorage.getItem('labo-rune-defs2') || 'null'); } catch (e) {}
+      if (!defs || !defs.found || !defs.found.length || Date.now() - defs.t > 7 * 864e5) { const html = await origFetch('/inventaire?onglet=runes', { credentials: 'include' }).then(r => r.text());
+        let perf = []; try { perf = performance.getEntriesByType('resource').map(e => e.name).filter(u => /\/_next\/static\/.+\.js/.test(u)).map(u => u.replace(/^https?:\/\/[^/]+/, '')); } catch (e) {}
+        const srcs = [...new Set(perf.concat([...html.matchAll(/\/_next\/static\/[^"' \\]+?\.js/g)].map(m => m[0])))].slice(0, 150); const found = [];
+        for (const src of srcs) { let t = ''; try { t = await origFetch(src).then(r => r.text()); } catch (e) { continue; } const i = t.search(/["'`]rall["'`]|\brall:/); if (i >= 0 && /["'`]dso["'`]|\bdso:/.test(t)) found.push({ src: src.slice(-60), ex: t.slice(Math.max(0, i - 8000), i + 8000) }); if (found.length >= 2) break; }
+        const ms = [...html.matchAll(/Rune d/g)];
+        defs = { t: Date.now(), n: srcs.length, found, page: ms.slice(0, 4).map(m => html.slice(Math.max(0, m.index - 300), m.index + 300)) }; if (found.length) try { localStorage.setItem('labo-rune-defs2', JSON.stringify(defs)); } catch (e) {} }
       runesProbe.defs = defs; } catch (e) { runesProbe.defsErr = String(e); }
     if (!(runesProbe.hits || []).length) try { const t = await origFetch('/inventaire', { credentials: 'include' }).then(r => r.text()); const ms = [...t.matchAll(/Rune d/g)]; runesProbe.text = { n: ms.length, size: t.length, ex: ms.slice(0, 3).map(m => t.slice(Math.max(0, m.index - 250), m.index + 250)) }; } catch (e) {}
     const it = (x) => ({ id: x.item.id, n: x.item.n, lvl: x.item.lvl, s: x.item.s, r: x.item.r, setId: x.item.setId || null, st: x.item.st, w: x.item.w || null, icon: x.item.icon || x.item.gfx || null, ru: runesOf(x), uid: x.uid || x.instanceId || x.id || undefined });
