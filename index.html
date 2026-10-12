@@ -351,7 +351,7 @@ th,td{border-bottom-color:var(--line)}
         </div>
         <div class="field" hidden><select id="oPack"></select><input type="range" id="oDiff" min="1" max="6" step="0.25" value="1"><span id="oDiffV"></span></div>
         <div class="field"><span class="lbl">Adversaire simulé</span><span class="note" id="oTargetNote">Choisi selon l'orientation.</span></div>
-        <div class="field"><label for="oElem">Éléments</label><select id="oElem"><option value="">Libre (le Labo choisit)</option><optgroup label="Mono-élément"><option value="mono:1">Full Terre</option><option value="mono:2">Full Feu</option><option value="mono:3">Full Eau</option><option value="mono:4">Full Air</option></optgroup><option value="multi">Multi-élément (sorts à 2 éléments ou plus)</option></select><span class="note">Se combine avec n'importe quelle orientation : par exemple Ascension en Full Eau, ou Kralamoure en multi.</span></div>
+        <div class="field"><label for="oElem">Éléments</label><select id="oElem"><option value="">Libre (le Labo choisit)</option><optgroup label="Mono-élément"><option value="mono:1">Full Terre</option><option value="mono:2">Full Feu</option><option value="mono:3">Full Eau</option><option value="mono:4">Full Air</option></optgroup><option value="multi">Multi-élément (stuff et deck qui mélangent les éléments)</option><option value="multisorts">Sorts multi (uniquement des sorts à 2 éléments ou plus)</option></select><span class="note" id="oElemNote">Se combine avec n'importe quelle orientation : par exemple Ascension en Full Eau, ou Kralamoure en multi-élément.</span></div>
         <div class="field" id="oPvpWrap" hidden><span class="lbl">Adversaire PvP</span>
           <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><label class="note">PV <input type="number" id="pvpHp" min="1000" step="500" value="33000" style="width:6.5em!important"></label><label class="note">Initiative <input type="number" id="pvpIni" min="0" step="100" value="0" style="width:6em!important"></label><label class="note">Rés. % <input type="number" id="pvpRes" min="0" max="50" value="0" style="width:4.2em!important"></label></div>
           <label class="chk"><input type="checkbox" id="pvpUlt">Arène Ultime (dégâts −60 %)</label>
@@ -1485,7 +1485,9 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   function spellOk(c, f) { if (!f || !f.type || f.mode !== 'strict' || !SPELL_TYPES[f.type]) return true; return !(c.eff || []).some(isDmgL) || SPELL_TYPES[f.type].m(c); }
   function spellPref(data, st, f) { if (!f || !f.type || f.mode !== 'pref' || !SPELL_TYPES[f.type]) return 0; const by = data._cardsByKey || {}; return 25 * (st.deck || []).filter(k => by[k] && SPELL_TYPES[f.type].m(by[k])).length; }
   // Choix d'éléments indépendant de l'objectif : '' (libre), 'mono:1'..'mono:4' ou 'multi'
-  function elemOf(objective, elem) { const o = ORIENT[objective] || {}; if (elem && /^mono:[1-4]$/.test(elem)) return { el: +elem.slice(5) }; if (elem === 'multi' || objective === 'multi') return { multi: true }; return o.el !== undefined ? { el: o.el } : {}; }
+  function elemOf(objective, elem) { const o = ORIENT[objective] || {}; if (elem && /^mono:[1-4]$/.test(elem)) return { el: +elem.slice(5) }; if (elem === 'multi') return { mixed: true }; if (elem === 'multisorts' || objective === 'multi') return { multi: true }; return o.el !== undefined ? { el: o.el } : {}; }
+  // Éléments de dégâts distincts d'un deck (Neutre compté avec Terre : même carac Force)
+  function deckEls(data, deck) { const by = data._cardsByKey || {}; const set = new Set(); for (const k of deck || []) for (const e of cardEls(by[k] || {})) set.add(e === 0 ? 1 : e); return set; }
   function cardAllowed(c, objective, sustain, noSteal, elem) {
     if (!c || !sustainAllowed(c, sustain, noSteal)) return false;
     const o = ORIENT[objective] || {};
@@ -1722,6 +1724,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const changes = st => SLOTS.filter(([s]) => (st.gear[s] && st.gear[s].id) !== (start0.gear[s] && start0.gear[s].id)).length + st.deck.filter(k => !start0.deck.includes(k)).length;
     // Ascension : à efficacité égale, on préfère le build qui change le moins de choses
     // Budget de temps : passé l'échéance, les candidats suivants sont rejetés sans simulation (on garde le meilleur trouvé)
+    const MIXED = opts.optDeck && !!elemOf(obj, opts.elem).mixed; // Multi-élément : le deck doit mélanger au moins 2 éléments
     const deadline = opts.deadline || (opts.budgetMs ? Date.now() + opts.budgetMs : 0);
     const late = () => deadline && Date.now() > deadline;
     // Tri rapide : un candidat est d'abord joué sur peu de combats (mêmes tirages que le build courant) ; s'il est nettement moins bon, on l'écarte sans la simulation complète
@@ -1729,7 +1732,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const E = (st, n) => { ev++; if (ev > 1 && late()) return { score: -Infinity, r: start.r, S: start.S };
       if (HASLK && !locksOk(st, LK)) return { score: -Infinity, r: start.r, S: start.S };
       if (QUICK && !n && ev > 2 && st !== cur) { const qc = evaluate(data, cur, ctx, mons, QUICK, obj, FO).score, qs = evaluate(data, st, ctx, mons, QUICK, obj, FO); if (qs.score < qc - (40 + 0.05 * Math.abs(qc))) return { score: -1e9, r: qs.r, S: qs.S }; }
-      const e = evaluate(data, st, ctx, mons, n || N, obj, FO); e.score -= (String(obj).startsWith('ascension') ? 3 : 1.5) * changes(st); e.score += spellPref(data, st, opts.spellFilter); return e; };
+      const e = evaluate(data, st, ctx, mons, n || N, obj, FO); e.score -= (String(obj).startsWith('ascension') ? 3 : 1.5) * changes(st); e.score += spellPref(data, st, opts.spellFilter); if (MIXED && deckEls(data, st.deck).size < 2) e.score -= 1e6; return e; };
     const start = evaluate(data, cur, ctx, mons, NF, obj, FO);
     // Cible trop facile : tout est déjà gagné en un tour sans dégâts, les différences ne seraient que du bruit de simulation
     if ((['survie', 'vitesse', 'equilibre', 'mono', 'multi'].includes(obj) || String(obj).startsWith('ascension')) && opts.saturateCheck && start.r.winRate >= 0.999 && start.r.avgRounds <= 1.05 && start.r.avgHpLost / start.S._maxHp < 0.03 && !opts.noSaturate) { // désactivé : on optimise toujours, même contre un adversaire facile
@@ -1799,6 +1802,18 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       const d2 = cur.deck.filter(k => data._cardsByKey[k] && allowed(data._cardsByKey[k]));
       while (d2.length < (opts.deckSize || cur.deck.length) && dmgPool.length) d2.push(dmgPool.splice(Math.floor(Math.random() * dmgPool.length), 1)[0].key);
       cur = forceLocks(data, Object.assign({}, cur, { deck: d2 }), LK, opts.deckSize); best = E(cur);
+      deckPass(budget.deckIter);
+    }
+    // Multi-élément : si le deck n'a qu'un élément, on remplace une de ses cartes de dégâts par la meilleure carte d'un autre élément
+    if (MIXED && deckEls(data, cur.deck).size < 2) {
+      const have = deckEls(data, cur.deck); const S0 = buildState(data, cur, ctx).S;
+      const other = useful.filter(c => { const e = cardEls(c); return e.length && e.some(x => !have.has(x === 0 ? 1 : x)) && !cur.deck.includes(c.key); }).sort((x, y) => cardPower(y, S0) - cardPower(x, S0));
+      if (other.length) {
+        const d2 = cur.deck.slice(); const locked = new Set((LK && LK.cards) || []);
+        const idx = d2.map((k, i) => i).filter(i => !locked.has(d2[i]) && cardEls(data._cardsByKey[d2[i]] || {}).length).pop();
+        if (d2.length < (opts.deckSize || d2.length)) d2.push(other[0].key); else if (idx !== undefined) d2[idx] = other[0].key;
+        cur = Object.assign({}, cur, { deck: d2 }); best = E(cur);
+      }
       deckPass(budget.deckIter);
     }
     // Emplacements libres (ex. après un Prestige) : on les remplit avec la meilleure carte disponible
@@ -2019,7 +2034,13 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const E = elemOf(opts.objective, opts.elem);
     if (E.el !== undefined) archs = archs.filter(a => a.id !== 'multi' && a.els.includes(E.el));           // mono : seulement l'élément choisi
     if (E.multi) archs = archs.filter(a => a.id === 'multi');
-    const runs = [{ id: 'libre', label: E.el !== undefined ? ['', 'Full Terre', 'Full Feu', 'Full Eau', 'Full Air'][E.el] + ' (deck libre)' : E.multi ? 'Multi (deck libre)' : 'Libre (sans contrainte d\'élément)', arch: null }].concat(archs.map(a => ({ id: a.id, label: a.label, arch: a })));
+    if (E.mixed) { // Multi-élément : duos d'éléments (chacun avec assez de sorts) + toutes caracs
+      const per = el => owned.filter(c => { const e = cardEls(c); return e.length && e.every(x => (x === 0 ? 1 : x) === el); }).length;
+      const N_ = ['', 'Terre', 'Feu', 'Eau', 'Air'], CAR = ['', 'force', 'intelligence', 'chance', 'agilite'];
+      const pairs = []; for (let a = 1; a <= 4; a++) for (let b = a + 1; b <= 4; b++) if (per(a) >= 2 && per(b) >= 2) pairs.push({ id: 'mix' + a + b, label: N_[a] + ' / ' + N_[b], els: (a === 1 ? [0, 1] : [a]).concat([b]), cars: [CAR[a], CAR[b]], n: per(a) + per(b) });
+      archs = pairs.sort((x, y) => y.n - x.n).slice(0, 3).concat(ARCHS.filter(a => a.id === 'multi'));
+    }
+    const runs = [{ id: 'libre', label: E.el !== undefined ? ['', 'Full Terre', 'Full Feu', 'Full Eau', 'Full Air'][E.el] + ' (deck libre)' : E.mixed ? 'Multi-élément (deck libre)' : E.multi ? 'Sorts multi (deck libre)' : 'Libre (sans contrainte d\'élément)', arch: null }].concat(archs.map(a => ({ id: a.id, label: a.label, arch: a })));
     // Reprise : le dernier build trouvé (mémorisé par le Labo) sert de point de départ supplémentaire, s'il est encore possible
     const seed = sanitizeSeed(data, opts);
     if (seed) runs.unshift({ id: 'memo', label: 'Reprise du dernier build trouvé', arch: null, start: seed });
@@ -4768,6 +4789,8 @@ function curAscPack(){const v=$('#aPack').value;if(v==='asc-poly')return ascPoly
 let ascBuilds=[];try{ascBuilds=JSON.parse(localStorage.getItem('labo-asc-builds')||'[]')}catch(e){}
 function saveAsc(){try{localStorage.setItem('labo-asc-builds',JSON.stringify(ascBuilds))}catch(e){}}
 function allocText(a){return ['vitalite','sagesse','force','intelligence','chance','agilite'].filter(k=>a[k]).map(k=>`${STAT_LABEL[k]} ${a[k]}`).join(', ')}
+function elemNote(){const n=$('#oElemNote');if(!n)return;const e=$('#oElem').value,sp=$('#oSpell')&&$('#oSpell').value;n.textContent=e==='multisorts'&&sp==='oneline'?"⚠ Sorts multi + 1 ligne : incompatible (un sort multi a plusieurs lignes de dégâts). Prends Multi-élément pour mélanger des sorts 1 ligne d'éléments différents.":"Se combine avec n'importe quelle orientation : par exemple Ascension en Full Eau, ou Kralamoure en multi-élément.";n.style.color=n.textContent.startsWith('⚠')?'var(--warn,#d98a2b)':''}
+document.addEventListener('change',ev=>{if(ev.target&&(ev.target.id==='oElem'||ev.target.id==='oSpell'))elemNote()});
 function spellF(p){const t=$('#'+p+'Spell')&&$('#'+p+'Spell').value;return t?{type:t,mode:segVal(p+'SpellMode')||'strict'}:null}
 function susOf(p){return{heal:$('#'+p+'Heal').checked,shield:$('#'+p+'Shield').checked,steal:$('#'+p+'Steal').checked}}
 function susNote(o){const off=[!o.heal&&'soin',!o.shield&&'bouclier',!o.steal&&'vol de vie'].filter(Boolean);return off.length?'Sans '+off.join(', '):''}
