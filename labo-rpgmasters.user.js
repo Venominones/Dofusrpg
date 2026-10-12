@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.12.8
+// @version      2.12.9
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -296,6 +296,7 @@
       if (!PK) return 0; const w = c && c.weapon, cur = C.cur || {};
       switch (PK) {
         case 'feca': return 6 * C.n;
+        case 'osamodas': return 25 * Math.max(1, Math.round(S.invocations || 1)); // Attaques coordonnées (patch du 12/10) : chaque invocation répercute 25 % de tes dégâts (supposé : une par point d'Invocations)
         case 'enutrof': return 5 * C.n;
         case 'xelor': return 6 * C.n;
         case 'eniripsa': return 9 * C.n;

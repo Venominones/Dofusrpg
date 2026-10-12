@@ -929,6 +929,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       if (!PK) return 0; const w = c && c.weapon, cur = C.cur || {};
       switch (PK) {
         case 'feca': return 6 * C.n;
+        case 'osamodas': return 25 * Math.max(1, Math.round(S.invocations || 1)); // Attaques coordonnées (patch du 12/10) : chaque invocation répercute 25 % de tes dégâts (supposé : une par point d'Invocations)
         case 'enutrof': return 5 * C.n;
         case 'xelor': return 6 * C.n;
         case 'eniripsa': return 9 * C.n;
@@ -1850,6 +1851,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       const pool = itemPool(data);
       const b = buildState(data, cur, ctx);
       const wts = orientWeights(statWeights(b.deck, b.weapon, b.S, obj === 'survie' || obj === 'equilibre' || obj === 'ascension' || obj === 'ascension-tank'), obj);
+      if (ctx.breedId === 2) wts.invocations = (wts.invocations || 0) + 200; // Osamodas : chaque Invocation ajoute 25 % de dégâts répercutés
       const cands = {};
       for (const [slot, type] of SLOTS) {
         const ONE = opts.spellFilter && opts.spellFilter.type === 'oneline' && opts.spellFilter.mode === 'strict';
@@ -2198,7 +2200,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
 <script type="text/plain" id="src-userscript">// ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.12.8
+// @version      2.12.9
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -2493,6 +2495,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       if (!PK) return 0; const w = c && c.weapon, cur = C.cur || {};
       switch (PK) {
         case 'feca': return 6 * C.n;
+        case 'osamodas': return 25 * Math.max(1, Math.round(S.invocations || 1)); // Attaques coordonnées (patch du 12/10) : chaque invocation répercute 25 % de tes dégâts (supposé : une par point d'Invocations)
         case 'enutrof': return 5 * C.n;
         case 'xelor': return 6 * C.n;
         case 'eniripsa': return 9 * C.n;
