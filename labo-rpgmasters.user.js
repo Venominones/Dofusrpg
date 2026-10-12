@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.12.19
+// @version      2.12.20
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -144,6 +144,20 @@
   // Dofus à effet spécial (patch du 10/10) : repérés par leur nom
   const DOFUS_FX = { emeraude: /meraude/i, pourpre: /pourpre/i, turquoise: /turquoise/i, ocre: /ocre/i, vulbis: /vulbis/i, ivoire: /ivoire/i, glaces: /glace/i, ebene: /b[eè]ne/i, kaliptus: /kaliptus/i, tachete: /tachet/i, dofawa: /dofawa/i, jyfus: /jyfus/i, cacao: /cacao/i, cawotte: /cawotte/i, dokille: /dokille/i, dolmanax: /dolmanax/i, veilleurs: /veilleur/i, dotruche: /dotruche/i, domakuro: /domakuro/i, dorigami: /dorigami/i, dofoozbz: /dofoozbz/i, forgelave: /forgelave/i, argente: /argent[ée]/i, cauchemar: /cauchemar/i, dompin: /dom de pin/i, sylvestre: /sylvestre/i }; // patch du 12/10 : passifs des Dofus « mineurs » (hors Abysses)
   function dofusFx(names) { const o = {}; for (const n of names) { if (!/dofus|dofawa|kaliptus|jyfus|dokille|dolmanax|dotruche|domakuro|dorigami|dofoozbz|dom de pin/i.test(n)) continue; for (const [k, re] of Object.entries(DOFUS_FX)) if (re.test(n)) o[k] = true; } return o; }
+  // Runes (patch du 12/10) : catalogue lu dans le code du jeu ; 2 par objet, 1 rune d'Action par personnage, bonus Prestige/Forge/Compagnon plafonné à ×2
+  const RUNES = { vi: { st: { vitalite: 60 } }, fo: { st: { force: 30 } }, ine: { st: { intelligence: 30 } }, cha: { st: { chance: 30 } }, age: { st: { agilite: 30 } }, sa: { st: { sagesse: 15 } }, pros: { st: { prospection: 20 } }, ini: { st: { initiative: 100 } },
+    rne: { st: { resPctNeutre: 3 } }, rte: { st: { resPctTerre: 3 } }, rfe: { st: { resPctFeu: 3 } }, rea: { st: { resPctEau: 3 } }, rai: { st: { resPctAir: 3 } }, tac: { st: { tacle: 10 } }, fui: { st: { fuite: 10 } },
+    pui: { st: { puissance: 25 } }, do: { st: { dommages: 8 } }, dne: { st: { dommagesNeutre: 12 } }, dte: { st: { dommagesTerre: 12 } }, dfe: { st: { dommagesFeu: 12 } }, dea: { st: { dommagesEau: 12 } }, dai: { st: { dommagesAir: 12 } },
+    cri: { st: { critique: 3 } }, rall: { st: { resPctAll: 2 } }, so: { st: { soins: 15 } }, dso: { st: { dmgPctSorts: 3 } }, ecl: { pct: 5 },
+    po: { st: { po: 1 } }, pm: { st: { pm: 1 } }, inv: { st: { invocations: 1 } }, pa: { st: { pa: 1 } }, dcr: { st: { dmgPctCrit: 8 } }, eve: { pct: 15 }, ele: { elem: true } };
+  const RUNE_NAMES = { vi: 'Vitalité', fo: 'Force', ine: 'Intelligence', cha: 'Chance', age: 'Agilité', sa: 'Sagesse', pros: 'Prospection', ini: 'Initiative', rne: 'Résistance Neutre', rte: 'Résistance Terre', rfe: 'Résistance Feu', rea: 'Résistance Eau', rai: 'Résistance Air', tac: 'Tacle', fui: 'Fuite', pui: 'Puissance', do: 'Dommages', dne: 'Dommages Neutre', dte: 'Dommages Terre', dfe: 'Dommages Feu', dea: 'Dommages Eau', dai: 'Dommages Air', cri: 'Critique', rall: 'Résistance', so: 'Soins', dso: 'Sorts', ecl: 'Éclat', po: 'Portée', pm: 'Mouvement', inv: 'Invocation', pa: 'Action', dcr: 'Fureur', eve: 'Éveil', ele: 'Élémentaire' };
+  const RUNE_RARITY = { pui: 'epique', do: 'epique', dne: 'epique', dte: 'epique', dfe: 'epique', dea: 'epique', dai: 'epique', cri: 'epique', rall: 'epique', so: 'epique', dso: 'epique', ecl: 'epique', po: 'legendaire', pm: 'legendaire', inv: 'legendaire', pa: 'legendaire', dcr: 'legendaire', eve: 'legendaire', ele: 'legendaire' };
+  function runeCodes(ru) { if (!ru) return []; if (Array.isArray(ru)) return ru.map(x => typeof x === 'string' ? x : x && (x.rune || x.id || x.code)).filter(c => RUNES[c]).slice(0, 2); if (typeof ru === 'object') for (const k in ru) { const c = runeCodes(ru[k]); if (c.length) return c; } return []; }
+  function runeStats(itemSt, codes, paLeft) { const o = {}; let pa = 0; const add = (k, v) => { if (v) o[k] = (o[k] || 0) + v; };
+    for (const c of codes.slice(0, 2)) { const R = RUNES[c]; if (!R) continue; for (const k in (R.st || {})) { if (k === 'pa') { if (pa >= paLeft) continue; pa++; } add(k, R.st[k]); }
+      if (R.pct) for (const k in itemSt) { const v = itemSt[k]; if (v > 0 && !FUSION_EXCLUDED.includes(k)) add(k, Math.max(1, Math.round(v * R.pct / 100))); }
+      if (R.elem) for (const k of ['dommagesNeutre', 'dommagesTerre', 'dommagesFeu', 'dommagesEau', 'dommagesAir']) if ((itemSt[k] || 0) > 0) add(k, itemSt[k]); }
+    return { st: o, pa }; }
   function computeStats(gear, ctx) {
     // Prestige : +25 % par Prestige ; Bouclier de forge : jusqu'à +150 % au niveau 200 (cumul supposé additif, à confirmer)
     const pMult = 1 + 0.25 * (ctx.prestige || 0) + (ctx.forgePct || 0) / 100 + (ctx.companionPct || 0) / 100; // Compagnon (patch du 10/10) : jusqu'à +100 % au niveau 400, cumul supposé additif comme le Bouclier
@@ -159,6 +173,12 @@
         tot[k] = (tot[k] || 0) + (v > 0 ? jsRound(v * pMult) : v);
       }
     }
+    // Runes gravées : leurs stats profitent du bonus Prestige/Forge/Compagnon, au plus ×2
+    { let paUsed = 0; const rm = Math.min(2, pMult);
+      for (const g of gear) { if (!g || !g.item) continue; const codes = runeCodes(g.ru || g.item.ru); if (!codes.length) continue;
+        const r = runeStats(itemStats(g.item, g.f), codes, 1 - paUsed); paUsed += r.pa;
+        for (const k in r.st) { const v = r.st[k]; const keys = k === 'resPctAll' ? ['resPctNeutre', 'resPctTerre', 'resPctFeu', 'resPctEau', 'resPctAir'] : [k];
+          for (const kk of keys) { if (CAP3.includes(kk)) { raw3[kk] = (raw3[kk] || 0) + v; continue; } tot[kk] = (tot[kk] || 0) + (NOT_SCALED.includes(kk) ? v : jsRound(v * rm)); } } } }
     // Bonus de panoplie : traités comme un objet de plus (même effet du Prestige), palier connu le plus proche
     if (ctx.setTiers) {
       const cnt = {};
@@ -224,7 +244,7 @@
     const carac = (S[CARAC_OF_EL[line.el || 0]] || 0) + (S.puissance || 0) + buffPuiss + ((S._cb && S._cb[CARAC_OF_EL[line.el || 0]]) || 0);
     let fixed = 0;
     if (withFixed) fixed = (S.dommages || 0) + (S['dommages' + EL_NAMES[line.el || 0]] || 0) + (crit ? (S.dommagesCritiques || 0) : 0);
-    let v = (b * (1 + carac / 100) * (crit === 'boost' ? CRIT_MULT : 1) + fixed) * (1 + ((isWeapon ? (S.dmgPctArmes || 0) : dmgPct) + (extra || 0)) / 100) * (spectral ? 2 : 1) * (1 - resPct / 100);
+    let v = (b * (1 + carac / 100) * (crit === 'boost' ? CRIT_MULT : 1) + fixed) * (1 + ((isWeapon ? (S.dmgPctArmes || 0) : dmgPct) + (extra || 0) + (crit ? (S.dmgPctCrit || 0) : 0)) / 100) * (spectral ? 2 : 1) * (1 - resPct / 100);
     return Math.max(0, Math.floor(v));
   }
   // Valeur moyenne attendue d'une ligne (pour la politique de jeu)
@@ -235,7 +255,7 @@
     const nc = avg(line) * (1 + carac / 100) + fixed;
     const cl = critLine || line;
     const cr = avg(cl) * (1 + carac / 100) * (critLine ? 1 : CRIT_MULT) + fixed + (withFixed ? (S.dommagesCritiques || 0) : 0);
-    const v = ((1 - critP) * nc + critP * cr) * (1 + ((isWeapon ? (S.dmgPctArmes || 0) : dmgPct) + (extra || 0)) / 100) * (1 + (isWeapon ? 0 : specP)) * (1 - resPct / 100);
+    const P0 = ((isWeapon ? (S.dmgPctArmes || 0) : dmgPct) + (extra || 0)) / 100; const v = ((1 - critP) * nc * (1 + P0) + critP * cr * (1 + P0 + (S.dmgPctCrit || 0) / 100)) * (1 + (isWeapon ? 0 : specP)) * (1 - resPct / 100);
     return Math.max(0, v);
   }
 
@@ -785,7 +805,7 @@
     if (mech.shockPct) w.push(`l'auto n'alterne pas les éléments (Onde de choc)`);
     return w;
   }
-  const api = { BREED_KEY, BREED_NAME, CLASS_SPECTRAL, deriveStats, setAutoOrder: v => { AUTO_ORDER = v; }, setTuning: o => { if (o.crit != null) CRIT_MULT = o.crit; if (o.zoneSec != null) ZONE_SEC = o.zoneSec; if (o.weaponLast != null) WEAPON_LAST = o.weaponLast; if (o.weaponMode) WEAPON_MODE = o.weaponMode; }, CLASS_PASSIVE, dofusFx, forgePctFor, forgeDaysTo, forgeXpAt, diffForFloor, bestiaryEntries, mechFromEntries, mechText, autoWarnings, itemStats, weaponWithFusion, tierCost, allocCost, pointsTotal, computeStats, prepCard, weaponCard, simulateFight, runMany, STAT_TIERS, CARAC_OF_EL, EL_NAMES, RES_PCT, RES_FIX };
+  const api = { RUNES, RUNE_NAMES, RUNE_RARITY, runeCodes, runeStats, BREED_KEY, BREED_NAME, CLASS_SPECTRAL, deriveStats, setAutoOrder: v => { AUTO_ORDER = v; }, setTuning: o => { if (o.crit != null) CRIT_MULT = o.crit; if (o.zoneSec != null) ZONE_SEC = o.zoneSec; if (o.weaponLast != null) WEAPON_LAST = o.weaponLast; if (o.weaponMode) WEAPON_MODE = o.weaponMode; }, CLASS_PASSIVE, dofusFx, forgePctFor, forgeDaysTo, forgeXpAt, diffForFloor, bestiaryEntries, mechFromEntries, mechText, autoWarnings, itemStats, weaponWithFusion, tierCost, allocCost, pointsTotal, computeStats, prepCard, weaponCard, simulateFight, runMany, STAT_TIERS, CARAC_OF_EL, EL_NAMES, RES_PCT, RES_FIX };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.RPG = api;
 })(__labo);
   return __labo.RPG; })(); /*__ENGINE_END__*/

@@ -777,6 +777,20 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   // Dofus à effet spécial (patch du 10/10) : repérés par leur nom
   const DOFUS_FX = { emeraude: /meraude/i, pourpre: /pourpre/i, turquoise: /turquoise/i, ocre: /ocre/i, vulbis: /vulbis/i, ivoire: /ivoire/i, glaces: /glace/i, ebene: /b[eè]ne/i, kaliptus: /kaliptus/i, tachete: /tachet/i, dofawa: /dofawa/i, jyfus: /jyfus/i, cacao: /cacao/i, cawotte: /cawotte/i, dokille: /dokille/i, dolmanax: /dolmanax/i, veilleurs: /veilleur/i, dotruche: /dotruche/i, domakuro: /domakuro/i, dorigami: /dorigami/i, dofoozbz: /dofoozbz/i, forgelave: /forgelave/i, argente: /argent[ée]/i, cauchemar: /cauchemar/i, dompin: /dom de pin/i, sylvestre: /sylvestre/i }; // patch du 12/10 : passifs des Dofus « mineurs » (hors Abysses)
   function dofusFx(names) { const o = {}; for (const n of names) { if (!/dofus|dofawa|kaliptus|jyfus|dokille|dolmanax|dotruche|domakuro|dorigami|dofoozbz|dom de pin/i.test(n)) continue; for (const [k, re] of Object.entries(DOFUS_FX)) if (re.test(n)) o[k] = true; } return o; }
+  // Runes (patch du 12/10) : catalogue lu dans le code du jeu ; 2 par objet, 1 rune d'Action par personnage, bonus Prestige/Forge/Compagnon plafonné à ×2
+  const RUNES = { vi: { st: { vitalite: 60 } }, fo: { st: { force: 30 } }, ine: { st: { intelligence: 30 } }, cha: { st: { chance: 30 } }, age: { st: { agilite: 30 } }, sa: { st: { sagesse: 15 } }, pros: { st: { prospection: 20 } }, ini: { st: { initiative: 100 } },
+    rne: { st: { resPctNeutre: 3 } }, rte: { st: { resPctTerre: 3 } }, rfe: { st: { resPctFeu: 3 } }, rea: { st: { resPctEau: 3 } }, rai: { st: { resPctAir: 3 } }, tac: { st: { tacle: 10 } }, fui: { st: { fuite: 10 } },
+    pui: { st: { puissance: 25 } }, do: { st: { dommages: 8 } }, dne: { st: { dommagesNeutre: 12 } }, dte: { st: { dommagesTerre: 12 } }, dfe: { st: { dommagesFeu: 12 } }, dea: { st: { dommagesEau: 12 } }, dai: { st: { dommagesAir: 12 } },
+    cri: { st: { critique: 3 } }, rall: { st: { resPctAll: 2 } }, so: { st: { soins: 15 } }, dso: { st: { dmgPctSorts: 3 } }, ecl: { pct: 5 },
+    po: { st: { po: 1 } }, pm: { st: { pm: 1 } }, inv: { st: { invocations: 1 } }, pa: { st: { pa: 1 } }, dcr: { st: { dmgPctCrit: 8 } }, eve: { pct: 15 }, ele: { elem: true } };
+  const RUNE_NAMES = { vi: 'Vitalité', fo: 'Force', ine: 'Intelligence', cha: 'Chance', age: 'Agilité', sa: 'Sagesse', pros: 'Prospection', ini: 'Initiative', rne: 'Résistance Neutre', rte: 'Résistance Terre', rfe: 'Résistance Feu', rea: 'Résistance Eau', rai: 'Résistance Air', tac: 'Tacle', fui: 'Fuite', pui: 'Puissance', do: 'Dommages', dne: 'Dommages Neutre', dte: 'Dommages Terre', dfe: 'Dommages Feu', dea: 'Dommages Eau', dai: 'Dommages Air', cri: 'Critique', rall: 'Résistance', so: 'Soins', dso: 'Sorts', ecl: 'Éclat', po: 'Portée', pm: 'Mouvement', inv: 'Invocation', pa: 'Action', dcr: 'Fureur', eve: 'Éveil', ele: 'Élémentaire' };
+  const RUNE_RARITY = { pui: 'epique', do: 'epique', dne: 'epique', dte: 'epique', dfe: 'epique', dea: 'epique', dai: 'epique', cri: 'epique', rall: 'epique', so: 'epique', dso: 'epique', ecl: 'epique', po: 'legendaire', pm: 'legendaire', inv: 'legendaire', pa: 'legendaire', dcr: 'legendaire', eve: 'legendaire', ele: 'legendaire' };
+  function runeCodes(ru) { if (!ru) return []; if (Array.isArray(ru)) return ru.map(x => typeof x === 'string' ? x : x && (x.rune || x.id || x.code)).filter(c => RUNES[c]).slice(0, 2); if (typeof ru === 'object') for (const k in ru) { const c = runeCodes(ru[k]); if (c.length) return c; } return []; }
+  function runeStats(itemSt, codes, paLeft) { const o = {}; let pa = 0; const add = (k, v) => { if (v) o[k] = (o[k] || 0) + v; };
+    for (const c of codes.slice(0, 2)) { const R = RUNES[c]; if (!R) continue; for (const k in (R.st || {})) { if (k === 'pa') { if (pa >= paLeft) continue; pa++; } add(k, R.st[k]); }
+      if (R.pct) for (const k in itemSt) { const v = itemSt[k]; if (v > 0 && !FUSION_EXCLUDED.includes(k)) add(k, Math.max(1, Math.round(v * R.pct / 100))); }
+      if (R.elem) for (const k of ['dommagesNeutre', 'dommagesTerre', 'dommagesFeu', 'dommagesEau', 'dommagesAir']) if ((itemSt[k] || 0) > 0) add(k, itemSt[k]); }
+    return { st: o, pa }; }
   function computeStats(gear, ctx) {
     // Prestige : +25 % par Prestige ; Bouclier de forge : jusqu'à +150 % au niveau 200 (cumul supposé additif, à confirmer)
     const pMult = 1 + 0.25 * (ctx.prestige || 0) + (ctx.forgePct || 0) / 100 + (ctx.companionPct || 0) / 100; // Compagnon (patch du 10/10) : jusqu'à +100 % au niveau 400, cumul supposé additif comme le Bouclier
@@ -792,6 +806,12 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         tot[k] = (tot[k] || 0) + (v > 0 ? jsRound(v * pMult) : v);
       }
     }
+    // Runes gravées : leurs stats profitent du bonus Prestige/Forge/Compagnon, au plus ×2
+    { let paUsed = 0; const rm = Math.min(2, pMult);
+      for (const g of gear) { if (!g || !g.item) continue; const codes = runeCodes(g.ru || g.item.ru); if (!codes.length) continue;
+        const r = runeStats(itemStats(g.item, g.f), codes, 1 - paUsed); paUsed += r.pa;
+        for (const k in r.st) { const v = r.st[k]; const keys = k === 'resPctAll' ? ['resPctNeutre', 'resPctTerre', 'resPctFeu', 'resPctEau', 'resPctAir'] : [k];
+          for (const kk of keys) { if (CAP3.includes(kk)) { raw3[kk] = (raw3[kk] || 0) + v; continue; } tot[kk] = (tot[kk] || 0) + (NOT_SCALED.includes(kk) ? v : jsRound(v * rm)); } } } }
     // Bonus de panoplie : traités comme un objet de plus (même effet du Prestige), palier connu le plus proche
     if (ctx.setTiers) {
       const cnt = {};
@@ -857,7 +877,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const carac = (S[CARAC_OF_EL[line.el || 0]] || 0) + (S.puissance || 0) + buffPuiss + ((S._cb && S._cb[CARAC_OF_EL[line.el || 0]]) || 0);
     let fixed = 0;
     if (withFixed) fixed = (S.dommages || 0) + (S['dommages' + EL_NAMES[line.el || 0]] || 0) + (crit ? (S.dommagesCritiques || 0) : 0);
-    let v = (b * (1 + carac / 100) * (crit === 'boost' ? CRIT_MULT : 1) + fixed) * (1 + ((isWeapon ? (S.dmgPctArmes || 0) : dmgPct) + (extra || 0)) / 100) * (spectral ? 2 : 1) * (1 - resPct / 100);
+    let v = (b * (1 + carac / 100) * (crit === 'boost' ? CRIT_MULT : 1) + fixed) * (1 + ((isWeapon ? (S.dmgPctArmes || 0) : dmgPct) + (extra || 0) + (crit ? (S.dmgPctCrit || 0) : 0)) / 100) * (spectral ? 2 : 1) * (1 - resPct / 100);
     return Math.max(0, Math.floor(v));
   }
   // Valeur moyenne attendue d'une ligne (pour la politique de jeu)
@@ -868,7 +888,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const nc = avg(line) * (1 + carac / 100) + fixed;
     const cl = critLine || line;
     const cr = avg(cl) * (1 + carac / 100) * (critLine ? 1 : CRIT_MULT) + fixed + (withFixed ? (S.dommagesCritiques || 0) : 0);
-    const v = ((1 - critP) * nc + critP * cr) * (1 + ((isWeapon ? (S.dmgPctArmes || 0) : dmgPct) + (extra || 0)) / 100) * (1 + (isWeapon ? 0 : specP)) * (1 - resPct / 100);
+    const P0 = ((isWeapon ? (S.dmgPctArmes || 0) : dmgPct) + (extra || 0)) / 100; const v = ((1 - critP) * nc * (1 + P0) + critP * cr * (1 + P0 + (S.dmgPctCrit || 0) / 100)) * (1 + (isWeapon ? 0 : specP)) * (1 - resPct / 100);
     return Math.max(0, v);
   }
 
@@ -1418,7 +1438,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     if (mech.shockPct) w.push(`l'auto n'alterne pas les éléments (Onde de choc)`);
     return w;
   }
-  const api = { BREED_KEY, BREED_NAME, CLASS_SPECTRAL, deriveStats, setAutoOrder: v => { AUTO_ORDER = v; }, setTuning: o => { if (o.crit != null) CRIT_MULT = o.crit; if (o.zoneSec != null) ZONE_SEC = o.zoneSec; if (o.weaponLast != null) WEAPON_LAST = o.weaponLast; if (o.weaponMode) WEAPON_MODE = o.weaponMode; }, CLASS_PASSIVE, dofusFx, forgePctFor, forgeDaysTo, forgeXpAt, diffForFloor, bestiaryEntries, mechFromEntries, mechText, autoWarnings, itemStats, weaponWithFusion, tierCost, allocCost, pointsTotal, computeStats, prepCard, weaponCard, simulateFight, runMany, STAT_TIERS, CARAC_OF_EL, EL_NAMES, RES_PCT, RES_FIX };
+  const api = { RUNES, RUNE_NAMES, RUNE_RARITY, runeCodes, runeStats, BREED_KEY, BREED_NAME, CLASS_SPECTRAL, deriveStats, setAutoOrder: v => { AUTO_ORDER = v; }, setTuning: o => { if (o.crit != null) CRIT_MULT = o.crit; if (o.zoneSec != null) ZONE_SEC = o.zoneSec; if (o.weaponLast != null) WEAPON_LAST = o.weaponLast; if (o.weaponMode) WEAPON_MODE = o.weaponMode; }, CLASS_PASSIVE, dofusFx, forgePctFor, forgeDaysTo, forgeXpAt, diffForFloor, bestiaryEntries, mechFromEntries, mechText, autoWarnings, itemStats, weaponWithFusion, tierCost, allocCost, pointsTotal, computeStats, prepCard, weaponCard, simulateFight, runMany, STAT_TIERS, CARAC_OF_EL, EL_NAMES, RES_PCT, RES_FIX };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.RPG = api;
 })(typeof self !== 'undefined' ? self : this);
 </script>
@@ -2240,7 +2260,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
 <script type="text/plain" id="src-userscript">// ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.12.15
+// @version      2.12.20
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -2383,6 +2403,20 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   // Dofus à effet spécial (patch du 10/10) : repérés par leur nom
   const DOFUS_FX = { emeraude: /meraude/i, pourpre: /pourpre/i, turquoise: /turquoise/i, ocre: /ocre/i, vulbis: /vulbis/i, ivoire: /ivoire/i, glaces: /glace/i, ebene: /b[eè]ne/i, kaliptus: /kaliptus/i, tachete: /tachet/i, dofawa: /dofawa/i, jyfus: /jyfus/i, cacao: /cacao/i, cawotte: /cawotte/i, dokille: /dokille/i, dolmanax: /dolmanax/i, veilleurs: /veilleur/i, dotruche: /dotruche/i, domakuro: /domakuro/i, dorigami: /dorigami/i, dofoozbz: /dofoozbz/i, forgelave: /forgelave/i, argente: /argent[ée]/i, cauchemar: /cauchemar/i, dompin: /dom de pin/i, sylvestre: /sylvestre/i }; // patch du 12/10 : passifs des Dofus « mineurs » (hors Abysses)
   function dofusFx(names) { const o = {}; for (const n of names) { if (!/dofus|dofawa|kaliptus|jyfus|dokille|dolmanax|dotruche|domakuro|dorigami|dofoozbz|dom de pin/i.test(n)) continue; for (const [k, re] of Object.entries(DOFUS_FX)) if (re.test(n)) o[k] = true; } return o; }
+  // Runes (patch du 12/10) : catalogue lu dans le code du jeu ; 2 par objet, 1 rune d'Action par personnage, bonus Prestige/Forge/Compagnon plafonné à ×2
+  const RUNES = { vi: { st: { vitalite: 60 } }, fo: { st: { force: 30 } }, ine: { st: { intelligence: 30 } }, cha: { st: { chance: 30 } }, age: { st: { agilite: 30 } }, sa: { st: { sagesse: 15 } }, pros: { st: { prospection: 20 } }, ini: { st: { initiative: 100 } },
+    rne: { st: { resPctNeutre: 3 } }, rte: { st: { resPctTerre: 3 } }, rfe: { st: { resPctFeu: 3 } }, rea: { st: { resPctEau: 3 } }, rai: { st: { resPctAir: 3 } }, tac: { st: { tacle: 10 } }, fui: { st: { fuite: 10 } },
+    pui: { st: { puissance: 25 } }, do: { st: { dommages: 8 } }, dne: { st: { dommagesNeutre: 12 } }, dte: { st: { dommagesTerre: 12 } }, dfe: { st: { dommagesFeu: 12 } }, dea: { st: { dommagesEau: 12 } }, dai: { st: { dommagesAir: 12 } },
+    cri: { st: { critique: 3 } }, rall: { st: { resPctAll: 2 } }, so: { st: { soins: 15 } }, dso: { st: { dmgPctSorts: 3 } }, ecl: { pct: 5 },
+    po: { st: { po: 1 } }, pm: { st: { pm: 1 } }, inv: { st: { invocations: 1 } }, pa: { st: { pa: 1 } }, dcr: { st: { dmgPctCrit: 8 } }, eve: { pct: 15 }, ele: { elem: true } };
+  const RUNE_NAMES = { vi: 'Vitalité', fo: 'Force', ine: 'Intelligence', cha: 'Chance', age: 'Agilité', sa: 'Sagesse', pros: 'Prospection', ini: 'Initiative', rne: 'Résistance Neutre', rte: 'Résistance Terre', rfe: 'Résistance Feu', rea: 'Résistance Eau', rai: 'Résistance Air', tac: 'Tacle', fui: 'Fuite', pui: 'Puissance', do: 'Dommages', dne: 'Dommages Neutre', dte: 'Dommages Terre', dfe: 'Dommages Feu', dea: 'Dommages Eau', dai: 'Dommages Air', cri: 'Critique', rall: 'Résistance', so: 'Soins', dso: 'Sorts', ecl: 'Éclat', po: 'Portée', pm: 'Mouvement', inv: 'Invocation', pa: 'Action', dcr: 'Fureur', eve: 'Éveil', ele: 'Élémentaire' };
+  const RUNE_RARITY = { pui: 'epique', do: 'epique', dne: 'epique', dte: 'epique', dfe: 'epique', dea: 'epique', dai: 'epique', cri: 'epique', rall: 'epique', so: 'epique', dso: 'epique', ecl: 'epique', po: 'legendaire', pm: 'legendaire', inv: 'legendaire', pa: 'legendaire', dcr: 'legendaire', eve: 'legendaire', ele: 'legendaire' };
+  function runeCodes(ru) { if (!ru) return []; if (Array.isArray(ru)) return ru.map(x => typeof x === 'string' ? x : x && (x.rune || x.id || x.code)).filter(c => RUNES[c]).slice(0, 2); if (typeof ru === 'object') for (const k in ru) { const c = runeCodes(ru[k]); if (c.length) return c; } return []; }
+  function runeStats(itemSt, codes, paLeft) { const o = {}; let pa = 0; const add = (k, v) => { if (v) o[k] = (o[k] || 0) + v; };
+    for (const c of codes.slice(0, 2)) { const R = RUNES[c]; if (!R) continue; for (const k in (R.st || {})) { if (k === 'pa') { if (pa >= paLeft) continue; pa++; } add(k, R.st[k]); }
+      if (R.pct) for (const k in itemSt) { const v = itemSt[k]; if (v > 0 && !FUSION_EXCLUDED.includes(k)) add(k, Math.max(1, Math.round(v * R.pct / 100))); }
+      if (R.elem) for (const k of ['dommagesNeutre', 'dommagesTerre', 'dommagesFeu', 'dommagesEau', 'dommagesAir']) if ((itemSt[k] || 0) > 0) add(k, itemSt[k]); }
+    return { st: o, pa }; }
   function computeStats(gear, ctx) {
     // Prestige : +25 % par Prestige ; Bouclier de forge : jusqu'à +150 % au niveau 200 (cumul supposé additif, à confirmer)
     const pMult = 1 + 0.25 * (ctx.prestige || 0) + (ctx.forgePct || 0) / 100 + (ctx.companionPct || 0) / 100; // Compagnon (patch du 10/10) : jusqu'à +100 % au niveau 400, cumul supposé additif comme le Bouclier
@@ -2398,6 +2432,12 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         tot[k] = (tot[k] || 0) + (v > 0 ? jsRound(v * pMult) : v);
       }
     }
+    // Runes gravées : leurs stats profitent du bonus Prestige/Forge/Compagnon, au plus ×2
+    { let paUsed = 0; const rm = Math.min(2, pMult);
+      for (const g of gear) { if (!g || !g.item) continue; const codes = runeCodes(g.ru || g.item.ru); if (!codes.length) continue;
+        const r = runeStats(itemStats(g.item, g.f), codes, 1 - paUsed); paUsed += r.pa;
+        for (const k in r.st) { const v = r.st[k]; const keys = k === 'resPctAll' ? ['resPctNeutre', 'resPctTerre', 'resPctFeu', 'resPctEau', 'resPctAir'] : [k];
+          for (const kk of keys) { if (CAP3.includes(kk)) { raw3[kk] = (raw3[kk] || 0) + v; continue; } tot[kk] = (tot[kk] || 0) + (NOT_SCALED.includes(kk) ? v : jsRound(v * rm)); } } } }
     // Bonus de panoplie : traités comme un objet de plus (même effet du Prestige), palier connu le plus proche
     if (ctx.setTiers) {
       const cnt = {};
@@ -2463,7 +2503,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const carac = (S[CARAC_OF_EL[line.el || 0]] || 0) + (S.puissance || 0) + buffPuiss + ((S._cb && S._cb[CARAC_OF_EL[line.el || 0]]) || 0);
     let fixed = 0;
     if (withFixed) fixed = (S.dommages || 0) + (S['dommages' + EL_NAMES[line.el || 0]] || 0) + (crit ? (S.dommagesCritiques || 0) : 0);
-    let v = (b * (1 + carac / 100) * (crit === 'boost' ? CRIT_MULT : 1) + fixed) * (1 + ((isWeapon ? (S.dmgPctArmes || 0) : dmgPct) + (extra || 0)) / 100) * (spectral ? 2 : 1) * (1 - resPct / 100);
+    let v = (b * (1 + carac / 100) * (crit === 'boost' ? CRIT_MULT : 1) + fixed) * (1 + ((isWeapon ? (S.dmgPctArmes || 0) : dmgPct) + (extra || 0) + (crit ? (S.dmgPctCrit || 0) : 0)) / 100) * (spectral ? 2 : 1) * (1 - resPct / 100);
     return Math.max(0, Math.floor(v));
   }
   // Valeur moyenne attendue d'une ligne (pour la politique de jeu)
@@ -2474,7 +2514,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const nc = avg(line) * (1 + carac / 100) + fixed;
     const cl = critLine || line;
     const cr = avg(cl) * (1 + carac / 100) * (critLine ? 1 : CRIT_MULT) + fixed + (withFixed ? (S.dommagesCritiques || 0) : 0);
-    const v = ((1 - critP) * nc + critP * cr) * (1 + ((isWeapon ? (S.dmgPctArmes || 0) : dmgPct) + (extra || 0)) / 100) * (1 + (isWeapon ? 0 : specP)) * (1 - resPct / 100);
+    const P0 = ((isWeapon ? (S.dmgPctArmes || 0) : dmgPct) + (extra || 0)) / 100; const v = ((1 - critP) * nc * (1 + P0) + critP * cr * (1 + P0 + (S.dmgPctCrit || 0) / 100)) * (1 + (isWeapon ? 0 : specP)) * (1 - resPct / 100);
     return Math.max(0, v);
   }
 
@@ -3024,7 +3064,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     if (mech.shockPct) w.push(`l'auto n'alterne pas les éléments (Onde de choc)`);
     return w;
   }
-  const api = { BREED_KEY, BREED_NAME, CLASS_SPECTRAL, deriveStats, setAutoOrder: v => { AUTO_ORDER = v; }, setTuning: o => { if (o.crit != null) CRIT_MULT = o.crit; if (o.zoneSec != null) ZONE_SEC = o.zoneSec; if (o.weaponLast != null) WEAPON_LAST = o.weaponLast; if (o.weaponMode) WEAPON_MODE = o.weaponMode; }, CLASS_PASSIVE, dofusFx, forgePctFor, forgeDaysTo, forgeXpAt, diffForFloor, bestiaryEntries, mechFromEntries, mechText, autoWarnings, itemStats, weaponWithFusion, tierCost, allocCost, pointsTotal, computeStats, prepCard, weaponCard, simulateFight, runMany, STAT_TIERS, CARAC_OF_EL, EL_NAMES, RES_PCT, RES_FIX };
+  const api = { RUNES, RUNE_NAMES, RUNE_RARITY, runeCodes, runeStats, BREED_KEY, BREED_NAME, CLASS_SPECTRAL, deriveStats, setAutoOrder: v => { AUTO_ORDER = v; }, setTuning: o => { if (o.crit != null) CRIT_MULT = o.crit; if (o.zoneSec != null) ZONE_SEC = o.zoneSec; if (o.weaponLast != null) WEAPON_LAST = o.weaponLast; if (o.weaponMode) WEAPON_MODE = o.weaponMode; }, CLASS_PASSIVE, dofusFx, forgePctFor, forgeDaysTo, forgeXpAt, diffForFloor, bestiaryEntries, mechFromEntries, mechText, autoWarnings, itemStats, weaponWithFusion, tierCost, allocCost, pointsTotal, computeStats, prepCard, weaponCard, simulateFight, runMany, STAT_TIERS, CARAC_OF_EL, EL_NAMES, RES_PCT, RES_FIX };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.RPG = api;
 })(__labo);
   return __labo.RPG; })(); /*__ENGINE_END__*/
@@ -3658,6 +3698,11 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   setInterval(() => { try { const a = self.__next_f; if (Array.isArray(a) && a.length !== detectProfile.n) { detectProfile.n = a.length; const txt = a.map(x => Array.isArray(x) ? x[1] || '' : '').join(''); detectProfile(txt); onPayload(txt); } } catch (e) {} }, 3000);
 
   // Interception passive de fetch : on lit une copie de la réponse, la requête n'est pas modifiée
+  // Runes (patch du 12/10) : en ouvrant l'onglet Runes de l'inventaire, on garde uniquement les objets qui parlent de runes (rien d'autre de la réponse)
+  const RUNE_SNAP = 'labo-runes-snap';
+  const isRuneObj = o => o && typeof o === 'object' && !Array.isArray(o) && (Object.keys(o).some(k => /rune/i.test(k)) || /^Rune /.test(String(o.n || o.name || o.label || '')));
+  function runeHits(page) { try { const out = [], seen = new Set(); const walk = (v, d) => { if (d > 24 || !v || typeof v !== 'object' || out.length > 400) return; if (isRuneObj(v)) { const j = JSON.stringify(v); if (j.length < 20000 && !seen.has(j)) { seen.add(j); out.push(v); } } (Array.isArray(v) ? v : Object.values(v)).forEach(x => walk(x, d + 1)); }; page.raw().forEach(v => walk(v, 0)); return out; } catch (e) { return []; } }
+  function runeSnap(t, u) { try { const hits = runeHits(parsePage(t)); if (!hits.length) return; const j = JSON.stringify({ t: Date.now(), u: String(u).replace(/^https?:\/\/[^/]+/, '').slice(0, 120), hits }); if (j.length < 400000) localStorage.setItem(RUNE_SNAP, j); } catch (e) {} }
   const origFetch = window.fetch;
   window.fetch = async function (...args) {
     const res = await origFetch.apply(this, args);
@@ -3667,6 +3712,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       if (method === 'POST') res.clone().text().then(t => { detectProfile(t); onPayload(t); }).catch(() => {});
       else if (/x-component/.test(res.headers && res.headers.get ? (res.headers.get('content-type') || '') : '')) res.clone().text().then(t => { detectProfile(t); onPayload(t); }).catch(() => {});
       const u0 = String(req && req.url || req);
+      if (/\/inventaire/.test(location.pathname)) res.clone().text().then(t => { if (/rune/i.test(t)) runeSnap(t, u0); }).catch(() => {});
       if (/\/bestiaire/.test(location.pathname) && /onglet=objets/.test(u0)) res.clone().text().then(t => harvestItems(t, 'page')).catch(() => {});
     } catch (e) {}
     return res;
@@ -3705,7 +3751,19 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     // Runes (patch du 12/10) : format encore inconnu → on garde ce qui porte « rune » dans son nom (objet runé ou stock de runes), sans rien supposer
     const runeKeys = o => o && typeof o === 'object' ? Object.keys(o).filter(k => /rune/i.test(k)) : [];
     const runesOf = x => { const o = {}; for (const src of [x, x.item]) for (const k of runeKeys(src)) o[k] = src[k]; return Object.keys(o).length ? o : undefined; };
-    const runesProbe = (() => { try { const hits = inv.all().filter(p => runeKeys(p).length); const j = JSON.stringify(hits); return { invKeys: Object.keys(I), hits: j.length < 300000 ? hits : j.slice(0, 300000) }; } catch (e) { return { err: String(e) }; } })();
+    let runesProbe = (() => { try { const hits = runeHits(inv); const j = JSON.stringify(hits); return { invKeys: Object.keys(I), hits: j.length < 300000 ? hits : j.slice(0, 300000) }; } catch (e) { return { err: String(e) }; } })();
+    if (!(runesProbe.hits || []).length) for (const path of ['/inventaire?onglet=runes', '/inventaire?tab=runes', '/inventaire/runes']) { try { const pg = await rsc(path); const h = runeHits(pg); if (h.length) { const j = JSON.stringify(h); runesProbe.hits = j.length < 300000 ? h : j.slice(0, 300000); runesProbe.from = path; break; } } catch (e) {} }
+    try { runesProbe.snap = JSON.parse(localStorage.getItem(RUNE_SNAP) || 'null'); } catch (e) {}
+    // Définitions des runes (valeurs) : dans le code du jeu (fichiers JS publics), lues une fois puis gardées une semaine
+    try { let defs = null; try { defs = JSON.parse(localStorage.getItem('labo-rune-defs2') || 'null'); } catch (e) {}
+      if (!defs || !defs.found || !defs.found.length || Date.now() - defs.t > 7 * 864e5) { const html = await origFetch('/inventaire?onglet=runes', { credentials: 'include' }).then(r => r.text());
+        let perf = []; try { perf = performance.getEntriesByType('resource').map(e => e.name).filter(u => /\/_next\/static\/.+\.js/.test(u)).map(u => u.replace(/^https?:\/\/[^/]+/, '')); } catch (e) {}
+        const srcs = [...new Set(perf.concat([...html.matchAll(/\/_next\/static\/[^"' \\]+?\.js/g)].map(m => m[0])))].slice(0, 150); const found = [];
+        for (const src of srcs) { let t = ''; try { t = await origFetch(src).then(r => r.text()); } catch (e) { continue; } const i = t.search(/["'`]rall["'`]|\brall:/); if (i >= 0 && /["'`]dso["'`]|\bdso:/.test(t)) found.push({ src: src.slice(-60), ex: t.slice(Math.max(0, i - 8000), i + 8000) }); if (found.length >= 2) break; }
+        const ms = [...html.matchAll(/Rune d/g)];
+        defs = { t: Date.now(), n: srcs.length, found, page: ms.slice(0, 4).map(m => html.slice(Math.max(0, m.index - 300), m.index + 300)) }; if (found.length) try { localStorage.setItem('labo-rune-defs2', JSON.stringify(defs)); } catch (e) {} }
+      runesProbe.defs = defs; } catch (e) { runesProbe.defsErr = String(e); }
+    if (!(runesProbe.hits || []).length) try { const t = await origFetch('/inventaire', { credentials: 'include' }).then(r => r.text()); const ms = [...t.matchAll(/Rune d/g)]; runesProbe.text = { n: ms.length, size: t.length, ex: ms.slice(0, 3).map(m => t.slice(Math.max(0, m.index - 250), m.index + 250)) }; } catch (e) {}
     const it = (x) => ({ id: x.item.id, n: x.item.n, lvl: x.item.lvl, s: x.item.s, r: x.item.r, setId: x.item.setId || null, st: x.item.st, w: x.item.w || null, icon: x.item.icon || x.item.gfx || null, ru: runesOf(x), uid: x.uid || x.instanceId || x.id || undefined });
     return {
       meta: { scriptV: (typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) || '2.11.10', profile: PROFILE, forge, companion, level: I.level || 200, prestige: H.prestige || 0, breedId: D.breedId, deckSize: D.deckSize, discordBonus: 5, scrolls: I.scrollValues || {}, rows: Pp.rows.map(r => ({ key: r.key, base: r.base, bonus: r.bonus, tiers: r.tiers })), pointsFree: Pp.pointsFree, decks: D.initialDecks, deckNames: D.initialNames, active: D.initialActive, ranked: D.initialRanked || null, presets: (() => { try { return findPresets(perso) || presetsFromDom(I, best); } catch (e) { return null; } })(), diag: (() => { try { let ai = null; try { ai = JSON.parse(localStorage.getItem('labo-allitems-diag') || 'null'); } catch (e) {} return { allItems: ai }; } catch (e) { return null; } })(), runesProbe },
@@ -5319,7 +5377,12 @@ function mbIni(it){return esc(String(it.n||'?').split(/[\s'’-]+/).filter(w=>w.
 function mbFresh(){const g={};for(const [s,it] of Object.entries(curGear||{}))if(it)g[s]={id:it.id,f:it.f||0};return {gear:g,alloc:Object.assign({},curAlloc||{}),deck:(DATA.meta.decks[DATA.meta.active]||[]).slice()}}
 function mbLoad(){if(MB)return MB;try{const x=JSON.parse(localStorage.getItem(MB_KEY)||'null');if(x&&x.gear)MB=x}catch(e){}if(!MB)MB=mbFresh();return MB}
 function mbSave(){try{localStorage.setItem(MB_KEY,JSON.stringify(MB))}catch(e){}}
-function mbGear(g){const A=mbAll().m,o={};for(const [s,x] of Object.entries(g||{})){const it=x&&A[x.id];if(it)o[s]=Object.assign({},it,{f:x.f||0,q:9,slot:s})}return o}
+function mbGear(g){const A=mbAll().m,o={};for(const [s,x] of Object.entries(g||{})){const it=x&&A[x.id];if(it)o[s]=Object.assign({},it,{f:x.f||0,q:9,slot:s},x.ru&&x.ru.length?{ru:x.ru.slice(0,2)}:{})}return o}
+/* Runes (patch du 12/10) : catalogue du jeu (moteur), stock lu par le script */
+function runeStock(){const h=(DATA&&DATA.meta&&DATA.meta.runesProbe&&DATA.meta.runesProbe.hits)||[];const o={};if(Array.isArray(h))for(const x of h)if(x&&x.rune&&R.RUNES[x.rune])o[x.rune]=Math.max(o[x.rune]||0,+x.qty||0);return o}
+function runeVal(c){const r=R.RUNES[c];if(!r)return '';if(r.pct)return `+${r.pct} % des stats de l'objet`;if(r.elem)return 'double les dommages élémentaires de l\'objet';return Object.entries(r.st).map(([k,v])=>k==='resPctAll'?`+${v} % toutes rés.`:k==='dmgPctCrit'?`+${v} % dommages critiques`:k==='dmgPctSorts'?`+${v} % dommages aux sorts`:`+${v}${/^resPct|critique/.test(k)?' %':''} ${MB_LBL[k]||STAT_LABEL[k]||k}`).join(', ')}
+function runeLabel(c){return `${R.RUNE_NAMES[c]||c} (${runeVal(c)})`}
+const RUNE_ORDER=Object.keys(R.RUNES||{}).sort((a,b)=>({legendaire:0,epique:1}[R.RUNE_RARITY[a]]??2)-({legendaire:0,epique:1}[R.RUNE_RARITY[b]]??2));
 function mbState(b){return O.buildState(DATA,{gear:mbGear(b.gear),alloc:b.alloc||{},deck:(b.deck||[]).filter(k=>cardsByKey[k])},ctx)}
 function mbStats(it,f){try{return R.itemStats(it,f||0)}catch(e){return it.st||{}}}
 function mbShort(st,n){return Object.entries(st).filter(([k,v])=>v&&MB_LBL[k]).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])).slice(0,n||5).map(([k,v])=>`${v>0?'+':''}${v} ${MB_LBL[k]}`).join(' · ')}
@@ -5335,12 +5398,14 @@ function renderMB(){if(!$('#mb'))return;const b=mbLoad();
   // emplacement choisi : nom, amélioration (fusion) bien visible au centre, et retrait
   $('#mbSel').innerHTML=`<div><strong>${esc(SLOT_LABEL[MB_SEL]||MB_SEL)}</strong></div>${it?`<div>${esc(it.n)} <span class="muted">niv. ${it.lvl||'?'}${own?' · possédé':''}</span></div>
     <label style="display:grid;gap:2px;margin-top:4px"><span class="lbl">Amélioration</span><span style="display:flex;gap:4px;align-items:center"><button class="btn" type="button" id="mbFusM" style="padding:1px 8px" title="Baisser">−</button><select id="mbFus" style="flex:1;min-width:0">${MB_FUS.map((l,i)=>`<option value="${i}" ${i===(x.f||0)?'selected':''}>${l}${own&&own.f===i?' (le tien)':''}</option>`).join('')}</select><button class="btn" type="button" id="mbFusP" style="padding:1px 8px" title="Monter">+</button></span></label>
+    ${(()=>{const st=runeStock(),ru=x.ru||[];const opt=v=>`<option value="">— aucune —</option>`+RUNE_ORDER.map(c=>`<option value="${c}" ${c===v?'selected':''}>${esc(runeLabel(c))}${st[c]?' · ×'+st[c]+' en stock':''}</option>`).join('');return `<label style="display:grid;gap:2px;margin-top:4px"><span class="lbl">Runes (2 max)</span><select data-mbru="0">${opt(ru[0])}</select><select data-mbru="1">${opt(ru[1])}</select></label>`})()}
     <button class="btn" type="button" id="mbRemove" style="margin-top:4px;justify-self:start">Retirer</button>`:'<div class="muted">vide : choisis un objet dans la liste à droite</div>'}`;
   $('#mbSlotInfo').innerHTML=it?`<p class="note" style="margin:0">${esc(it.n)} (${MB_FUS[x.f||0]}) : ${esc(mbShort(mbStats(it,x.f),12))}</p>`:'';
   const setF=f=>{b.gear[MB_SEL].f=Math.max(0,Math.min(7,f));mbSave();renderMB()};
   if($('#mbFusM'))$('#mbFusM').onclick=()=>setF((x.f||0)-1);if($('#mbFusP'))$('#mbFusP').onclick=()=>setF((x.f||0)+1);
   if($('#mbFus'))$('#mbFus').onchange=e=>{b.gear[MB_SEL].f=+e.target.value;mbSave();renderMB()};
   if($('#mbRemove'))$('#mbRemove').onclick=()=>{delete b.gear[MB_SEL];mbSave();renderMB()};
+  document.querySelectorAll('[data-mbru]').forEach(el=>el.onchange=()=>{const g=b.gear[MB_SEL];if(!g)return;const r=(g.ru||[]).slice(0,2);r[+el.dataset.mbru]=el.value||null;g.ru=r.filter(Boolean);if(!g.ru.length)delete g.ru;mbSave();renderMB()});
   renderMBAlloc();renderMBDeck();renderMBStats();renderMBList();renderMBSaves()}
 function renderMBAlloc(){const b=mbLoad();const tot=R.pointsTotal(DATA.meta.level);let used=0;try{used=R.allocCost(b.alloc)}catch(e){}
   $('#mbPtsLeft').textContent=`(${fmt(tot-used)} restants sur ${fmt(tot)})`;$('#mbPtsLeft').style.color=tot-used<0?'var(--bad)':'';
