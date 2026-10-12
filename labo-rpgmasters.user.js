@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.12.10
+// @version      2.12.12
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -251,6 +251,7 @@
       weapon: !!c.weapon, chanceLines,
       // Bluff & co : « Pioche N » (refait la main) et dégâts « augmentés selon les Cartes » dans la main (calibré sur les combats réels)
       drawN: +((String(c.d || c.desc || '').match(/Pioche (\d+)/i) || [])[1] || 0), handScale: /augment[ée]s selon les Cartes/i.test(String(c.d || c.desc || '')),
+      summon: (() => { const m = String(c.d || c.desc || '').match(/Invoque (?:un |une |le |la )?([A-Za-zÀ-ÿ' -]+?)\s*:\s*(\d+) à (\d+) (Neutre|Terre|Feu|Eau|Air) par tour \((\d+) tours?\)/i); return m ? { name: m[1].trim(), min: +m[2], max: +m[3], el: ['neutre', 'terre', 'feu', 'eau', 'air'].indexOf(m[4].toLowerCase()), left: +m[5] } : null; })(),
       dmgLines: eff.filter(isDmg),
       isSustain: eff.some(l => ['heal', 'healPct', 'shieldHp', 'shieldLvl'].includes(l.k)) && !eff.some(isDmg),
       hasDmg: eff.some(l => isDmg(l) || l.k === 'bomb' || l.k === 'dmgCasterHp'),
@@ -296,7 +297,7 @@
       if (!PK) return 0; const w = c && c.weapon, cur = C.cur || {};
       switch (PK) {
         case 'feca': return 6 * C.n;
-        case 'osamodas': return 25; // Attaques coordonnées (patch du 12/10) : ses invocations répercutent 25 % de ses dégâts (la stat Invocations sert à la pioche, pas au nombre d'invocations)
+        case 'osamodas': { const n = summons.length; return 20 * Math.min(3, n) + (n ? 25 : 0); } // Dompteur : +20 % par invocation active (3 au plus) ; Attaques coordonnées (patch du 12/10) : les invocations répercutent 25 % de ses dégâts (compté une fois tant qu'au moins une invocation est là)
         case 'enutrof': return 5 * C.n;
         case 'xelor': return 6 * C.n;
         case 'eniripsa': return 9 * C.n;
@@ -326,6 +327,7 @@
     if (DF.argente) P.shields.push({ value: Math.floor(maxHp * 0.08), turns: 99 }); // Argenté Scintillant : bouclier de 8 % des PV max au début
     // Pioches en plus (bouton « Piocher ») : réserve plafonnée par la stat Invocations, qui se recharge de 1 par tour (Dofoozbz : 2)
     const drawCap = opts.abyss ? 0 : Math.min(4, Math.max(0, Math.round(S.invocations || 0))); let drawsLeft = drawCap; // stat Invocations : 1 pioche en plus par point, 4 au plus, pas dans les Abysses
+    const summons = []; const sumMult = () => PK === 'osamodas' ? 2 : PK === 'roublard' ? 1.5 : PK === 'steamer' ? 1 + 0.07 * Math.min(6, Math.max(0, T.round - 1)) : 1; // Dompteur ×2, Artificier +50 %, Évolution du Steamer // invocations actives : { name, min, max, el, left } — attaquent au début de tes tours
     let olStreak = 0; // Sorts à une seule ligne (patch du 12/10) : +50 %, puis +20 % par tour sans lancer à plusieurs lignes, +150 % au plus ; un lancer à plusieurs lignes (sort ou corps à corps) remet à zéro jusqu'au tour suivant
     const deckBonus = opts.abyss ? 0 : Math.min(25, 5 * Math.max(0, (opts.deck || []).length - 7)); // patch du 12/10 : +5 % de dégâts des sorts par carte au-delà de 7, +25 % au plus (hors Abysses)
     const surprised = !opts.noSurprise && (S._surprise || 0) > 0 && RND() < S._surprise; // ennemis pris de vitesse : ils passent leur premier tour
@@ -357,6 +359,8 @@
       const paM = mk('paTurn'), paNeed = paM && paM.paTurn === round ? paM.paLeft : null;
       // Fureur : au-delà de N cartes (hors arme) dans le tour, sa prochaine attaque est multipliée
       const furyCap = Math.min(99, ...alive().filter(m => m.mech && m.mech.furyCards).map(m => m.mech.furyCards));
+      // invocations : chacune attaque au début de ton tour (Dompteur de l'Osamodas : +100 % de dégâts)
+      for (let i = summons.length - 1; i >= 0; i--) { const sm = summons[i]; if (round > sm.from) { const t = target(); if (t && t.alive) { const b = sm.min + Math.floor(RND() * (sm.max - sm.min + 1)); const rp = er(t.res[RES_PCT[sm.el]] || 0); const d = Math.max(0, Math.floor(b * sumMult() * (1 - rp / 100))); const real = Math.min(t.hp, d); t.hp -= real; dmgDone += real; perCard[sm.name] = (perCard[sm.name] || 0) + real; if (t.hp <= 0) { t.hp = 0; down(t); } } if (--sm.left <= 0) summons.splice(i, 1); } }
       // bombes posées au tour précédent
       for (const m of mons) if (m.alive && m.bombs.length) { for (const b of m.bombs) { C.cur = null; hit(m, b, 'Bombe', { bomb: true }); if (PK === 'roublard') C.bombN++; } m.bombs = []; }
       for (let guard = 0; guard < 20; guard++) {
@@ -450,7 +454,7 @@
     return result(false, opts.maxRounds || 30);
 
     function result(win, rounds) { const tm = mons.reduce((a, m) => a + m.maxHp, 0) || 1; return { trace, win, rounds, hpLost, dmgDone, perCard, progress: win ? 1 : 1 - mons.reduce((a, m) => a + (m.alive ? Math.max(0, m.hp) + (m.mech && m.mech.revive && !m.revived ? m.maxHp * (m.mech.revivePct != null ? m.mech.revivePct / 100 : 0.5) : 0) : 0), 0) / tm, kills: mons.filter(m => !m.alive).length }; }
-    function healP(a) { if (T.inv) { P.hp -= a; hpLost += a; } else { const h = T.half ? Math.floor(a / 2) : a, over = P.hp + h - maxHp; P.hp = Math.min(maxHp, P.hp + h); if (DF.dotruche && over > 0) { const cap = Math.floor(maxHp * 0.1), add = Math.min(over, cap - truche); if (add > 0) { truche += add; P.shields.push({ value: add, turns: 2 }); } } } } // Dotruche : soin en trop → bouclier (10 % des PV max au plus)
+    function healP(a) { if (T.inv) { P.hp -= a; hpLost += a; } else { a = PK === 'eniripsa' ? Math.floor(a * (1 + 0.09 * C.n)) : a; const h = T.half ? Math.floor(a / 2) : a, over = P.hp + h - maxHp; P.hp = Math.min(maxHp, P.hp + h); if (DF.dotruche && over > 0) { const cap = Math.floor(maxHp * 0.1), add = Math.min(over, cap - truche); if (add > 0) { truche += add; P.shields.push({ value: add, turns: 2 }); } } } } // Dotruche : soin en trop → bouclier (10 % des PV max au plus)
     function draw() { if (!pile.length) { if (!discard.length) return null; pile = shuffle(discard); discard = []; } return pile.pop(); }
     function reflects(m) { return !!(m.mech && m.mech.reflectFrom && T.round >= m.mech.reflectFrom && (!m.mech.reflectTo || T.round <= m.mech.reflectTo)); }
     // Mode auto : le jeu vise le premier boss encore debout. Mode manuel : le plus entamé, en évitant celui qui renvoie les coups.
@@ -518,6 +522,7 @@
       rec(apRoom, T.buffP, T.buffC, T.dmgPct, 0, 0, 0);
       return best.v > 0 ? best.seq : null;
     }
+    function dmgdTurnGuess() { return Math.max(1, dmgDone / Math.max(1, T.round)); }
     function valueOf(c) {
       let v = 0;
       if (c.hasDmg) {
@@ -525,6 +530,7 @@
         const tot = mons.filter(m => m.alive).reduce((a, m) => a + m.hp + m.shield, 0);
         v += Math.min(raw, tot);
       }
+      if (c.summon && summons.length < 6) { const per = (c.summon.min + c.summon.max) / 2 * sumMult(); v += per * c.summon.left + (PK === 'osamodas' && summons.length < 3 ? 0.2 * dmgdTurnGuess() : 0); } // invocation : ses coups + (Osamodas) +20 % sur tes sorts
       for (const l of c.eff) {
         if (l.k === 'buff' && l.tgt === 'self') {
           const others = hand.filter(h => h !== c && h.hasDmg);
@@ -633,6 +639,7 @@
       const lines = crit && c.crit ? c.crit : c.eff;
       if (PK && c.hasDmg) { C.att++; C.cur = { portal: PK === 'eliotrope' && C.att % 2 === 0, lance: PK === 'forgelance' && !C.firstDone && !c.weapon }; } else C.cur = null;
       C.inTurn = true;
+      if (c.summon) summons.push(Object.assign({}, c.summon, { from: T.round }));
       let luck = c.handScale ? 1 + HAND_K * Math.max(0, hand.length - 1) : 1; if (ECA && !c.weapon && c.hasDmg) { const r = RND(); luck = r < 0.32 ? 2 : r < 0.34 ? 0.5 : 1; } // Chance d'Ecaflip
       const spec = !c.weapon && c.hasDmg && RND() < specP;
       if (c.hasDmg && !opts.abyss) { const nl = c.chanceLines.length ? 1 : c.dmgLines.length; if (nl > 1) T.olBroken = true; T.olNow = T.olBroken ? 0 : Math.min(150, 50 + 20 * olStreak); } else T.olNow = 0;
@@ -687,7 +694,7 @@
       }
       if (sustainUsed) T.sustainLeft--;
       if (PK && c.hasDmg && !c.weapon) { const t0 = tgt && tgt.alive ? tgt : null; C.lastTgt = tgt || null;
-        if (PK === 'sadida' && t0) { t0.poison = t0.poison || []; if (t0.poison.length < 4) t0.poison.push(3); else { t0.poison.sort((a, b) => a - b); t0.poison[0] = 3; } } }
+        if (PK === 'sadida' && t0 && !t0.noOS) { t0.poison = t0.poison || []; if (t0.poison.length < 4) t0.poison.push(3); else { t0.poison.sort((a, b) => a - b); t0.poison[0] = 3; } } }
       C.inTurn = false;
     }
   }
