@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.12.23
+// @version      2.12.24
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -1502,6 +1502,8 @@
     const runeKeys = o => o && typeof o === 'object' ? Object.keys(o).filter(k => /rune/i.test(k)) : [];
     const runesOf = x => { const o = {}; for (const src of [x, x.item]) for (const k of runeKeys(src)) o[k] = src[k]; return Object.keys(o).length ? o : undefined; };
     let runesProbe = (() => { try { const hits = runeHits(inv); const j = JSON.stringify(hits); return { invKeys: Object.keys(I), hits: j.length < 300000 ? hits : j.slice(0, 300000) }; } catch (e) { return { err: String(e) }; } })();
+    // Stock de runes : onglet Runes de l'inventaire (toujours lu : la page Inventaire contient aussi des objets runés, qui ne sont pas le stock)
+    try { const pg = await rsc('/inventaire?onglet=runes'); const st = runeHits(pg).filter(h => h && typeof h.rune === 'string' && 'qty' in h); if (st.length) runesProbe.stock = st; } catch (e) {}
     if (!(runesProbe.hits || []).length) for (const path of ['/inventaire?onglet=runes', '/inventaire?tab=runes', '/inventaire/runes']) { try { const pg = await rsc(path); const h = runeHits(pg); if (h.length) { const j = JSON.stringify(h); runesProbe.hits = j.length < 300000 ? h : j.slice(0, 300000); runesProbe.from = path; break; } } catch (e) {} }
     try { runesProbe.snap = JSON.parse(localStorage.getItem(RUNE_SNAP) || 'null'); } catch (e) {}
     // Objet runé : format encore inconnu → clés présentes sur les objets de l'inventaire, et exemples d'objets aux clés inhabituelles

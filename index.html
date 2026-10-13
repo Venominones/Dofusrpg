@@ -44,6 +44,7 @@ nav.tabs button{font:600 .95rem var(--f-body);background:none;border:1px solid t
 nav.tabs button[aria-selected="true"]{background:var(--gold-soft);color:var(--ink);border-color:var(--line2)}
 nav.tabs button:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 section.tab{display:grid;gap:20px}
+.optgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:14px;align-items:start}.optcard{border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:12px;background:var(--bg)}.optcard h3{margin:0;font-size:1rem}.optrun{display:flex;flex-wrap:wrap;gap:14px;align-items:end;margin-top:14px}
 .grid2{display:grid;grid-template-columns:minmax(0,320px) minmax(0,1fr);gap:20px;align-items:start}
 @media (max-width:820px){.grid2{grid-template-columns:minmax(0,1fr)}}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;display:grid;gap:14px;min-width:0;overflow-wrap:anywhere}
@@ -51,7 +52,7 @@ section.tab{display:grid;gap:20px}
 .field{display:grid;gap:6px;min-width:0}
 .field>*{min-width:0;max-width:100%}
 .field>label:not(.chk),.lbl{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--muted)}
-select,input[type=number],input[type=text],textarea{max-width:100%;min-width:0;text-overflow:ellipsis;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line2);border-radius:7px;padding:7px 9px;width:100%}
+select,input[type=number],input[type=text],input[type=search],textarea{max-width:100%;min-width:0;text-overflow:ellipsis;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line2);border-radius:7px;padding:7px 9px;width:100%}
 input[type=range]{width:100%;accent-color:var(--gold)}
 .checks{display:flex;flex-wrap:wrap;gap:8px}
 .chk{display:flex;align-items:center;flex-wrap:nowrap;gap:6px;border:1px solid var(--line2);border-radius:8px;padding:6px 10px;cursor:pointer;font-weight:500;font-size:.92rem;line-height:1.35;text-transform:none;letter-spacing:0;color:var(--ink);max-width:100%;min-width:0}
@@ -159,6 +160,7 @@ textarea{min-height:110px;font-family:var(--f-mono);font-size:.8rem}
 .pre-mid{display:grid;place-content:center;text-align:center;border:1px solid var(--line);border-radius:9px;padding:6px;background:var(--panel);gap:2px}
 .pre-mid .v{font:700 1.35rem var(--f-display);color:var(--gold)}
 .pre-dof{display:grid;grid-template-columns:repeat(6,36px);gap:4px;justify-content:center}
+.pre-tier{min-width:min(100%,420px)}.pre-tier button{font-size:1rem!important;padding:10px 14px!important;font-weight:700}
 .pre-card h3{margin:0;font-size:1.05rem}.pre-card p{margin:0}
 .pre-det{display:grid;grid-template-columns:minmax(0,430px) minmax(0,1fr);gap:14px;align-items:start}
 @media (max-width:820px){.pre-det{grid-template-columns:1fr}}
@@ -240,10 +242,11 @@ th,td{border-bottom-color:var(--line)}
     <button role="tab" id="t-mb" aria-selected="false" data-tab="mb">Build manuel</button>
     <button role="tab" id="t-coll" aria-selected="false" data-tab="coll">Collection</button>
     <button role="tab" id="t-best" aria-selected="false" data-tab="best">Bestiaire</button>
-    <button role="tab" id="t-form" aria-selected="false" data-tab="form">Formules</button>
+    <button role="tab" id="t-notes" aria-selected="false" data-tab="notes">Patch notes</button>
+    <button role="tab" id="t-form" aria-selected="false" data-tab="form" hidden>Formules</button>
     <button role="tab" id="t-data" aria-selected="false" data-tab="data">Mes données</button>
   </nav>
-  <div class="playmode"><span class="lbl">Personnage</span><div class="seg" id="profMode"><button type="button" data-v="principal" aria-pressed="true">Principal</button><button type="button" data-v="saison" aria-pressed="false">Héroïque</button></div><span hidden><span class="lbl">Mode de combat simulé</span><div class="seg" id="playMode"><button type="button" data-v="auto" aria-pressed="true">Auto</button><button type="button" data-v="manual" aria-pressed="false">À la main</button></div><span class="lbl" id="wModeLbl">Arme en auto</span><div class="seg" id="wMode"><button type="button" data-v="prio" aria-pressed="false">Prioritaire</button><button type="button" data-v="normal" aria-pressed="true">Normale</button><button type="button" data-v="last" aria-pressed="false">En dernier</button><button type="button" data-v="never" aria-pressed="false">Jamais</button></div><span class="note" id="playModeNote"></span></span></div>
+  <div class="playmode" hidden data-off="1"><span class="lbl">Personnage</span><div class="seg" id="profMode"><button type="button" data-v="principal" aria-pressed="true">Principal</button><button type="button" data-v="saison" aria-pressed="false">Héroïque</button></div><span hidden><span class="lbl">Mode de combat simulé</span><div class="seg" id="playMode"><button type="button" data-v="auto" aria-pressed="true">Auto</button><button type="button" data-v="manual" aria-pressed="false">À la main</button></div><span class="lbl" id="wModeLbl">Arme en auto</span><div class="seg" id="wMode"><button type="button" data-v="prio" aria-pressed="false">Prioritaire</button><button type="button" data-v="normal" aria-pressed="true">Normale</button><button type="button" data-v="last" aria-pressed="false">En dernier</button><button type="button" data-v="never" aria-pressed="false">Jamais</button></div><span class="note" id="playModeNote"></span></span></div>
   <div class="alert" id="heroBanner" hidden style="margin-bottom:14px"><strong>Perso Héroïque : une défaite contre un boss = mort définitive.</strong><span>Le Labo affiche le risque de mort pour chaque combat de boss. Ne lance un boss que si la victoire est quasi certaine (99 % ou plus en simulation), et garde de la marge : la simulation reste une estimation.</span></div>
 
   <!-- PERSO -->
@@ -329,17 +332,10 @@ th,td{border-bottom-color:var(--line)}
 
   <!-- OPTIMISEUR -->
   <section class="tab" id="opt" hidden>
-    <div class="grid2">
-      <div class="panel">
-        <h2>Chercher le meilleur build</h2>
-        <div class="field"><span class="lbl">Ce que l'optimiseur peut changer</span>
-          <div class="checks">
-            <label class="chk"><input type="checkbox" id="oGear" checked>Équipement</label>
-            <label class="chk"><input type="checkbox" id="oAlloc" checked>Points de carac</label>
-            <label class="chk"><input type="checkbox" id="oDeck" checked>Deck</label>
-          </div>
-          <label class="chk"><input type="checkbox" id="oTarget">Build cible : inclure les objets que je n'ai pas encore (bestiaire)</label>
-        </div>
+    <div class="panel">
+      <h2 style="margin-top:0">Chercher le meilleur build</h2>
+      <div class="optgrid">
+        <div class="optcard"><h3>1 · Objectif</h3>
         <div class="field"><label for="oObj">Orientation du build</label>
           <select id="oObj">
             <optgroup label="Général"><option value="equilibre" selected>Équilibré</option><option value="vitesse">Farm rapide</option><option value="survie">Tank</option></optgroup>
@@ -348,7 +344,6 @@ th,td{border-bottom-color:var(--line)}
             <optgroup label="PvP"><option value="pvp">PvP One-shot tour 1</option><option value="pvp-ini">PvP Full initiative</option></optgroup>
           </select>
           <span class="note" id="oObjNote"></span>
-        </div>
         <div class="field" hidden><select id="oPack"></select><input type="range" id="oDiff" min="1" max="6" step="0.25" value="1"><span id="oDiffV"></span></div>
         <div class="field"><span class="lbl">Adversaire simulé</span><span class="note" id="oTargetNote">Choisi selon l'orientation.</span></div>
         <div class="field"><label for="oElem">Éléments</label><select id="oElem"><option value="">Libre (le Labo choisit)</option><optgroup label="Mono-élément"><option value="mono:1">Full Terre</option><option value="mono:2">Full Feu</option><option value="mono:3">Full Eau</option><option value="mono:4">Full Air</option></optgroup><option value="multi">Multi-élément (stuff et deck qui mélangent les éléments)</option><option value="multisorts">Sorts multi (uniquement des sorts à 2 éléments ou plus)</option></select><span class="note" id="oElemNote">Se combine avec n'importe quelle orientation : par exemple Ascension en Full Eau, ou Kralamoure en multi-élément.</span></div>
@@ -357,35 +352,56 @@ th,td{border-bottom-color:var(--line)}
           <label class="chk"><input type="checkbox" id="pvpUlt">Arène Ultime (dégâts −60 %)</label>
           <span class="note">Le Labo cherche le build qui le tue avant qu'il joue : dégâts du tour 1 et initiative au-dessus de la sienne (0 = inconnue, l'initiative compte alors un peu). Rés. % : moyenne de ses résistances.</span></div>
         <div class="field" id="oFloorWrap" hidden><label for="oFloor">Étage visé (Ascension)</label><input type="number" id="oFloor" min="1" max="200" placeholder="auto"><span class="note">Vide = l'étage qui suit ton record. Les boss de tes derniers étages sont ramenés à la puissance de cet étage, avec toutes les mécaniques.</span></div>
-<div class="field"><span class="lbl">Survie autorisée</span><label class="chk"><input type="checkbox" id="oHeal" checked>Soins</label><label class="chk"><input type="checkbox" id="oShield" checked>Boucliers</label><label class="chk"><input type="checkbox" id="oSteal" checked>Vol de vie (cartes et arme)</label></div>
-        <div class="field" hidden><span class="lbl">Mécanique de boss</span><label class="chk"><input type="checkbox" id="oInv">Soins inversés à partir du tour <input type="number" id="oInvT" min="1" max="30" value="3" style="width:4.2em;padding:3px 6px"></label><label class="chk"><input type="checkbox" id="oInvS">Les boucliers blessent aussi</label><span class="note">Le vol de vie et les soins te retirent des PV au lieu d'en rendre.</span></div>
         <div class="field"><label for="oSpell">Type de sorts</label><select id="oSpell"><option value="">Tous</option><option value="zone">Zone</option><option value="mono">Mono-cible</option><option value="steal">Vol de vie</option><option value="sustain">Bouclier / Soin</option><option value="apremove">Retrait PA</option><option value="oneline">1 ligne (bonus +50 à +150 %)</option></select><div class="seg" id="oSpellMode" style="margin-top:4px"><button type="button" data-v="strict" aria-pressed="true">Strict</button><button type="button" data-v="pref" aria-pressed="false">Préférence</button></div><span class="note">Strict : tous les sorts de dégâts du deck sont de ce type (boucliers, PA… restent permis). Préférence : l'optimiseur en met le plus possible sans sacrifier le résultat.</span></div>
+        <div class="field"><span class="lbl">Survie autorisée</span><label class="chk"><input type="checkbox" id="oHeal" checked>Soins</label><label class="chk"><input type="checkbox" id="oShield" checked>Boucliers</label><label class="chk"><input type="checkbox" id="oSteal" checked>Vol de vie (cartes et arme)</label></div>
+        <div class="field" hidden><span class="lbl">Mécanique de boss</span><label class="chk"><input type="checkbox" id="oInv">Soins inversés à partir du tour <input type="number" id="oInvT" min="1" max="30" value="3" style="width:4.2em;padding:3px 6px"></label><label class="chk"><input type="checkbox" id="oInvS">Les boucliers blessent aussi</label><span class="note">Le vol de vie et les soins te retirent des PV au lieu d'en rendre.</span></div>
+        </div>
+        <div class="optcard"><h3>2 · Point de départ</h3>
+        <div class="field"><span class="lbl">Ce que l'optimiseur peut changer</span>
+          <div class="checks">
+            <label class="chk"><input type="checkbox" id="oGear" checked>Équipement</label>
+            <label class="chk"><input type="checkbox" id="oAlloc" checked>Points de carac</label>
+            <label class="chk"><input type="checkbox" id="oDeck" checked>Deck</label>
+          </div>
+          <span class="note">Décoche « Équipement » pour garder un stuff entier et construire le deck autour, ou « Deck » pour garder un deck et chercher le stuff autour.</span>
+          <label class="chk"><input type="checkbox" id="oTarget">Build cible : inclure les objets que je n'ai pas encore (bestiaire)</label>
+        </div>
+        <div class="field"><label for="oGearStart">Équipement de départ</label><select id="oGearStart"></select><span class="note">Ton équipement porté, un équipement enregistré en jeu ou un build du Build manuel.</span></div>
+        <div class="field"><label for="oStart">Deck de départ</label><select id="oStart"></select><div class="alert" id="oStartNote" hidden style="margin-top:6px"></div></div>
+        <div class="field"><label for="oSlots">Emplacements de deck</label><input type="number" id="oSlots" min="5" max="30" class="slots"><span class="note">Lu dans ton export. Corrige-le si tu viens de passer un Prestige.</span></div>
+        </div>
+        <div class="optcard"><h3>3 · Contraintes</h3>
         <div class="field"><span class="lbl">À inclure absolument</span>
           <div class="lockrow"><input type="search" id="oLockCard" placeholder="+ Sort… (clique ou tape pour chercher)" autocomplete="off" aria-label="Sort à inclure"><div class="lockdd" id="oLockCardL" hidden></div></div>
           <div class="lockrow"><input type="search" id="oLockItem" placeholder="+ Équipement… (clique ou tape pour chercher)" autocomplete="off" aria-label="Équipement à inclure"><div class="lockdd" id="oLockItemL" hidden></div></div>
           <div class="lockchips" id="oLocks"></div>
-          <span class="note">Ces sorts et objets restent dans tous les builds testés ; l'optimiseur construit le reste autour.</span></div>
-        <div class="field"><label for="oStart">Deck de départ</label><select id="oStart"></select><div class="alert" id="oStartNote" hidden style="margin-top:6px"></div></div>
-        <div class="field"><label for="oSlots">Emplacements de deck</label><input type="number" id="oSlots" min="5" max="30" class="slots"><span class="note">Lu dans ton export. Corrige-le si tu viens de passer un Prestige.</span></div>
-        <div class="field"><span class="lbl">Effort de recherche</span>
-          <div class="seg" id="oEffort"><button type="button" data-v="1" aria-pressed="false">Rapide</button><button type="button" data-v="2" aria-pressed="true">Tous éléments</button><button type="button" data-v="3" aria-pressed="false">Approfondi</button></div><span class="note">Rapide : ajuste ton build actuel (20 s max). Tous éléments : un build complet par élément (Terre, Feu, Eau, Air, multi) puis comparaison (45 s max, en parallèle sur les cœurs de ton processeur). Approfondi : pareil avec deux passes stuff ↔ caracs ↔ sorts et une confirmation (10 min max). Passé ce temps, le Labo garde le meilleur build trouvé.</span>
+          <div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><span class="note">Ces sorts et objets restent dans tous les builds testés.</span><button class="btn ghost" type="button" id="oLocksClear" style="padding:2px 10px;font-size:.8rem">Tout retirer</button></div></div>
+        <div class="field"><span class="lbl">Seuils de stats</span>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><select id="oConsK" style="flex:1;min-width:130px"></select><input type="number" id="oConsMin" placeholder="min" style="width:5.5em!important"><input type="number" id="oConsMax" placeholder="max" style="width:5.5em!important"><button class="btn" type="button" id="oConsAdd" style="padding:4px 10px">Ajouter</button></div>
+          <div class="lockchips" id="oCons"></div>
+          <span class="note">Exemple : PA ≥ 13, Initiative ≥ 4 000, PV ≥ 12 000. Le Labo écarte les builds qui ne respectent pas ces seuils (s'il n'y arrive pas avec ton inventaire, il le signale).</span></div>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="oRun">Lancer l'optimisation</button><button class="btn ghost" id="oStop" type="button" hidden>Arrêter et voir le meilleur build</button></div>
-        <div class="progress" aria-hidden="true"><div id="oBar"></div></div>
-        <div class="toast muted" id="oStatus">Prêt. 20 s max (Rapide), 45 s (Tous éléments), 10 min max (Approfondi).</div><div class="note" id="oReady"></div>
       </div>
-      <div class="panel" id="optOut">
-        <div class="alert theory"><strong>Résultat théorique</strong><span>L'Optimiseur génère un build cohérent avec ta demande, calculé par simulation de combats. Ce n'est pas forcément le meilleur stuff possible : vérifie en jeu et ajuste à ton style.</span></div>
-        <div class="kpis" id="oKpis"></div>
-        <div id="oDetails" class="prose"><p class="muted">Les résultats s'affichent ici : avant/après, objets à changer, répartition des points et cartes à échanger.</p></div>
+      <div class="optrun">
+        <div class="field" style="flex:1;min-width:260px"><span class="lbl">Recherche</span>
+          <div class="seg" id="oEffort"><button type="button" data-v="1" aria-pressed="false">Rapide</button><button type="button" data-v="2" aria-pressed="true">Normale</button><button type="button" data-v="3" aria-pressed="false">Approfondie</button></div><span class="note">Rapide : ajuste ton build actuel (1 min max). Normale : un build complet par élément puis comparaison (5 min max). Approfondie : pareil avec trois passes stuff ↔ caracs ↔ sorts et une confirmation (20 min max). Le Labo propose un seul build : le meilleur trouvé.</span>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end"><button class="btn" id="oRun">Lancer l'optimisation</button><button class="btn ghost" id="oStop" type="button" hidden>Arrêter et voir le meilleur build</button></div>
       </div>
+      <div class="progress" aria-hidden="true"><div id="oBar"></div></div>
+      <div class="toast muted" id="oStatus">Prêt. 1 min max (Rapide), 5 min (Normale), 20 min (Approfondie).</div><div class="note" id="oReady"></div>
+    </div>
+    <div class="panel" id="optOut" style="margin-top:16px">
+      <div class="alert theory"><strong>Résultat théorique</strong><span>L'Optimiseur génère un build cohérent avec ta demande, calculé par simulation de combats. Ce n'est pas forcément le meilleur stuff possible : vérifie en jeu et ajuste à ton style.</span></div>
+      <div class="kpis" id="oKpis"></div>
+      <div id="oDetails" class="prose"><p class="muted">Les résultats s'affichent ici : avant/après, objets à changer, répartition des points et cartes à échanger.</p></div>
     </div>
   </section>
 
   <!-- PRÉBUILDS -->
   <section class="tab" id="pre" hidden>
     <div class="panel">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><h2 style="margin:0">Prébuilds niveau 200</h2><div class="seg" id="preTier"><button type="button" data-v="budget" aria-pressed="true">Budget</button><button type="button" data-v="opti" aria-pressed="false">Opti</button></div></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><h2 style="margin:0">Prébuilds niveau 200</h2><div class="seg pre-tier" id="preTier"><button type="button" data-v="budget" aria-pressed="true">Budget</button><button type="button" data-v="opti" aria-pressed="false">Opti</button><button type="button" data-v="vit" aria-pressed="false">Vitrines ♥</button></div></div>
       <div class="alert theory"><strong>Suggestions de builds, loin d'être optimisées</strong><span>Ces prébuilds sont là pour donner des idées : des builds « de joueur normal » qui ont du sens, pas le meilleur stuff possible. Calculés au prestige 6, sans passif de classe. Pour un build adapté à ton perso, passe par l'Optimiseur ou le Build manuel.</span></div><p class="note"><strong>Budget</strong> : pas d'objet Légendaire, pas de Rayonnant, pas de vrai Dofus (les petits Dofus de stats sont permis). <strong>Opti</strong> : tous les objets du jeu, en +0. Clique un build pour voir ses stats, son deck et ses codes ; survole un objet pour son détail (bordure pointillée = objet que tu n'as pas).</p>
       <div id="preOut"></div>
     </div>
@@ -453,7 +469,7 @@ th,td{border-bottom-color:var(--line)}
         <div class="field"><span class="lbl">Survie autorisée</span><label class="chk" id="aSusAutoL"><input type="checkbox" id="aSusAuto" checked><span id="aSusAutoT">Auto (selon les mécaniques du boss)</span></label><label class="chk"><input type="checkbox" id="aHeal" checked>Soins</label><label class="chk"><input type="checkbox" id="aShield" checked>Boucliers</label><label class="chk"><input type="checkbox" id="aSteal" checked>Vol de vie (cartes et arme)</label></div>
         <div class="field"><label for="aSlots">Emplacements de deck</label><input type="number" id="aSlots" min="5" max="30" class="slots"></div>
         <div class="field"><span class="lbl">Effort de recherche</span>
-          <div class="seg" id="aEffort"><button type="button" data-v="1" aria-pressed="false">Rapide</button><button type="button" data-v="2" aria-pressed="true">Tous éléments</button><button type="button" data-v="3" aria-pressed="false">Approfondi</button></div><span class="note">Rapide : ajuste ton build actuel (20 s max). Tous éléments : un build complet par élément (Terre, Feu, Eau, Air, multi) puis comparaison (45 s max, en parallèle sur les cœurs de ton processeur). Approfondi : pareil avec deux passes stuff ↔ caracs ↔ sorts et une confirmation (10 min max). Passé ce temps, le Labo garde le meilleur build trouvé.</span>
+          <div class="seg" id="aEffort"><button type="button" data-v="1" aria-pressed="false">Rapide</button><button type="button" data-v="2" aria-pressed="true">Normale</button><button type="button" data-v="3" aria-pressed="false">Approfondie</button></div><span class="note">Rapide : ajuste ton build actuel (1 min max). Normale : un build complet par élément puis comparaison (5 min max). Approfondie : deux passes et une confirmation (20 min max).</span>
         </div>
         <button class="btn" id="aRun">Trouver un build qui passe</button>
         <div class="progress" aria-hidden="true"><div id="aBar"></div></div>
@@ -488,7 +504,7 @@ th,td{border-bottom-color:var(--line)}
     <div class="panel">
       <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center">
         <h2 style="margin:0">Collection</h2>
-        <div class="seg" id="cView" style="min-width:280px"><button type="button" data-v="own" aria-pressed="true">Mes objets</button><button type="button" data-v="miss" aria-pressed="false">Objets manquants</button></div>
+        <div class="seg" id="cView" style="min-width:280px"><button type="button" data-v="own" aria-pressed="true">Mes objets</button><button type="button" data-v="miss" aria-pressed="false">Objets manquants</button><button type="button" data-v="sell" aria-pressed="false">À vendre</button></div>
       </div>
       <p class="note" id="cInfo"></p>
       <div class="bfilters" style="display:flex;flex-wrap:wrap;gap:8px;align-items:end;margin:8px 0">
@@ -497,6 +513,8 @@ th,td{border-bottom-color:var(--line)}
         <label style="display:grid;gap:2px"><span class="lbl">Niveau min</span><input id="cMin" type="number" min="1" max="200" value="1" style="width:5em"></label>
         <label style="display:grid;gap:2px"><span class="lbl">Niveau max</span><input id="cMax" type="number" min="1" max="200" value="200" style="width:5em"></label>
         <label style="display:grid;gap:2px"><span class="lbl">Panoplie</span><select id="cSet" style="max-width:220px"><option value="">Toutes</option></select></label>
+        <label style="display:grid;gap:2px" id="cRankL"><span class="lbl">Rang</span><select id="cRank"><option value="">Tous</option><option value="lt7">Pas encore Rayonnant +5</option><option value="ready">Prêts à fusionner</option><option value="7">Rayonnant +5</option><option value="6">Rayonnant +4</option><option value="5">Rayonnant +3</option><option value="4">Rayonnant +2</option><option value="3">Rayonnant +1</option><option value="2">Rayonnant</option><option value="1">Tiers 2</option><option value="0">Tiers 1</option></select></label>
+        <label style="display:grid;gap:2px" id="cOrdL"><span class="lbl">Ordre</span><select id="cOrd"><option value="desc">Meilleur rang d'abord</option><option value="asc">Moins amélioré d'abord</option></select></label>
       </div>
       <div id="cOut"></div>
     </div>
@@ -529,7 +547,7 @@ th,td{border-bottom-color:var(--line)}
     </div>
   </section>
   <section class="tab" id="items" hidden>
-    <div class="panel" id="bank2Wrap">
+    <div class="panel" id="bank2Wrap" hidden data-off="1">
       <h2 style="margin-top:0">Banque de fin de saison</h2>
       <p class="note" id="bank2Note"></p>
       <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:end;margin:8px 0">
@@ -551,7 +569,7 @@ th,td{border-bottom-color:var(--line)}
       <h2 style="margin-top:0">Tier list des objets</h2>
       <p class="note">Valeur d'un objet = ce qu'il ajoute à un perso de son niveau, en dégâts par tour et en PV effectifs (formules du simulateur : caractéristique + puissance, dommages fixes, critique, PA, vision spectrale du Crâ, résistances, esquive). Le tier compare l'objet aux meilleurs de son emplacement dans sa tranche de niveau (les 20 niveaux en dessous). <strong>S</strong> = parmi les meilleurs (≥ 90 % du meilleur), <strong>A</strong> ≥ 75 %, <strong>B</strong> ≥ 55 %, <strong>C</strong> ≥ 35 %, <strong>D</strong> en dessous. « Fin de jeu » = même calcul face à tous les objets jusqu'au niveau 200. Les éléments comptés sont ceux des cartes du deck actif du perso choisi.</p>
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:end;margin:8px 0">
-        <div class="field" style="margin:0"><label for="tlFor">Pour le perso</label><select id="tlFor"><option value="principal">Principal</option><option value="saison">Héroïque (saison)</option></select></div>
+        <div class="field" style="margin:0"><label for="tlFor">Pour le perso</label><select id="tlFor"><option value="principal">Principal</option></select></div>
         <div class="field" style="margin:0"><label for="tlSlot">Emplacement</label><select id="tlSlot"><option value="">Tous</option><option>chapeau</option><option>cape</option><option>amulette</option><option>anneau</option><option>ceinture</option><option>bottes</option><option>arme</option><option>bouclier</option><option>familier</option><option>dofus</option></select></div>
         <div class="field" style="margin:0"><label for="tlSrc">Objets</label><select id="tlSrc"><option value="all">Tous (possédés + bestiaire)</option><option value="own">Possédés (un des deux persos)</option><option value="saison">Possédés par l'Héroïque</option><option value="principal">Possédés par le principal</option><option value="best">Pas encore obtenus (bestiaire + vitrines)</option><option value="vit">Portés dans les vitrines</option></select></div>
         <div class="field" style="margin:0"><label>Niveaux</label><span style="display:flex;gap:4px;align-items:center"><input type="number" id="tlMin" min="1" max="200" value="1" style="width:4.6em"> à <input type="number" id="tlMax" min="1" max="200" value="200" style="width:4.6em"></span></div>
@@ -632,10 +650,60 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   </section>
 
   <!-- DONNEES -->
+  <section class="tab" id="notes" hidden>
+    <div class="panel prose">
+      <h2 style="margin-top:0">Patch notes du jeu</h2>
+      <p class="note">Résumé des mises à jour de RpgMasters et de leur prise en compte dans le Labo.</p>
+      <h3>13/10 · Mise à jour V3 : nouveau look, runes, Abysses</h3>
+      <ul>
+        <li>Nouvelle interface dorée : combat en scène, tableau de bord sur 3 colonnes, inventaire et personnage centrés sur le héros (double clic pour équiper, sélection multiple, confirmation avant « Tout fusionner »).</li>
+        <li>Runes : plus de runes sur les Dofus et trophées (rendues en stock) ; pierre de rune visible sur les objets runés ; Pénétration et Réduction des runes bien comptées.</li>
+        <li>Équipements enregistrés : ils retrouvent tes objets après une fusion ou une gravure.</li>
+        <li>Abysses : deck de 10 sorts maximum construit pendant la descente ; défaite ou abandon = −20 étages (au lieu de −25).</li>
+        <li>Équilibrage : Féca, Armure à 20 % max (au lieu de 30 %) ; passifs Enutrof, Sram, Xélor, Eniripsa, Roublard, Steamer +10 %. Prestige de classe par Prestige : sorts de dégâts de classe +10 %, sorts de boost +2 %, passif +5 %.</li>
+        <li class="muted">Labo : pris en compte dans les calculs (Armure, passifs, Prestige de classe, runes interdites sur les Dofus).</li>
+      </ul>
+      <h3>12/10 (soir) · Prestige de classe et kamas</h3>
+      <ul>
+        <li>Sorts et passif de classe +10 % par Prestige (remplacé le 13/10 par le détail ci-dessus).</li>
+        <li>Boutique : orbes de Forgemagie (100 kamas, 2 000/jour) et croquettes de Compagnon (100 000 kamas, 20/jour).</li>
+        <li>Désenchanter une rune : 100 000 (classique), 500 000 (épique), 2 000 000 (légendaire) kamas.</li>
+        <li>Fusion des Rayonnants +1 à +5 payante : 3 000 à 15 000 kamas au niveau 200. T1 → T2 → Rayonnant reste gratuit.</li>
+        <li>Taxe HDV par tranche : 8 % jusqu'à 100 000, 12 % jusqu'à 1 000 000, 15 % au-delà.</li>
+        <li>Colisée : mode Auto sur les étages normaux, boss moins résistants mais plus forts, 20 s par tour.</li>
+        <li class="muted">Labo : coût en kamas des fusions affiché dans Collection.</li>
+      </ul>
+      <h3>12/10 · Runes, Poutch d'entraînement, Colisée</h3>
+      <ul>
+        <li>Runes : butin rare après chaque victoire (classique 1 %, épique 0,5 %, légendaire 0,1 % ; ×5 sur les boss des Abysses ; coffre de 5 runes aux étages 250, 500, 750 et 1000). 2 runes par objet, 1 rune d'Action par personnage, bonus Prestige/Forge/Compagnon jusqu'à +100 %.</li>
+        <li>Poutch d'entraînement : mannequin de 100 millions de PV, sans récompense ni perte.</li>
+        <li>Colisée : onglet dans les Classements ; PV des boss −20 % hors paliers.</li>
+        <li>Osamodas : ses invocations frappent aussi à 25 % de leurs dégâts.</li>
+        <li>Forgemagie : bris sans limite, plafond de 8 000 orbes versées par jour dans le Bouclier.</li>
+        <li>Prestige 15+ : record dans les Abysses requis (100 étages par Prestige).</li>
+        <li class="muted">Labo : runes dans le Build manuel et classement « Mes runes » ; plafond de forge à 8 000.</li>
+      </ul>
+      <h3>Avant le 12/10</h3>
+      <ul>
+        <li>Initiative et effet de surprise, bonus de deck au-delà de 7 cartes, bonus des sorts à une seule ligne (+50 % puis +20 % par tour, +150 % max), réserve de pioche (stat Invocations, 4 max), Arène Ultime, nouveaux passifs de Dofus et de classe.</li>
+        <li class="muted">Labo : tout est simulé dans l'Optimiseur et le Build manuel.</li>
+      </ul>
+    </div>
+  </section>
   <section class="tab" id="data" hidden>
     <div class="grid2">
       <div class="panel prose">
         <h2>Importer mes données</h2>
+        <div class="alert" style="display:block"><strong>Mode d'emploi rapide</strong>
+        <ol style="margin:6px 0 0;padding-left:20px">
+          <li>Installe l'extension <strong>Tampermonkey</strong> (Chrome, Firefox, Edge…).</li>
+          <li>Clique « Installer / mettre à jour le script » ci-dessous (ou copie-le dans un nouveau script Tampermonkey).</li>
+          <li>Recharge RpgMasters : le panneau <strong>« Labo · cette session »</strong> apparaît en bas à gauche.</li>
+          <li>Joue normalement : tes combats s'enregistrent tout seuls.</li>
+          <li>Pour mettre le Labo à jour : <strong>« Envoyer au Labo ↗ »</strong> dans ce panneau. Le Labo s'ouvre et importe tout (stuff, inventaire, deck, combats, bestiaire).</li>
+          <li>Runes : ouvre une fois l'onglet <strong>Runes</strong> de ton inventaire avant d'envoyer.</li>
+        </ol>
+        <p class="note" style="margin:6px 0 0">Le Labo ne s'ouvre pas ? « Exporter pour le Labo » dans le panneau, puis <kbd>Ctrl</kbd>+<kbd>V</kbd> n'importe où sur cette page.</p></div>
         <h3>Méthode conseillée : le script de collecte</h3>
         <ul>
           <li>Installe l'extension Tampermonkey dans ton navigateur.</li>
@@ -1704,7 +1772,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   }
   function evaluate(data, st, ctx, monsters, n, objective, fight) {
     if (!data._memo || data._memoFor !== monsters) { data._memo = new Map(); data._memoFor = monsters; data._memoHits = data._memoHits || 0; }
-    const mk = stateKey(st) + '#' + n + '#' + objective + '#' + JSON.stringify(fight || {}) + (fight && fight.ranked ? '#' + (st.deck || []).join(',') : '');
+    const mk = stateKey(st) + '#' + n + '#' + objective + '#' + JSON.stringify(fight || {}) + (ctx && ctx.statCons && ctx.statCons.length ? '#' + JSON.stringify(ctx.statCons) : '') + (fight && fight.ranked ? '#' + (st.deck || []).join(',') : '');
     const hit = data._memo.get(mk);
     if (hit) { data._memoHits++; return { r: hit.r, S: hit.S, score: hit.score }; }
     const res = evaluateRaw(data, st, ctx, monsters, n, objective, fight);
@@ -1712,7 +1780,15 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     data._memo.set(mk, { r: res.r, S: res.S, score: res.score });
     return { r: res.r, S: res.S, score: res.score };
   }
+  // Seuils de stats imposés par le joueur (min / max) : forte pénalité, proportionnelle à l'écart, pour que la recherche s'en approche puis les respecte
+  const STAT_GET = { _maxHp: S => S._maxHp, _paTotal: S => S._paTotal, _pp: S => S._pp, initiative: S => iniEst(S) };
+  function statVal(S, k) { return STAT_GET[k] ? STAT_GET[k](S) || 0 : S[k] || 0; }
+  function consPenalty(S, cons) { let p = 0; for (const c of cons || []) { const v = statVal(S, c.k); if (c.min != null && v < c.min) p += 1e5 * (1 + (c.min - v) / Math.max(1, Math.abs(c.min))); if (c.max != null && v > c.max) p += 1e5 * (1 + (v - c.max) / Math.max(1, Math.abs(c.max))); } return p; }
+  function consOk(S, cons) { return consPenalty(S, cons) === 0; }
   function evaluateRaw(data, st, ctx, monsters, n, objective, fight) {
+    const e = evaluateRaw0(data, st, ctx, monsters, n, objective, fight); if (ctx && ctx.statCons && ctx.statCons.length) e.score -= consPenalty(e.S, ctx.statCons); return e;
+  }
+  function evaluateRaw0(data, st, ctx, monsters, n, objective, fight) {
     const b = buildState(data, st, ctx);
     if (monsters && monsters.scenarios) return evaluateMulti(b, ctx, monsters.scenarios, n, objective, fight);
     const r = R.runMany(Object.assign({ S: b.S, deck: b.deck, weapon: b.weapon, monsters, level: ctx.level }, fight || {}), n < 0 ? Math.max(20, -n * 3) : n);
@@ -1768,7 +1844,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const ctx = opts.ctx, mons = opts.monsters, obj = opts.objective || 'vitesse';
     const effort = opts.effort || 2;
     const N = [80, 140, 220][effort - 1], NF = opts.NF || 2500;
-    const budget = { gearIter: [120, 260, 500][effort - 1], deckIter: [40, 90, 160][effort - 1] };
+    const budget = { gearIter: [160, 400, 1200][effort - 1], deckIter: [60, 140, 400][effort - 1] }; // plafonds de temps : 1 min, 5 min, 20 min
     let cur = { gear: Object.assign({}, opts.start.gear), alloc: Object.assign({}, opts.start.alloc), deck: opts.start.deck.slice() };
     let ev = 0;
     const LK = locksOf(opts), HASLK = LK.cards.length + LK.items.length > 0;
@@ -2107,7 +2183,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   function deepPart(data, opts, ids, keep) {
     data._cardsByKey = data._cardsByKey || Object.fromEntries(data.cards.map(c => [c.key, c]));
     const all = deepRuns(data, opts); const runs = ids ? all.filter(r => ids.includes(r.id)) : all;
-    const passes = opts.effort >= 3 ? 2 : 1;
+    const passes = opts.effort >= 3 ? 3 : 1;
     let evals = 0, results = [];
     const t0 = Date.now(), BUD = opts.budgetMs || 0;
     runs.forEach((run, i) => {
@@ -2244,7 +2320,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const off = 100 * Math.log(o1 / o0), def = 100 * Math.log(d1 / d0);
     return { v: off + lam * def, off, def };
   }
-  const api = { iniEst, SPELL_TYPES, statWeights, valueProfile, itemValue, optimizeDeep, deepRuns, deepPart, deepStart, deepMerge, ARCHS, weaponSteals, normSus, encodeGear, encodeDeck, decodeCode, sustainAllowed, SLOTS, ORIENT, optimize, evaluate, buildState, itemPool, allocTemplates, score, cardAllowed };
+  const api = { statVal, consOk, consPenalty, iniEst, SPELL_TYPES, statWeights, valueProfile, itemValue, optimizeDeep, deepRuns, deepPart, deepStart, deepMerge, ARCHS, weaponSteals, normSus, encodeGear, encodeDeck, decodeCode, sustainAllowed, SLOTS, ORIENT, optimize, evaluate, buildState, itemPool, allocTemplates, score, cardAllowed };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.OPT = api;
 })(typeof self !== 'undefined' ? self : this);
 </script>
@@ -2287,7 +2363,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
 <script type="text/plain" id="src-userscript">// ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.12.23
+// @version      2.12.24
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -3788,6 +3864,8 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const runeKeys = o => o && typeof o === 'object' ? Object.keys(o).filter(k => /rune/i.test(k)) : [];
     const runesOf = x => { const o = {}; for (const src of [x, x.item]) for (const k of runeKeys(src)) o[k] = src[k]; return Object.keys(o).length ? o : undefined; };
     let runesProbe = (() => { try { const hits = runeHits(inv); const j = JSON.stringify(hits); return { invKeys: Object.keys(I), hits: j.length < 300000 ? hits : j.slice(0, 300000) }; } catch (e) { return { err: String(e) }; } })();
+    // Stock de runes : onglet Runes de l'inventaire (toujours lu : la page Inventaire contient aussi des objets runés, qui ne sont pas le stock)
+    try { const pg = await rsc('/inventaire?onglet=runes'); const st = runeHits(pg).filter(h => h && typeof h.rune === 'string' && 'qty' in h); if (st.length) runesProbe.stock = st; } catch (e) {}
     if (!(runesProbe.hits || []).length) for (const path of ['/inventaire?onglet=runes', '/inventaire?tab=runes', '/inventaire/runes']) { try { const pg = await rsc(path); const h = runeHits(pg); if (h.length) { const j = JSON.stringify(h); runesProbe.hits = j.length < 300000 ? h : j.slice(0, 300000); runesProbe.from = path; break; } } catch (e) {} }
     try { runesProbe.snap = JSON.parse(localStorage.getItem(RUNE_SNAP) || 'null'); } catch (e) {}
     // Objet runé : format encore inconnu → clés présentes sur les objets de l'inventaire, et exemples d'objets aux clés inhabituelles
@@ -4318,7 +4396,7 @@ function dsDel(k){delete DS[k];idbPut(k,null);try{localStorage.removeItem(k)}cat
 async function dsBoot(){IDB=await idbOpen();if(!IDB)return;Object.assign(DS,await idbGetAll());
   // migration : les imports déjà dans le localStorage passent dans IndexedDB (et libèrent la place)
   for(const k of ['labo-data','labo-data-saison']){let v=null;try{v=localStorage.getItem(k)}catch(e){}if(v&&!(k in DS)){DS[k]=v;if(await idbPut(k,v))try{localStorage.removeItem(k)}catch(e){}}else if(v&&(k in DS)){try{localStorage.removeItem(k)}catch(e){}}}}
-let LPROF='principal';try{LPROF=localStorage.getItem('labo-lprofile')==='saison'?'saison':'principal'}catch(e){}
+let LPROF='principal';try{localStorage.setItem('labo-lprofile','principal')}catch(e){} // serveur Héroïque fermé : un seul perso
 const dataKey=p=>p==='saison'?'labo-data-saison':'labo-data';
 function slotsKey(){return 'labo-slots-'+(typeof LPROF!=='undefined'?LPROF:'principal')}
 function deckSlots(){const v=+($('#oSlots')&&$('#oSlots').value)||0;return v>=5?v:DATA.meta.deckSize}
@@ -4575,7 +4653,7 @@ function pvpPack(){const hp=Math.max(1000,+$('#pvpHp').value||33000)*($('#pvpUlt
   return {key:'pvp',label:`Joueur · ${fmt(+$('#pvpHp').value||33000)} PV${$('#pvpUlt').checked?' (Arène Ultime)':''}`,defs:[{name:'Adversaire (joueur)',grade:1,level:200,hpMin:hp,hpMax:hp,atk:1,element:0,pattern:['attack'],stats:{resPctNeutre:rp,resPctTerre:rp,resPctFeu:rp,resPctEau:rp,resPctAir:rp},isBoss:false,fixedStart:false}],fights:[]}}
 function optAutoPack(){const o=$('#oObj').value;if(o==='kralamoure')return kralaPack();if(/^pvp/.test(o))return pvpPack();if(/^ascension/.test(o)){try{return ascPolyPack()}catch(e){}}return polyPack()}
 function optOptsFor(v){const pack=optAutoPack();if(!pack)return null;const mult=1;const deckIdx=+$('#oStart').value;
-  const opts={optGear:$('#oGear').checked,optAlloc:$('#oAlloc').checked,optDeck:$('#oDeck').checked,deckSize:deckSlots(),objective:$('#oObj').value,...($('#oElem').value?{elem:$('#oElem').value}:{}),spellFilter:spellF('o'),sustain:susOf('o'),noSteal:!!$('#oInv').checked,...fightOpts('o'),effort:+segVal('oEffort'),budgetMs:[20,45,555][(+segVal('oEffort')||2)-1]*1000,...lockOpts(),monsters:monstersFor(pack,mult),ctx:/^pvp/.test($('#oObj').value)?Object.assign({},ctx,{needIni:$('#oObj').value==='pvp'?(+$('#pvpIni').value||0):0}):$('#oObj').value==='pp'?Object.assign({},ctx,{lootE:lootPerFight()}):ctx,start:OPT_START?{gear:OPT_START.gear,alloc:OPT_START.alloc,deck:OPT_START.deck}:{gear:curGear,alloc:curAlloc,deck:DATA.meta.decks[deckIdx]}};return {pack,mult,deckIdx,opts}}
+  const opts={optGear:$('#oGear').checked,optAlloc:$('#oAlloc').checked,optDeck:$('#oDeck').checked,deckSize:deckSlots(),objective:$('#oObj').value,...($('#oElem').value?{elem:$('#oElem').value}:{}),spellFilter:spellF('o'),sustain:susOf('o'),noSteal:!!$('#oInv').checked,...fightOpts('o'),effort:+segVal('oEffort'),budgetMs:[60,300,1200][(+segVal('oEffort')||2)-1]*1000,...lockOpts(),monsters:monstersFor(pack,mult),ctx:/^pvp/.test($('#oObj').value)?Object.assign({},ctx,{needIni:$('#oObj').value==='pvp'?(+$('#pvpIni').value||0):0}):$('#oObj').value==='pp'?Object.assign({},ctx,{lootE:lootPerFight()}):ctx,start:OPT_START?{gear:OPT_START.gear,alloc:OPT_START.alloc,deck:OPT_START.deck}:optStartGear(deckIdx)};{const cs=consGet();if(cs.length)opts.ctx=Object.assign({},opts.ctx,{statCons:cs})}return {pack,mult,deckIdx,opts}}
 // Kralamoure de la Faille : boss à ~100 M de PV qu'on ne tue pas ; on cumule un maximum de dégâts en 10 tours.
 // Stats relevées en combat (monstre 423) ; si le perso ne l'a jamais croisé, on prend ces valeurs.
 const KRALA_REF={name:'Kralamoure Géant',grade:1,level:200,hpMin:99999458,hpMax:99999458,atk:383,element:3,pattern:['attack','attack','heavy','rage','attack','heavy'],stats:{resPctNeutre:20,resPctTerre:20,resPctFeu:20,resPctEau:30,resPctAir:20},isBoss:true};
@@ -4603,7 +4681,25 @@ function lockCombo(inp,list,getRows,onPick){if(!inp||!list)return;let rows=[],hi
   const pick=i=>{const r=rows[i];if(!r)return;inp.value='';list.hidden=true;hi=-1;onPick(r.v)};
   inp.onfocus=()=>{hi=-1;draw()};inp.oninput=()=>{hi=0;draw()};inp.onblur=()=>setTimeout(()=>{list.hidden=true},120);
   inp.onkeydown=e=>{if(list.hidden)return;const n=Math.min(rows.length,80);if(e.key==='ArrowDown'){e.preventDefault();hi=Math.min(n-1,hi+1);draw()}else if(e.key==='ArrowUp'){e.preventDefault();hi=Math.max(0,hi-1);draw()}else if(e.key==='Enter'){e.preventDefault();pick(hi<0?0:hi)}else if(e.key==='Escape'){list.hidden=true;inp.blur()}}}
-function renderLocks(){const box=$('#oLocks');if(!box)return;const L=locksGet();
+/* Équipement de départ (porté, enregistré en jeu, Build manuel) */
+function fillGearStart(){const el=$('#oGearStart');if(!el)return;const cur=el.value;el.innerHTML=pvGearOpts().map(([v,l])=>`<option value="${esc(v)}">${esc(l)}</option>`).join('');if([...el.options].some(o=>o.value===cur))el.value=cur}
+function optStartGear(deckIdx){const v=$('#oGearStart')&&$('#oGearStart').value;if(!v||v==='cur')return {gear:curGear,alloc:curAlloc,deck:DATA.meta.decks[deckIdx]};const B=pvGearBuild(v);const g=mbGear(B.gear||{});for(const [sl] of O.SLOTS)if(!g[sl]&&curGear[sl]&&!B.gear)g[sl]=curGear[sl];
+  return {gear:g,alloc:B.alloc&&Object.keys(B.alloc).length?B.alloc:curAlloc,deck:B.deck&&B.deck.length&&v[0]==='s'?B.deck:DATA.meta.decks[deckIdx]}}
+/* Seuils de stats (min / max) */
+const CONS_K=[['_maxHp','PV max'],['_paTotal','PA'],['pm','PM'],['po','PO'],['vitalite','Vitalité'],['sagesse','Sagesse'],['force','Force'],['intelligence','Intelligence'],['chance','Chance'],['agilite','Agilité'],['puissance','Puissance'],['critique','Critique (%)'],['dommages','Dommages'],['dmgPctSorts','Dommages aux sorts (%)'],['dommagesCritiques','Dommages critiques'],['soins','Soins'],['_pp','Prospection'],['initiative','Initiative'],['invocations','Invocations'],['resPctNeutre','Rés. Neutre (%)'],['resPctTerre','Rés. Terre (%)'],['resPctFeu','Rés. Feu (%)'],['resPctEau','Rés. Eau (%)'],['resPctAir','Rés. Air (%)'],['tacle','Tacle'],['fuite','Fuite'],['retraitPA','Retrait PA'],['retraitPM','Retrait PM']];
+const CONS_L=Object.fromEntries(CONS_K);
+function consKey(){return 'labo-cons-'+LPROF}
+function consGet(){try{const x=JSON.parse(localStorage.getItem(consKey())||'[]');if(Array.isArray(x))return x.filter(c=>c&&CONS_L[c.k]&&(c.min!=null||c.max!=null))}catch(e){}return []}
+function consSet(x){try{localStorage.setItem(consKey(),JSON.stringify(x))}catch(e){}renderCons()}
+function renderCons(){const box=$('#oCons'),sel=$('#oConsK');if(!box||!sel)return;if(!sel.options.length)sel.innerHTML=CONS_K.map(([k,l])=>`<option value="${k}">${esc(l)}</option>`).join('');const C=consGet();
+  box.innerHTML=C.map((c,i)=>`<span class="lockchip">${esc(CONS_L[c.k])} ${c.min!=null?'≥ '+fmt(c.min):''}${c.min!=null&&c.max!=null?' et ':''}${c.max!=null?'≤ '+fmt(c.max):''}<button type="button" data-i="${i}" aria-label="Retirer">×</button></span>`).join('')||'<span class="note">Aucun seuil.</span>';
+  box.querySelectorAll('button').forEach(b=>b.onclick=()=>{const x=consGet();x.splice(+b.dataset.i,1);consSet(x)})}
+function consHtml(res){const C=consGet();if(!C.length||!res||!res.final)return '';const S=res.final.S;const bad=C.filter(c=>!O.consOk(S,[c]));
+  return bad.length?`<div class="alert"><strong>Seuils non atteints avec ton inventaire</strong><span>${bad.map(c=>`${esc(CONS_L[c.k])} : ${fmt(O.statVal(S,c.k))} (visé ${c.min!=null?'≥ '+fmt(c.min):''}${c.max!=null?' ≤ '+fmt(c.max):''})`).join(' · ')}. Le build proposé s'en approche le plus possible.</span></div>`:`<p class="note">Seuils respectés : ${C.map(c=>`${esc(CONS_L[c.k])} ${fmt(O.statVal(S,c.k))}`).join(' · ')}.</p>`}
+document.addEventListener('click',e=>{const t=e.target;if(!t||!t.id)return;
+  if(t.id==='oLocksClear'){locksSet({cards:[],items:[]})}
+  if(t.id==='oConsAdd'){const k=$('#oConsK').value,mn=$('#oConsMin').value,mx=$('#oConsMax').value;if(mn===''&&mx===''){flash('Indique un minimum, un maximum, ou les deux.');return}const x=consGet().filter(c=>c.k!==k);x.push({k,min:mn===''?null:+mn,max:mx===''?null:+mx});$('#oConsMin').value='';$('#oConsMax').value='';consSet(x)}});
+function renderLocks(){try{fillGearStart();renderCons()}catch(e){}const box=$('#oLocks');if(!box)return;const L=locksGet();
   const pool=lockPool();const byK=Object.fromEntries((DATA.cards||[]).map(c=>[c.key,c]));const byI=Object.fromEntries(pool.map(i=>[i.id,i]));
   const TL={chapeau:'Chapeau',cape:'Cape',amulette:'Amulette',anneau:'Anneau',ceinture:'Ceinture',bottes:'Bottes',arme:'Arme',bouclier:'Bouclier',familier:'Familier',dofus:'Dofus / Trophée'};const order=[...new Set(O.SLOTS.map(x=>x[1]))];
   const chips=L.cards.filter(k=>byK[k]).map(k=>{const c=byK[k],src=cardImg(c);return `<span class="lockchip">${src?`<img src="${src}" alt="" onerror="this.remove()">`:''}${esc(c.n)}<button type="button" data-c="${esc(k)}" aria-label="Retirer">×</button></span>`}).concat(L.items.filter(i=>byI[i]).map(i=>{const it=byI[i],src=mbIcon(it);return `<span class="lockchip">${src?`<img src="${src}" alt="" onerror="this.remove()">`:''}${esc(it.n)}<button type="button" data-i="${i}" aria-label="Retirer">×</button></span>`}));
@@ -4676,9 +4772,10 @@ function renderOpt(res,opts,pack,mult,deckIdx){lastOpt=res;
     const offNote=off.length?`<div class="alert" style="margin-top:6px">${off.length} sort${off.length>1?'s':''} hors de ton élément principal (${off.map(c=>esc(c.n)).join(', ')}) : leur caractéristique est faible, ils tapent peu. Le Labo les garde seulement s'ils servent quand même (PA, bonus, retrait de PA) ; sinon, choisis l'orientation « Mono-élément ».</div>`:'';
     html+=`<h3>Deck · ${ins.length} échange${ins.length>1?'s':''}</h3><div class="cards">${st.deck.map(k=>cardChip(cardsByKey[k],ins.includes(k)?'':'')+(ins.includes(k)?'<span class="pill in">nouvelle</span>':'')).join('')}</div>${outs.length?`<div class="cards" style="margin-top:6px"><span class="lbl" style="align-self:center">À retirer</span>${outs.map(k=>cardChip(cardsByKey[k])).join('')}</div>`:''}${offNote}${autoOrderHtml(st)}`;
   }
-  html+=farmHtml(st)+choicesHtml(res)+archTable(res)+scenTable(b);
+  html+=farmHtml(st)+consHtml(res)+scenTable(b); // un seul build proposé : le meilleur trouvé
+  {const stock=runeStock();if(Object.keys(stock).length){let rp=null;try{rp=runePlan(st.gear,st.alloc,st.deck,opts.objective,stock)}catch(e){}if(rp)html+=`<h3>Runes à graver <span class="note">(depuis ton stock, pour ce build)</span></h3>${runePlanHtml(rp.plan,st.gear)}<p class="note">Les runes déjà gravées sur tes objets sont comptées. 1 rune d'Action par personnage ; pas de runes sur les Dofus.</p>`}}
   const per=Object.entries(b.perCard).sort((p,q)=>q[1]-p[1]).slice(0,8);const mx=per.length?per[0][1]:1;
-  html+=`<h3>Dégâts par carte, build proposé</h3><div class="bars">${per.map(([n,v])=>`<div class="bar"><span class="name">${esc(n)}</span><span class="track"><span class="fill" style="display:block;width:${v/mx*100}%"></span></span><span class="num" style="text-align:right">${fmt(v)}</span></div>`).join('')}</div>`;
+  html+=`<h3>Sorts qui portent le build</h3><p class="note">${per.map(([n])=>esc(n)).join(' · ')}</p>`; // pas de chiffres de combat affichés
   const gCode=O.encodeGear(st.gear),dCode=O.encodeDeck(st.deck,DATA.meta.breedId);lines.push('Code équipement : '+gCode);lines.push('Code deck : '+dCode);
   const SUM=optSummary(st,Sb,b,opts,res);lines.splice(1,0,'En bref : '+SUM.short);
   const top=`<div class="otop"><div><strong>En bref.</strong> ${esc(SUM.short)}</div><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" type="button" data-copy="${gCode}">Copier le stuff</button><button class="btn" type="button" data-copy="${dCode}">Copier le deck</button><button class="btn ghost" id="copySum" type="button">Copier le résumé</button><button class="btn ghost" id="oToMb" type="button">Ouvrir dans le Build manuel</button></div><span class="toast muted" id="copyMsg"></span>
@@ -4721,13 +4818,13 @@ function importText(txt){
 }
 
 /* ---------- Onglets & réglages ---------- */
-function showTab(id){if(id==='sim')id='mb';if(id==='wip')id='perso';{const pm=document.querySelector('.playmode');if(pm)pm.hidden=(id==='best'||id==='wip'||id==='form');}if(id==='asc')id='opt';if(id==='farm'||id==='items')id='perso';document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===id?'true':'false'));document.querySelectorAll('section.tab').forEach(s=>s.hidden=s.id!==id);try{localStorage.setItem('labo-tab',id)}catch(e){}if(id==='perso'){try{renderPV()}catch(e){}}if(id==='mb'){try{setupMB();renderMB()}catch(e){$('#mbMsg').textContent='Erreur : '+e.message}}if(id==='coll'){try{renderColl()}catch(e){$('#cOut').textContent='Erreur : '+e.message}}if(id==='pre'){try{renderPrebuilds()}catch(e){$('#preOut').textContent='Erreur : '+e.message}}if(id==='farm'){try{renderFarm()}catch(e){$('#fZones').textContent='Erreur : '+e.message}try{renderPredict()}catch(e){$('#fPredict').textContent='Erreur : '+e.message}}if(id==='data'){try{renderChanges()}catch(e){}try{healthCheck(false)}catch(e){$('#healthOut').textContent='Erreur : '+e.message}}if(id==='items'){TL=null;if(LPROF==='saison')$('#tlFor').value='principal';renderItemsTab()}}
+function showTab(id){if(id==='sim')id='mb';if(id==='wip'||id==='form')id='perso';{const pm=document.querySelector('.playmode');if(pm)pm.hidden=pm.dataset.off==='1'||(id==='best'||id==='wip'||id==='form');}if(id==='asc')id='opt';if(id==='farm'||id==='items')id='perso';document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===id?'true':'false'));document.querySelectorAll('section.tab').forEach(s=>s.hidden=s.id!==id);try{localStorage.setItem('labo-tab',id)}catch(e){}if(id==='perso'){try{renderPV()}catch(e){}}if(id==='mb'){try{setupMB();renderMB()}catch(e){$('#mbMsg').textContent='Erreur : '+e.message}}if(id==='coll'){try{renderColl()}catch(e){$('#cOut').textContent='Erreur : '+e.message}}if(id==='pre'){try{renderPrebuilds()}catch(e){$('#preOut').textContent='Erreur : '+e.message}}if(id==='farm'){try{renderFarm()}catch(e){$('#fZones').textContent='Erreur : '+e.message}try{renderPredict()}catch(e){$('#fPredict').textContent='Erreur : '+e.message}}if(id==='data'){try{renderChanges()}catch(e){}try{healthCheck(false)}catch(e){$('#healthOut').textContent='Erreur : '+e.message}}if(id==='items'){TL=null;if(LPROF==='saison')$('#tlFor').value='principal';renderItemsTab()}}
 document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
 /* Collection : mes objets au meilleur rang (avec ce qu'il manque pour fusionner) et objets manquants (où les trouver) */
 let C_VIEW='own';try{C_VIEW=localStorage.getItem('labo-cview')||'own'}catch(e){}
 const C_TL={chapeau:'Chapeau',cape:'Cape',amulette:'Amulette',anneau:'Anneau',ceinture:'Ceinture',bottes:'Bottes',arme:'Arme',bouclier:'Bouclier',familier:'Familier',dofus:'Dofus / Trophée'};
 const C_KAM=[0,0,0,3000,6000,9000,12000,15000];
-function collOwned(){const o={};for(const i of (DATA.items||[]).concat(DATA.worn||[])){if(!i||!i.s||i.s==='parchemin')continue;const x=o[i.id]||(o[i.id]={it:i,byF:{},n:0});const f=i.f||0;x.byF[f]=(x.byF[f]||0)+(i.q||1);x.n+=(i.q||1);if(!x.worn&&i.slot)x.worn=true}
+function collOwned(){const o={};for(const i of (DATA.items||[]).concat(DATA.worn||[])){if(!i||!i.s||i.s==='parchemin')continue;const x=o[i.id]||(o[i.id]={it:i,byF:{},n:0});const f=i.f||0;x.byF[f]=(x.byF[f]||0)+(i.q||1);x.n+=(i.q||1);if(!x.worn&&i.slot)x.worn=true;if(i.slot||R.runeCodes(i.ru).length){x.keep=x.keep||{};x.keep[f]=(x.keep[f]||0)+(i.q||1)}}
   for(const x of Object.values(o)){let m=-1;for(const k in x.byF)if(x.byF[k]>0&&+k>m)m=+k;x.main=m;const by=Object.assign({},x.byF);by[m]--;let fod=0;for(const k in by)if(+k<=2)fod+=by[k]*fusVal(+k);x.fod=fod;
     x.next=m>=7?null:{to:m+1,missing:Math.max(0,fusVal(m+1)-fusVal(m)-fod),kam:C_KAM[m+1]||0};x.total=fusNeed(x,7);x.kamTot=C_KAM.slice(m+1).reduce((a,b)=>a+b,0)}
   return o}
@@ -4738,17 +4835,26 @@ function collFilters(list){const sl=$('#cSlot'),st=$('#cSet');const types=[...ne
   const sets=[...new Set(list.map(i=>i.setName).filter(Boolean))].sort((a,b)=>a.localeCompare(b));const cs=st.value;st.innerHTML='<option value="">Toutes</option>'+sets.map(n=>`<option ${n===cs?'selected':''}>${esc(n)}</option>`).join('')}
 function collPassF(){const q=($('#cQ').value||'').trim().toLowerCase(),sl=$('#cSlot').value,set=$('#cSet').value,mn=+$('#cMin').value||1,mx=+$('#cMax').value||200;return i=>{const L=i.lvl||0;return (!q||String(i.n).toLowerCase().includes(q))&&(!sl||i.s===sl)&&(!set||i.setName===set)&&L>=mn&&L<=mx}}
 function collIcon(it){const src=mbIcon(it);return src?`<img src="${src}" alt="" loading="lazy" style="width:32px;height:32px;object-fit:contain;vertical-align:middle">`:''}
-function renderColl(){const out=$('#cOut');if(!out)return;document.querySelectorAll('#cView button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===C_VIEW?'true':'false'));
+function renderColl(){const out=$('#cOut');if(!out)return;['cRankL','cOrdL'].forEach(id=>{const e=document.getElementById(id);if(e)e.hidden=C_VIEW!=='own'});document.querySelectorAll('#cView button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===C_VIEW?'true':'false'));
   const B=bestData()||{},A=mbAll().m;const setOf=i=>{const c=A[i.id]||i;return Object.assign({},i,{setName:i.setName||c.setName||(c.setId?mbSetName(c):null),icon:i.icon||c.icon})};
   if(C_VIEW==='own'){const O2=collOwned(),items=Object.values(O2).map(x=>Object.assign(x,{it:setOf(x.it)}));collFilters(items.map(x=>x.it));
-    const pass=collPassF(),rows=items.filter(x=>pass(x.it));$('#cInfo').textContent=`${items.length} objets différents possédés · chaque objet n'apparaît qu'une fois, à son meilleur rang ; les exemplaires de rang inférieur (jusqu'à Rayonnant +0) comptent comme matière de fusion. Coût : 3 Tiers 1 → Tiers 2, 3 Tiers 2 → Rayonnant, puis Rayonnant +1/+2 : +1 Rayonnant +0, +3/+4/+5 : +2.`;
+    const pass=collPassF(),rk=$('#cRank').value,rows=items.filter(x=>pass(x.it)&&(!rk||(rk==='lt7'?x.main<7:rk==='ready'?x.next&&!x.next.missing:x.main===+rk)));$('#cInfo').textContent=`${items.length} objets différents possédés · chaque objet n'apparaît qu'une fois, à son meilleur rang ; les exemplaires de rang inférieur (jusqu'à Rayonnant +0) comptent comme matière de fusion. Coût : 3 Tiers 1 → Tiers 2, 3 Tiers 2 → Rayonnant, puis Rayonnant +1/+2 : +1 Rayonnant +0, +3/+4/+5 : +2.`;
     if(!rows.length){out.innerHTML='<p class="note">Aucun objet avec ces filtres. Importe ton export (script) pour voir ton inventaire.</p>';return}
-    let html='';for(let r=7;r>=0;r--){const g=rows.filter(x=>x.main===r).sort((a,b)=>(b.it.lvl||0)-(a.it.lvl||0)||String(a.it.n).localeCompare(b.it.n));if(!g.length)continue;
+    let html='';const asc=$('#cOrd').value==='asc';for(let i=0;i<8;i++){const r=asc?i:7-i;const g=rows.filter(x=>x.main===r).sort((a,b)=>(b.it.lvl||0)-(a.it.lvl||0)||String(a.it.n).localeCompare(b.it.n));if(!g.length)continue;
       html+=`<h3 style="margin:14px 0 6px">${MB_FUS[r]} <span class="note">(${g.length})</span></h3><div class="tablewrap"><table><tr><th></th><th>Objet</th><th>${r>=7?'En trop (à vendre)':'Autres exemplaires'}</th><th>Rang suivant</th><th>Jusqu'à Rayonnant +5</th></tr>`+g.map(x=>{const others=Object.entries(x.byF).filter(([f,q])=>q>0).sort((a,b)=>b[0]-a[0]).map(([f,q])=>`${+f===x.main?q-1?(q-1)+'× '+MB_FUS[f]+' en plus':'':q+'× '+MB_FUS[f]}`).filter(Boolean).join(', ');
         const nx=x.next?(x.next.missing?`→ ${MB_FUS[x.next.to]} : encore ~${x.next.missing} T1${x.next.missing>=9?' (≈ '+Math.ceil(x.next.missing/9)+' Rayonnant'+(Math.ceil(x.next.missing/9)>1?'s':'')+' +0)':''}`:`<strong style="color:var(--good,#4caf50)">✓ prêt → ${MB_FUS[x.next.to]}</strong>`)+(x.next.kam?` <span class="muted">· ~${fmt(x.next.kam)} k</span>`:''):'<span class="muted">rang max</span>';
         const tot=x.main>=7?'—':x.total.missing?`~${x.total.missing} T1${x.kamTot?` <span class="muted">· ~${fmt(x.kamTot)} k</span>`:''}`:'<span class="muted">matière suffisante</span>';
         return `<tr><td>${collIcon(x.it)}</td><td><span data-tip="${x.it.id}:${x.main}">${esc(x.it.n)}</span><div class="note">${C_TL[x.it.s]||esc(x.it.s)} · niv. ${x.it.lvl||'?'}${x.worn?' · équipé':''}${x.it.setName?' · '+esc(x.it.setName):''}</div></td><td class="note">${others||'—'}</td><td>${nx}</td><td>${tot}</td></tr>`}).join('')+'</table></div>'}
     out.innerHTML=html+'<p class="note">T1 = exemplaire de base (Tiers 1). Kamas : fusions Rayonnant au niveau 200 (3 000 au premier palier, 15 000 au dernier ; paliers intermédiaires estimés). Dofus et familiers suivent la même règle.</p>';return}
+  if(C_VIEW==='sell'){const O2=collOwned(),items=Object.values(O2).map(x=>Object.assign(x,{it:setOf(x.it)}));collFilters(items.map(x=>x.it));const pass=collPassF();
+    const rows=[];for(const x of items){if(!pass(x.it))continue;const rm=(f,q)=>q-Math.max((x.keep&&x.keep[f])||0,+f===x.main?1:0);const dup=Object.entries(x.byF).filter(([f,q])=>+f>2&&q>0).map(([f,q])=>[+f,rm(f,q)]).filter(([f,q])=>q>0);
+      const need=x.main>=7?0:fusVal(7)-fusVal(Math.max(0,x.main));const fodCopies=Object.entries(x.byF).filter(([f])=>+f<=2).map(([f,q])=>[+f,rm(f,q)]).filter(([f,q])=>q>0);
+      const sur=x.main>=2?Math.max(0,x.fod-need):0;if(!dup.length&&sur<1&&!(x.main>=7&&fodCopies.length))continue;
+      const fodTxt=x.main>=7?fodCopies.map(([f,q])=>q+'× '+MB_FUS[f]).join(', '):sur>=1?`~${sur} T1 de trop, même après le passage au Rayonnant +5`:'';
+      rows.push({x,txt:[dup.map(([f,q])=>q+'× '+MB_FUS[f]+' (doublon)').join(', '),fodTxt].filter(Boolean).join(' · '),w:sur+dup.reduce((a,[f,q])=>a+q*fusVal(f),0)})}
+    rows.sort((a,b)=>(b.x.it.lvl||0)-(a.x.it.lvl||0)||b.w-a.w);
+    $('#cInfo').textContent=`${rows.length} objets avec des exemplaires en trop : copies qui ne servent plus à fusionner (objet déjà au Rayonnant +5, ou plus de matière qu'il n'en faut pour y arriver) et doublons de rang élevé. Les objets équipés ou runés ne sont jamais comptés comme « en trop ».`;
+    out.innerHTML=rows.length?`<div class="tablewrap"><table><tr><th></th><th>Objet</th><th>Rang gardé</th><th>En trop (à vendre)</th></tr>${rows.slice(0,400).map(({x,txt})=>`<tr><td>${collIcon(x.it)}</td><td><span data-tip="${x.it.id}:${x.main}">${esc(x.it.n)}</span><div class="note">${C_TL[x.it.s]||esc(x.it.s)} · niv. ${x.it.lvl||'?'}</div></td><td>${MB_FUS[x.main]}</td><td class="note">${txt}</td></tr>`).join('')}</table></div>`:'<p class="note">Rien en trop avec ces filtres.</p>';return}
   // manquants
   const own=new Set((DATA.items||[]).concat(DATA.worn||[]).map(i=>i.id));const cat=(B.allItems&&B.allItems.length?B.allItems:bItems(B)).filter(i=>i&&i.s&&i.s!=='parchemin'&&!own.has(i.id)).map(setOf);
   if($('#cMin').dataset.init!=='1'){$('#cMin').value=180;$('#cMin').dataset.init='1'}collFilters(cat);
@@ -4756,7 +4862,7 @@ function renderColl(){const out=$('#cOut');if(!out)return;document.querySelector
   $('#cInfo').textContent=`${cat.length} objets du catalogue que tu n'as pas · ${rows.length} avec ces filtres. Où les trouver : monstres qui les lâchent (taux de base, zone), sinon leur source connue.`;
   const shown=rows.slice(0,300);out.innerHTML=shown.length?`<div class="tablewrap"><table><tr><th></th><th>Objet</th><th>Où le trouver</th></tr>${shown.map(i=>`<tr><td>${collIcon(i)}</td><td><span data-tip="${i.id}:0">${esc(i.n)}</span><div class="note">${C_TL[i.s]||esc(i.s)} · niv. ${i.lvl||'?'}${i.setName?' · '+esc(i.setName):''}</div></td><td class="note">${collSrc(B,i.id)}</td></tr>`).join('')}</table></div>${rows.length>300?`<p class="note">300 premiers affichés sur ${rows.length} : affine les filtres.</p>`:''}`:'<p class="note">Aucun objet manquant avec ces filtres.</p>'}
 document.querySelectorAll('#cView button').forEach(b=>b.addEventListener('click',()=>{C_VIEW=b.dataset.v;try{localStorage.setItem('labo-cview',C_VIEW)}catch(e){}renderColl()}));
-['cQ','cSlot','cMin','cMax','cSet'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener(el.tagName==='SELECT'?'change':'input',()=>{try{renderColl()}catch(e){}})});
+['cQ','cSlot','cMin','cMax','cSet','cRank','cOrd'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener(el.tagName==='SELECT'?'change':'input',()=>{try{renderColl()}catch(e){}})});
 document.querySelectorAll('.seg:not(#playMode):not(#bView):not(#profMode)').forEach(g=>g.querySelectorAll('button').forEach(b=>b.onclick=()=>{g.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b?'true':'false'))}));
 const dv=v=>'×'+Number(v).toLocaleString('fr-FR',{minimumFractionDigits:1,maximumFractionDigits:2});
 $('#simDiff').oninput=e=>$('#simDiffV').textContent=dv(e.target.value);
@@ -5021,7 +5127,7 @@ function renderAscResult(res,pack,mult,su){
       +(far?`<div class="alert"><strong>Étage ${T} extrapolé.</strong><span>Ton plus haut étage enregistré est le ${rec} : la force des boss au-delà est estimée (×${fmt(floorPower(T)/floorPower(rec),1)} par rapport à l'étage ${rec}). Fiable jusqu'à environ l'étage ${rec+5}.</span></div>`:'')})()}
   ${unsim?'<div class="alert">Une partie des mécaniques de ce groupe n\'est pas encore simulée : le taux réel peut être plus bas.</div>':''}
   ${wr<0.6?`<div class="alert">Moins de 60 % de victoires avec ton stock actuel${b.progress!=null?` (en moyenne, ${fmt(b.progress*100,0)} % des PV des boss sont retirés avant ta défaite)`:''}. ${PLAY_AUTO&&pack.defs.some(d=>R.autoWarnings(d.mech||{}).length)?'Ce groupe a des mécaniques que le mode auto ne gère pas : passe le mode de combat sur « À la main » en haut de page et relance.':'Essaie l\'effort Poussé, ou vise d\'abord un étage plus bas.'}</div>`:''}
-  ${choicesHtml(res)}${archTable(res)}${scenTable(b)}
+  ${scenTable(b)}
   <h3>Équipement · ${changes.length} changement${changes.length>1?'s':''}</h3><ul>${changes.map(c=>`<li>${esc(c)}</li>`).join('')||'<li class="muted">Garde ton équipement.</li>'}</ul>
   <h3>Points de caractéristiques</h3><p>${esc(lastAsc.points)} <span class="note">(après réinitialisation)</span></p>
   <h3>Deck</h3><div class="cards">${st.deck.map(k=>cardsByKey[k]?cardChip(cardsByKey[k]):'').join('')}</div>${autoOrderHtml(st)}
@@ -5233,7 +5339,7 @@ function renderTierList(){
   const m=$('#tlMore');if(m)m.onclick=()=>{out.dataset.n=N+150;renderTierList()};
 }
 function renderBank2(){
-  const wrap=$('#bank2Wrap');if(!wrap)return;const S=profData('saison'),Pp=profData('principal');
+  const wrap=$('#bank2Wrap');if(!wrap||wrap.dataset.off==='1')return;const S=profData('saison'),Pp=profData('principal');
   if(!S){wrap.hidden=false;$('#bank2Note').innerHTML='Importe un export de ton perso Héroïque (saison) pour savoir quoi mettre en Banque.';$('#bank2Out').innerHTML='';return}
   const H=200,lam=+$('#bkStyle').value;
   const X=itemUniverse();const P=O.valueProfile(Pp.cards,Pp.meta.decks[Pp.meta.active],Pp.meta);
@@ -5447,13 +5553,28 @@ function mbAll(){if(mbAll.c&&mbAll.d===DATA)return mbAll.c;const m={},icon={};
   mbAll.c={m,icon,own};mbAll.d=DATA;return mbAll.c}
 function mbIcon(it){const ic=it&&(it.icon||mbAll().icon[it.id]);return ic?`https://rpgmasters.houk.fr/img/items/${ic}.png`:''}
 function mbIni(it){return esc(String(it.n||'?').split(/[\s'’-]+/).filter(w=>w.length>2).slice(0,2).map(w=>w[0]).join('').toUpperCase()||'?')}
-function mbFresh(){const g={};for(const [s,it] of Object.entries(curGear||{}))if(it)g[s]={id:it.id,f:it.f||0};return {gear:g,alloc:Object.assign({},curAlloc||{}),deck:(DATA.meta.decks[DATA.meta.active]||[]).slice()}}
+function mbFresh(){const g={};for(const [s,it] of Object.entries(curGear||{}))if(it){g[s]={id:it.id,f:it.f||0};const rc=R.runeCodes(it.ru);if(rc.length)g[s].ru=rc}return {gear:g,alloc:Object.assign({},curAlloc||{}),deck:(DATA.meta.decks[DATA.meta.active]||[]).slice()}}
 function mbLoad(){if(MB)return MB;try{const x=JSON.parse(localStorage.getItem(MB_KEY)||'null');if(x&&x.gear)MB=x}catch(e){}if(!MB)MB=mbFresh();return MB}
 function mbSave(){try{localStorage.setItem(MB_KEY,JSON.stringify(MB))}catch(e){}}
 function mbGear(g){const A=mbAll().m,o={};for(const [s,x] of Object.entries(g||{})){const it=x&&A[x.id];if(it)o[s]=Object.assign({},it,{f:x.f||0,q:9,slot:s},x.ru&&x.ru.length?{ru:x.ru.slice(0,2)}:{})}return o}
 /* Runes (patch du 12/10) : catalogue du jeu (moteur), stock lu par le script */
-function runeStock(){const h=(DATA&&DATA.meta&&DATA.meta.runesProbe&&DATA.meta.runesProbe.hits)||[];const o={};if(Array.isArray(h))for(const x of h)if(x&&x.rune&&R.RUNES[x.rune])o[x.rune]=Math.max(o[x.rune]||0,+x.qty||0);return o}
+function runeStock(){const P=(DATA&&DATA.meta&&DATA.meta.runesProbe)||{};const h=(P.stock&&P.stock.length?P.stock:P.hits)||[];const o={};if(Array.isArray(h))for(const x of h)if(x&&x.rune&&R.RUNES[x.rune])o[x.rune]=Math.max(o[x.rune]||0,+x.qty||0);return o}
 function runeVal(c){const r=R.RUNES[c];if(!r)return '';if(r.pct)return `+${r.pct} % des stats de l'objet`;if(r.elem)return 'double les dommages élémentaires de l\'objet';return Object.entries(r.st).map(([k,v])=>k==='resPctAll'?`+${v} % toutes rés.`:k==='dmgPctCrit'?`+${v} % dommages critiques`:k==='dmgPctSorts'?`+${v} % dommages aux sorts`:(L=>`+${v}${/^resPct|critique/.test(k)&&!/%/.test(L)?' %':''} ${L}`)(MB_LBL[k]||STAT_LABEL[k]||k)).join(', ')}
+/* Placement automatique des runes du stock (runes déjà gravées conservées) : ajout glouton de la rune qui améliore le plus le build, selon l'orientation */
+function runeMetric(S,deck,obj){const D=Math.max(1,R.dmgIndex(S,deck)),res=['resPctNeutre','resPctTerre','resPctFeu','resPctEau','resPctAir'].reduce((a,k)=>a+Math.min(50,S[k]||0),0)/5,EHP=Math.max(1,S._maxHp||1)/(1-res/100),L=Math.log;
+  switch(obj){case 'pp':return 3*L(Math.max(1,S._pp||1))+0.5*L(D)+0.3*L(EHP);case 'sagesse':return 3*L(100+(S.sagesse||0))+0.5*L(D)+0.3*L(EHP);case 'pvp-ini':return 2*L(Math.max(1,S.initiative||1))+L(D);
+    case 'survie':case 'ascension-tank':return L(D)+1.5*L(EHP);case 'ascension':return L(D)+L(EHP);case 'kralamoure':return L(D);default:return L(D)+0.4*L(EHP)}}
+function runePlan(gear,alloc,deck,obj,stock){gear=Object.fromEntries(Object.entries(gear).map(([k,v])=>[k,v?Object.assign({},v,{ru:R.runeCodes(v.ru)}):v]));const st=Object.assign({},stock);
+  const val=g=>{try{const b=O.buildState(DATA,{gear:g,alloc,deck},ctx);return runeMetric(b.S,b.deck,obj)}catch(e){return -Infinity}};
+  let paUsed=Object.values(gear).some(it=>it&&it.s!=='dofus'&&(it.ru||[]).includes('pa'));let cur=val(gear);const plan=[];
+  for(let step=0;step<40;step++){const free=Object.keys(gear).filter(sl=>gear[sl]&&gear[sl].s!=='dofus'&&(gear[sl].ru||[]).length<2);if(!free.length)break;let best=null;
+    for(const c of Object.keys(st)){if(!(st[c]>0)||!R.RUNES[c]||(c==='pa'&&paUsed))continue;const r=R.RUNES[c];const cand=r.pct||r.elem?free:[free[0]];
+      for(const sl of cand){const g=Object.assign({},gear,{[sl]:Object.assign({},gear[sl],{ru:(gear[sl].ru||[]).concat([c])})});const v=val(g)-cur;if(!best||v>best.v)best={c,sl,v,g}}}
+    if(!best||best.v<=1e-5)break;gear=best.g;cur+=best.v;st[best.c]--;if(best.c==='pa')paUsed=true;plan.push({slot:best.sl,c:best.c})}
+  // regroupe les runes « plates » sur les objets sans rune % (Éclat/Éveil sur les objets les plus chargés)
+  return {gear,plan}}
+function runePlanHtml(plan,gearFull){if(!plan.length)return '<p class="note">Aucune rune de ton stock n\'améliore ce build (ou plus d\'emplacement libre).</p>';const by={};for(const p of plan)(by[p.slot]=by[p.slot]||[]).push(p.c);
+  return `<div class="tablewrap"><table><tr><th>Objet</th><th>Runes à graver</th></tr>${Object.entries(by).map(([sl,cs])=>`<tr><td>${esc((gearFull[sl]&&gearFull[sl].n)||SLOT_LABEL[sl]||sl)}</td><td>${cs.map(c=>esc(runeLabel(c))).join('<br>')}</td></tr>`).join('')}</table></div>`}
 function renderMBRunes(){const box=$('#mbRunes');if(!box)return;const st=runeStock(),own=Object.keys(st).filter(c=>st[c]>0);
   if(!own.length){box.innerHTML='<p class="note">Aucune rune connue : ouvre l\'onglet Runes de ton inventaire dans le jeu, puis « Envoyer au Labo » (script 2.12.20 ou plus).</p>';return}
   const b=mbLoad();let base;try{base=mbState(b)}catch(e){box.textContent='Calcul impossible : '+e.message;return}const I0=R.dmgIndex(base.S,base.deck);
@@ -5463,7 +5584,9 @@ function renderMBRunes(){const box=$('#mbRunes');if(!box)return;const st=runeSto
   const rows=own.map(c=>{const r=R.RUNES[c];let gain,where=null;if(r.pct||r.elem){gain=-1;for(const s of slots){const v=try1(s,c);if(v>gain){gain=v;where=s}}}else gain=try1(slots[0],c);
     const keys=Object.keys(r.st||{});const t=gain>=0.04?'S':gain>=0.015?'A':gain>=0.003?'B':keys.some(k=>SURV.test(k))?'Survie':keys.some(k=>UTIL.test(k))?'Selon l\'objectif':'Inutile ici';return {c,t,gain,where}});
   const ORD=['S','A','B','Survie','Selon l\'objectif','Inutile ici'],HINT={S:'à graver en premier',A:'bon gain de dégâts',B:'petit gain de dégâts',Survie:'PV / résistances / soins : pour les boss qui tapent fort','Selon l\'objectif':'Sagesse (XP), Prospection (butin), Initiative (PvP)…','Inutile ici':'plafond déjà atteint (PA, critique) ou sans effet sur ce build'};
-  box.innerHTML='<div class="tablewrap"><table><tr><th>Tier</th><th>Runes</th></tr>'+ORD.filter(t=>rows.some(r=>r.t===t)).map(t=>`<tr><td><strong>${esc(t)}</strong><div class="note">${esc(HINT[t])}</div></td><td>${rows.filter(r=>r.t===t).sort((x,y)=>y.gain-x.gain).map(r=>`${esc(runeLabel(r.c))} ×${st[r.c]}${r.where&&A[b.gear[r.where].id]?` <span class="note">→ sur ${esc(A[b.gear[r.where].id].n)}</span>`:''}`).join('<br>')}</td></tr>`).join('')+'</table></div><p class="note">Classement des dégâts sans hasard, pour le build affiché ci-dessus (stuff, points, deck). 1 rune d\'Action par personnage.</p>'}
+  const planBtn='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 8px"><button class="btn" type="button" id="mbRunePlan">Placer mes runes automatiquement</button><span class="note">Remplit les emplacements libres (hors Dofus) avec les runes de ton stock qui servent le plus ce build ; les runes déjà gravées restent.</span></div>';
+  box.innerHTML=planBtn+'<div class="tablewrap"><table><tr><th>Tier</th><th>Runes</th></tr>'+ORD.filter(t=>rows.some(r=>r.t===t)).map(t=>`<tr><td><strong>${esc(t)}</strong><div class="note">${esc(HINT[t])}</div></td><td>${rows.filter(r=>r.t===t).sort((x,y)=>y.gain-x.gain).map(r=>`${esc(runeLabel(r.c))} ×${st[r.c]}${r.where&&A[b.gear[r.where].id]?` <span class="note">→ sur ${esc(A[b.gear[r.where].id].n)}</span>`:''}`).join('<br>')}</td></tr>`).join('')+'</table></div><p class="note">Classement des dégâts sans hasard, pour le build affiché ci-dessus (stuff, points, deck). 1 rune d\'Action par personnage.</p>';
+  const pb=$('#mbRunePlan');if(pb)pb.onclick=()=>{const full=mbGear(b.gear);const P=runePlan(full,b.alloc||{},(b.deck||[]).filter(k=>cardsByKey[k]),'equilibre',st);for(const p of P.plan){const g=b.gear[p.slot];if(g){g.ru=(g.ru||[]).concat([p.c]).slice(0,2)}}mbSave();renderMB();const m=$('#mbMsg');if(m)m.textContent=P.plan.length?`${P.plan.length} rune${P.plan.length>1?'s':''} placée${P.plan.length>1?'s':''} (voir chaque emplacement).`:'Aucune rune utile à placer.'}}
 function runeLabel(c){return `${R.RUNE_NAMES[c]||c} (${runeVal(c)})`}
 const RUNE_ORDER=Object.keys(R.RUNES||{}).sort((a,b)=>({legendaire:0,epique:1}[R.RUNE_RARITY[a]]??2)-({legendaire:0,epique:1}[R.RUNE_RARITY[b]]??2));
 function mbState(b){return O.buildState(DATA,{gear:mbGear(b.gear),alloc:b.alloc||{},deck:(b.deck||[]).filter(k=>cardsByKey[k])},ctx)}
@@ -5600,8 +5723,15 @@ const PRE_WHY={farm:'Pour enchaîner les combats de farm le plus vite possible :
 const PRE_SHORT={farm:'Farm rapide, deck court et rentable.',equilibre:'Polyvalent : farm et Ascension moyenne.',tank:'PV, résistances, boucliers : Ascension.',krala:'Dégâts max en 10 tours.',pp:'Prospection max, 95 % de victoires.',zone:'Que des sorts de zone : groupes.'};
 const PRE_ORDER=['equilibre','farm','tank','krala','pp','zone'];
 let PRE_SEL=null,PRE_TAB='car';
-function preList(){const tier=segVal('preTier')||'budget';return PRE_ORDER.map(a=>PREBUILDS.find(b=>b.arch===a&&b.tier===tier)).filter(Boolean)}
-function preKpi(b){return b.arch==='pp'?[fmt(b.r.pp),'prospection']:[fmt(b.r.hp),'PV · '+(b.r.pa||'?')+' PA']}
+function preList(){const tier=segVal('preTier')||'budget';if(tier==='vit')return vitPrebuilds();return PRE_ORDER.map(a=>PREBUILDS.find(b=>b.arch===a&&b.tier===tier)).filter(Boolean)}
+/* Builds des vitrines publiques, les plus likés d'abord, affichés comme des prébuilds */
+function vitPrebuilds(){const V=vitrineData();if(vitPrebuilds.v===V)return vitPrebuilds.c;const cn={};for(const c of (V.cards||[]))cn[c.id]=c;for(const c of (DATA.cards||[]))if(!cn[c.id])cn[c.id]={id:c.id,n:c.n,ap:c.ap};
+  const out=(V.builds||[]).slice().sort((a,b)=>(b.likes||0)-(a.likes||0)).slice(0,24).map(v=>{const gear={};let deckIds=v.deck||[];
+    for(const code of (v.codes||[])){try{const d=O.decodeCode(code);if(d.kind==='E')for(const x of d.items)if(x.slot)gear[x.slot]={id:x.id,f:x.f};if(d.kind==='S'&&d.ids.length)deckIds=d.ids}catch(e){}}
+    return {arch:'v_'+v.id,tier:'vit',vit:true,likes:v.likes||0,head:v.head||'?',label:`${v.head||'Joueur'} · ${v.likes||0} ♥`,gear,alloc:{},deck:deckIds.map(id=>cn[id]||{id,n:'Sort '+id,ap:'?'})}});
+  vitrinePrebuildsCache(V,out);return out}
+function vitrinePrebuildsCache(V,out){vitPrebuilds.v=V;vitPrebuilds.c=out}
+function preKpi(b){if(b.vit)return [b.likes+' ♥','likes en vitrine'];return b.arch==='pp'?[fmt(b.r.pp),'prospection']:[fmt(b.r.hp),'PV · '+(b.r.pa||'?')+' PA']}
 function preGear(b){const g={};for(const [s,x] of Object.entries(b.gear||{}))if(x)g[s]={id:x.id,f:x.f||0};return g}
 function preDeckKeys(b){const byId={};for(const c of DATA.cards)byId[c.id]=c.key;return (b.deck||[]).map(c=>byId[c.id]).filter(Boolean)}
 function preIc(s,x,own,cls){const it=x&&mbAll().m[x.id];if(!it)return `<span class="${cls}" title="${esc(SLOT_LABEL[s]||s)}"></span>`;const src=mbIcon(it);
@@ -5614,7 +5744,7 @@ function renderPrebuilds(){const el=$('#preOut');if(!el)return;const L=preList()
     return `<button type="button" class="pre-card" data-pre="${b.arch}" aria-pressed="${PRE_SEL===b.arch}">
       <div class="pre-doll"><div class="pre-col">${MB_LEFT.map(s=>preIc(s,g[s],own,'pre-ic')).join('')}</div><div class="pre-mid"></div><div class="pre-col">${MB_RIGHT.map(s=>preIc(s,g[s],own,'pre-ic')).join('')}</div></div>
       <div class="pre-dof">${MB_DOF.map(s=>preIc(s,g[s],own,'pre-ic')).join('')}</div>
-      <h3>${esc(b.label)}</h3><p class="note">${esc(PRE_SHORT[b.arch]||'')}</p><p class="note">${no}/${n} objets possédés · ${(b.deck||[]).length} sorts</p></button>`}).join('')}</div>`;
+      <h3>${esc(b.label)}</h3><p class="note">${esc(b.vit?'Build en vitrine':PRE_SHORT[b.arch]||'')}</p><p class="note">${no}/${n} objets possédés · ${(b.deck||[]).length} sorts</p></button>`}).join('')}</div>`;
   el.querySelectorAll('[data-pre]').forEach(c=>c.onclick=()=>{PRE_SEL=PRE_SEL===c.dataset.pre?null:c.dataset.pre;renderPrebuilds();if(PRE_SEL){const d=$('#preDetail');if(d.scrollIntoView)d.scrollIntoView({behavior:'smooth',block:'start'})}});
   renderPreDetail()}
 function renderPreDetail(){const el=$('#preDetail');const b=PRE_SEL&&preList().find(x=>x.arch===PRE_SEL);if(!b){el.hidden=true;el.innerHTML='';return}el.hidden=false;
@@ -5624,22 +5754,23 @@ function renderPreDetail(){const el=$('#preDetail');const b=PRE_SEL&&preList().f
   const big=s=>{const x=gear[s],it=x&&mbAll().m[x.id];const src=it&&mbIcon(it);return `<span class="mb-slot" style="cursor:default${it&&!own.has(it.id)?';border-style:dashed':''}" ${it?`data-tip="${it.id}:${x.f||0}"`:`title="${esc(SLOT_LABEL[s]||s)}"`}>${it?(src?`<img src="${src}" alt="" loading="lazy">`:`<span class="mb-ini">${mbIni(it)}</span>`):emptyLbl(s)}</span>`};
   const nOwn=Object.values(gear).filter(x=>own.has(x.id)).length;
   el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><h2 style="margin:0">${esc(b.label)}</h2><button class="btn ghost" type="button" id="preClose">Fermer</button></div>
-  <p class="note" style="margin:4px 0 10px">${esc(PRE_WHY[b.arch]||'')}</p>
+  <p class="note" style="margin:4px 0 10px">${esc(b.vit?`Build exposé en vitrine par ${b.head} (${b.likes} likes), avec ses fusions. Pointillés = objet que tu n'as pas.`:PRE_WHY[b.arch]||'')}</p>
   <div class="pre-det"><div style="display:grid;gap:10px">
-    <div class="mb-doll"><div class="mb-col">${MB_LEFT.map(big).join('')}</div><div class="mb-center"><strong>${preKpi(b)[0]}</strong><span class="note">${preKpi(b)[1]}</span><span class="note">${nOwn}/${Object.keys(gear).length} objets possédés</span><span class="note">Calculé au prestige 6, sans passif de classe.</span></div><div class="mb-col">${MB_RIGHT.map(big).join('')}</div></div>
+    <div class="mb-doll"><div class="mb-col">${MB_LEFT.map(big).join('')}</div><div class="mb-center"><strong>${preKpi(b)[0]}</strong><span class="note">${preKpi(b)[1]}</span><span class="note">${nOwn}/${Object.keys(gear).length} objets possédés</span><span class="note">${b.vit?'Points de carac non publiés : les tiens sont utilisés.':'Calculé au prestige 6, sans passif de classe.'}</span></div><div class="mb-col">${MB_RIGHT.map(big).join('')}</div></div>
     <div class="mb-dofus">${MB_DOF.map(big).join('')}</div>
-    <div><strong>Points</strong> : ${esc(allocText(b.alloc||{})||'—')}</div>
+    <div><strong>Points</strong> : ${esc(b.vit?'tes points actuels ('+(allocText(curAlloc)||'—')+')':allocText(b.alloc||{})||'—')}</div>
     <div><strong>Deck (${b.deck.length})</strong><div>${b.deck.map(c=>`<span class="mb-card" style="cursor:default" ${ownC.has(c.id)?'':'title="Sort que tu n\'as pas"'}>${ownC.has(c.id)?'':'⚠ '}${esc(c.n)} <span class="muted">${c.ap} PA</span></span>`).join('')}</div></div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap">${ce?`<button class="btn" type="button" data-pcopy="${ce}">Copier le stuff</button>`:''}${cd?`<button class="btn" type="button" data-pcopy="${cd}">Copier le deck</button>`:''}<button class="btn" type="button" id="preToMb">Ouvrir dans le Build manuel</button></div><span class="note" id="preMsg"></span>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">${ce?`<button class="btn" type="button" data-pcopy="${ce}">Copier le stuff</button>`:''}${cd?`<button class="btn" type="button" data-pcopy="${cd}">Copier le deck</button>`:''}<button class="btn" type="button" id="preToMb">Ouvrir dans le Build manuel</button><button class="btn ghost" type="button" id="preToOpt" title="Part de ce build avec les objets que tu possèdes (les autres emplacements gardent ton stuff actuel), puis optimise">Adapter à mon inventaire</button></div><span class="note" id="preMsg"></span>
   </div><div><h3 style="margin:0 0 6px">Stats <span class="note">(écart avec ton stuff actuel, avec ton niveau et ton prestige)</span></h3><div id="preStats">${S?mbStatsBlock(S,mbCurS(),full,PRE_TAB,'preTab'):'<p class="note">Calcul impossible.</p>'}</div></div></div>`;
   el.querySelectorAll('[data-pcopy]').forEach(bt=>bt.onclick=()=>copyText(bt.dataset.pcopy,$('#preMsg')));
   $('#preClose').onclick=()=>{PRE_SEL=null;renderPrebuilds()};
-  $('#preToMb').onclick=()=>mbOpen({gear,alloc:Object.assign({},b.alloc||{}),deck},`Prébuild ${b.label} (${b.tier})`);
+  $('#preToMb').onclick=()=>mbOpen({gear,alloc:Object.assign({},b.vit?curAlloc:b.alloc||{}),deck},b.vit?`Vitrine ${b.label}`:`Prébuild ${b.label} (${b.tier})`);
+  $('#preToOpt').onclick=()=>{const g=Object.assign({},curGear);const og={};for(const [sl,x] of Object.entries(gear))if(own.has(x.id))og[sl]=x;Object.assign(g,mbGear(og));const dk=deck.filter(k=>cardsByKey[k]);setOptStart({name:b.vit?'Vitrine '+b.label:'Prébuild '+b.label,gear:g,alloc:Object.assign({},b.vit||!b.alloc||!Object.keys(b.alloc).length?curAlloc:b.alloc),deck:dk.length>=5?dk:(DATA.meta.decks[DATA.meta.active]||[])});showTab('opt');try{window.scrollTo({top:0,behavior:'smooth'})}catch(e){}};
   el.querySelectorAll('#preTab button').forEach(x=>x.onclick=()=>{PRE_TAB=x.dataset.v;renderPreDetail()})}
 document.querySelectorAll('#preTier button').forEach(bt=>bt.addEventListener('click',()=>setTimeout(renderPrebuilds,0)));
 function renderItemsTab(){try{renderVitrines()}catch(e){$('#vitOut').textContent='Erreur : '+e.message}try{renderDofusFx()}catch(e){}try{renderBank2()}catch(e){$('#bank2Out').textContent='Erreur : '+e.message}try{renderTierList()}catch(e){$('#tlOut').textContent='Erreur : '+e.message}}
 ['tlFor','tlSlot','tlSrc','tlMin','tlMax','tlStyle','tlQ','bkStyle','tlSet'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener(id==='tlQ'||id==='tlMin'||id==='tlMax'||id==='bkLvl'?'input':'change',()=>{if(id.startsWith('tl')){if(id==='tlSet')TL=null;$('#tlOut').dataset.n=150;renderTierList()}else renderBank2()})});
-function init(){prepare();renderPerso();try{renderPV()}catch(e){const x=document.getElementById('pvMsg');if(x)x.textContent='Vue impossible : '+e.message}try{renderCardUse();renderFreePts();renderBank()}catch(e){}renderAscPanel();renderBest();packOptions($('#simPack'));packOptions($('#oPack'));try{optTargetNote()}catch(e){};{const o=document.createElement('option');o.value='poly';o.textContent='Polyvalent · tes adversaires habituels (conseillé)';$('#oPack').insertBefore(o,$('#oPack').firstChild);$('#oPack').value='poly'}deckOptions($('#simDeck'));deckOptions($('#oStart'));try{renderLocks()}catch(e){}setTimeout(()=>{markReady($('#oPack'),'opt');markReady($('#aPack'),'asc')},400);}
+function init(){prepare();renderPerso();try{renderPV()}catch(e){const x=document.getElementById('pvMsg');if(x)x.textContent='Vue impossible : '+e.message}try{renderCardUse();renderFreePts();renderBank()}catch(e){}renderAscPanel();renderBest();packOptions($('#simPack'));packOptions($('#oPack'));try{optTargetNote()}catch(e){};{const o=document.createElement('option');o.value='poly';o.textContent='Polyvalent · tes adversaires habituels (conseillé)';$('#oPack').insertBefore(o,$('#oPack').firstChild);$('#oPack').value='poly'}deckOptions($('#simDeck'));deckOptions($('#oStart'));try{renderLocks()}catch(e){}try{fillGearStart();renderCons()}catch(e){}setTimeout(()=>{markReady($('#oPack'),'opt');markReady($('#aPack'),'asc')},400);}
 (function(){const set=v=>{if(v==='light')document.documentElement.setAttribute('data-theme','light');else document.documentElement.removeAttribute('data-theme');const b=document.getElementById('themeTg');if(b)b.textContent=v==='light'?'Thème sombre':'Thème clair'};let v='dark';try{v=localStorage.getItem('labo-theme2')||'dark'}catch(e){}set(v);const b=document.getElementById('themeTg');if(b)b.onclick=()=>{v=v==='light'?'dark':'light';set(v);try{localStorage.setItem('labo-theme2',v)}catch(e){}}})();
 setupData();init();
 // imports stockés dans IndexedDB : on recharge dès qu'ils sont lus
