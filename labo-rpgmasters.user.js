@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.12.21
+// @version      2.12.23
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -183,7 +183,7 @@
     }
     // Runes gravées : leurs stats profitent du bonus Prestige/Forge/Compagnon, au plus ×2
     { let paUsed = 0; const rm = Math.min(2, pMult);
-      for (const g of gear) { if (!g || !g.item) continue; const codes = runeCodes(g.ru || g.item.ru); if (!codes.length) continue;
+      for (const g of gear) { if (!g || !g.item || g.item.s === 'dofus') continue; const codes = runeCodes(g.ru || g.item.ru); if (!codes.length) continue; // Dofus et trophées : plus de runes (patch V3)
         const r = runeStats(itemStats(g.item, g.f), codes, 1 - paUsed); paUsed += r.pa;
         for (const k in r.st) { const v = r.st[k]; const keys = k === 'resPctAll' ? ['resPctNeutre', 'resPctTerre', 'resPctFeu', 'resPctEau', 'resPctAir'] : [k];
           for (const kk of keys) { if (CAP3.includes(kk)) { raw3[kk] = (raw3[kk] || 0) + v; continue; } tot[kk] = (tot[kk] || 0) + (NOT_SCALED.includes(kk) ? v : jsRound(v * rm)); } } } }
@@ -302,18 +302,19 @@
 
   // opts: {S, deck:[cards], weapon, monsters:[defs], maxRounds}
   // Prestige (patch du 12/10) : sorts de sa classe et passif de classe +10 % par Prestige (+200 % au P20) ; réductions de dégâts et chances de déclenchement inchangées
-  const CLS_SCALE_K = ['dmg', 'steal', 'heal', 'healPct', 'shieldHp', 'shieldLvl', 'bomb', 'dmgCasterHp'];
-  function clsScale(c, pm) {
-    const sc = l => CLS_SCALE_K.includes(l.k) ? Object.assign({}, l, { min: Math.round((l.min || 0) * pm), max: Math.round((l.max || 0) * pm) }) : l;
+  // Patch V3 (13/10) : sorts de dégâts de classe +10 %/P, sorts de boost +2 %/P, passif +5 %/P (soins et boucliers de classe : plus de bonus)
+  const CLS_SCALE_K = ['dmg', 'steal', 'bomb', 'dmgCasterHp'];
+  function clsScale(c, pm, pb) {
+    const sc = l => CLS_SCALE_K.includes(l.k) ? Object.assign({}, l, { min: Math.round((l.min || 0) * pm), max: Math.round((l.max || 0) * pm) }) : l.k === 'buff' && pb > 1 ? Object.assign({}, l, { min: Math.round((l.min || 0) * pb), max: Math.round((l.max || 0) * pb) }) : l;
     const eff = c.eff.map(sc), isDmg = l => l.k === 'dmg' || l.k === 'steal';
     return Object.assign({}, c, { eff, dmgLines: eff.filter(isDmg), chanceLines: eff.filter(l => l.chance), summon: c.summon ? Object.assign({}, c.summon, { min: Math.round(c.summon.min * pm), max: Math.round(c.summon.max * pm) }) : null });
   }
   function simulateFight(opts) {
     const S = opts.S, maxHp = S._maxHp;
-    const PM = 1 + 0.1 * Math.min(20, S._prestige || 0);
+    const PRE = Math.min(20, S._prestige || 0), PMd = 1 + 0.1 * PRE, PMb = 1 + 0.02 * PRE, PM = 1 + 0.05 * PRE; // PM : multiplicateur du passif
     const P = { hp: Math.min(maxHp, opts.startHp > 0 ? opts.startHp : maxHp), shields: [], apNext: 0 };
     const mons = opts.monsters.map(makeMonster);
-    let pile = shuffle(opts.deck.map(c => PM > 1 && c.cls != null && c.cls === S._breed ? clsScale(c, PM) : c)), discard = [], hand = [];
+    let pile = shuffle(opts.deck.map(c => PRE > 0 && c.cls != null && c.cls === S._breed ? clsScale(c, PMd, PMb) : c)), discard = [], hand = [];
     const shieldCap = Math.floor(maxHp * SUSTAIN.maxPctHp / 100);
     const specP = S._spectral / 100;
     let dmgDone = 0, hpLost = 0;
@@ -333,17 +334,17 @@
     const clsPct0 = (m, c, bomb) => {
       if (!PK) return 0; const w = c && c.weapon, cur = C.cur || {};
       switch (PK) {
-        case 'feca': return 6 * C.n;
+        case 'feca': return 4 * C.n; // Armure : 20 % au plus (patch V3, avant 30 %)
         case 'osamodas': { const n = summons.length; return 20 * Math.min(3, n) + (n ? 25 : 0); } // Dompteur : +20 % par invocation active (3 au plus) ; Attaques coordonnées (patch du 12/10) : les invocations répercutent 25 % de ses dégâts (compté une fois tant qu'au moins une invocation est là)
-        case 'enutrof': return 5 * C.n;
-        case 'xelor': return 6 * C.n;
-        case 'eniripsa': return 9 * C.n;
+        case 'enutrof': return 5.5 * C.n;
+        case 'xelor': return 6.6 * C.n;
+        case 'eniripsa': return 9.9 * C.n;
         case 'pandawa': return 5 * C.n;
-        case 'sram': { const r = m ? m.hp / m.maxHp : 1; return r < 0.25 ? 60 : r < 0.5 ? 30 : 0; }
+        case 'sram': { const r = m ? m.hp / m.maxHp : 1; return r < 0.25 ? 66 : r < 0.5 ? 33 : 0; }
         case 'sacrieur': return Math.min(63, 7 * Math.floor(missPct() / 10));
-        case 'roublard': return (bomb ? 50 : 0) + 10 * Math.min(3, C.bombN);
+        case 'roublard': return (bomb ? 55 : 0) + 11 * Math.min(3, C.bombN);
         case 'zobal': { const k = (T.round - 1) % 3; return k === 0 ? 10 : k === 1 ? 25 : 0; }
-        case 'steamer': return 7 * Math.min(6, Math.max(0, T.round - 1));
+        case 'steamer': return 7.7 * Math.min(6, Math.max(0, T.round - 1));
         case 'eliotrope': return cur.portal ? 50 : 0;
         case 'huppermage': return 11 * Math.min(4, C.runes.size);
         case 'ouginak': return m && m === C.prey ? 12 * C.preyN : 0;
@@ -351,7 +352,7 @@
       }
       return 0;
     };
-    const clsTaken = () => PK === 'feca' ? 6 * C.n : PK === 'zobal' ? [10, 0, 25][(T.round - 1) % 3] : 0; // % de dégâts subis en moins
+    const clsTaken = () => PK === 'feca' ? 4 * C.n : PK === 'zobal' ? [10, 0, 25][(T.round - 1) % 3] : 0; // % de dégâts subis en moins
     const ECA = PK === 'ecaflip';
     const saved = () => { if (P.hp <= 0 && !emeraudeUsed) { emeraudeUsed = true; P.hp = Math.max(1, Math.round(maxHp * 0.2)); } return P.hp > 0; }; // Émeraude : survit une fois avec 20 % de PV
     // Mécaniques de boss : chaque boss encore debout applique les siennes (bestiaire + mécaniques apprises en combat)
@@ -364,7 +365,7 @@
     if (DF.argente) P.shields.push({ value: Math.floor(maxHp * 0.08), turns: 99 }); // Argenté Scintillant : bouclier de 8 % des PV max au début
     // Pioches en plus (bouton « Piocher ») : réserve plafonnée par la stat Invocations, qui se recharge de 1 par tour (Dofoozbz : 2)
     const drawCap = opts.abyss ? 0 : Math.min(4, Math.max(0, Math.round(S.invocations || 0))); let drawsLeft = drawCap; // stat Invocations : 1 pioche en plus par point, 4 au plus, pas dans les Abysses
-    const summons = []; const sumMult = () => PK === 'osamodas' ? 1 + PM : PK === 'roublard' ? 1 + 0.5 * PM : PK === 'steamer' ? 1 + 0.07 * PM * Math.min(6, Math.max(0, T.round - 1)) : 1; // Dompteur ×2, Artificier +50 %, Évolution du Steamer // invocations actives : { name, min, max, el, left } — attaquent au début de tes tours
+    const summons = []; const sumMult = () => PK === 'osamodas' ? 1 + PM : PK === 'roublard' ? 1 + 0.55 * PM : PK === 'steamer' ? 1 + 0.077 * PM * Math.min(6, Math.max(0, T.round - 1)) : 1; // Dompteur ×2, Artificier +50 %, Évolution du Steamer // invocations actives : { name, min, max, el, left } — attaquent au début de tes tours
     let olStreak = 0; // Sorts à une seule ligne (patch du 12/10) : +50 %, puis +20 % par tour sans lancer à plusieurs lignes, +150 % au plus ; un lancer à plusieurs lignes (sort ou corps à corps) remet à zéro jusqu'au tour suivant
     const deckBonus = opts.abyss ? 0 : Math.min(25, 5 * Math.max(0, (opts.deck || []).length - 7)); // patch du 12/10 : +5 % de dégâts des sorts par carte au-delà de 7, +25 % au plus (hors Abysses)
     const surprised = !opts.noSurprise && (S._surprise || 0) > 0 && RND() < S._surprise; // ennemis pris de vitesse : ils passent leur premier tour
@@ -491,7 +492,7 @@
     return result(false, opts.maxRounds || 30);
 
     function result(win, rounds) { const tm = mons.reduce((a, m) => a + m.maxHp, 0) || 1; return { trace, win, rounds, hpLost, dmgDone, perCard, progress: win ? 1 : 1 - mons.reduce((a, m) => a + (m.alive ? Math.max(0, m.hp) + (m.mech && m.mech.revive && !m.revived ? m.maxHp * (m.mech.revivePct != null ? m.mech.revivePct / 100 : 0.5) : 0) : 0), 0) / tm, kills: mons.filter(m => !m.alive).length }; }
-    function healP(a) { if (T.inv) { P.hp -= a; hpLost += a; } else { a = PK === 'eniripsa' ? Math.floor(a * (1 + 0.09 * PM * C.n)) : a; const h = T.half ? Math.floor(a / 2) : a, over = P.hp + h - maxHp; P.hp = Math.min(maxHp, P.hp + h); if (DF.dotruche && over > 0) { const cap = Math.floor(maxHp * 0.1), add = Math.min(over, cap - truche); if (add > 0) { truche += add; P.shields.push({ value: add, turns: 2 }); } } } } // Dotruche : soin en trop → bouclier (10 % des PV max au plus)
+    function healP(a) { if (T.inv) { P.hp -= a; hpLost += a; } else { a = PK === 'eniripsa' ? Math.floor(a * (1 + 0.099 * PM * C.n)) : a; const h = T.half ? Math.floor(a / 2) : a, over = P.hp + h - maxHp; P.hp = Math.min(maxHp, P.hp + h); if (DF.dotruche && over > 0) { const cap = Math.floor(maxHp * 0.1), add = Math.min(over, cap - truche); if (add > 0) { truche += add; P.shields.push({ value: add, turns: 2 }); } } } } // Dotruche : soin en trop → bouclier (10 % des PV max au plus)
     function draw() { if (!pile.length) { if (!discard.length) return null; pile = shuffle(discard); discard = []; } return pile.pop(); }
     function reflects(m) { return !!(m.mech && m.mech.reflectFrom && T.round >= m.mech.reflectFrom && (!m.mech.reflectTo || T.round <= m.mech.reflectTo)); }
     // Mode auto : le jeu vise le premier boss encore debout. Mode manuel : le plus entamé, en évitant celui qui renvoie les coups.
@@ -721,7 +722,7 @@
           P.shields.push({ value: Math.min(amount, room), turns: l.dur || 1 });
         } else if ((l.k === 'heal' || l.k === 'healPct') && l.tgt === 'self') {
           if (!c.hasDmg) { if (T.sustainLeft <= 0 && !sustainUsed) continue; sustainUsed = true; }
-          const amount = Math.floor((l.k === 'healPct' ? maxHp * l.max / 100 : (l.max + (S.soins || 0))) * (PK === 'eniripsa' ? 1 + 0.09 * C.n : 1));
+          const amount = Math.floor((l.k === 'healPct' ? maxHp * l.max / 100 : (l.max + (S.soins || 0)))); // le bonus Eniripsa est appliqué dans healP (il l'était deux fois)
           healP(amount);
         } else if (l.k === 'apRemove' && l.tgt === 'enemy') {
           const n = l.max; if (n <= 0) continue;
@@ -1503,6 +1504,9 @@
     let runesProbe = (() => { try { const hits = runeHits(inv); const j = JSON.stringify(hits); return { invKeys: Object.keys(I), hits: j.length < 300000 ? hits : j.slice(0, 300000) }; } catch (e) { return { err: String(e) }; } })();
     if (!(runesProbe.hits || []).length) for (const path of ['/inventaire?onglet=runes', '/inventaire?tab=runes', '/inventaire/runes']) { try { const pg = await rsc(path); const h = runeHits(pg); if (h.length) { const j = JSON.stringify(h); runesProbe.hits = j.length < 300000 ? h : j.slice(0, 300000); runesProbe.from = path; break; } } catch (e) {} }
     try { runesProbe.snap = JSON.parse(localStorage.getItem(RUNE_SNAP) || 'null'); } catch (e) {}
+    // Objet runé : format encore inconnu → clés présentes sur les objets de l'inventaire, et exemples d'objets aux clés inhabituelles
+    try { const cnt = {}, all = (I.entries || []).concat(I.slots || []); for (const e of all) { for (const k of Object.keys(e || {})) cnt['e.' + k] = (cnt['e.' + k] || 0) + 1; for (const k of Object.keys((e && e.item) || {})) cnt['i.' + k] = (cnt['i.' + k] || 0) + 1; }
+      const rare = Object.keys(cnt).filter(k => cnt[k] < all.length * 0.05); runesProbe.keys = cnt; runesProbe.odd = all.filter(e => rare.some(k => k.startsWith('e.') ? e && k.slice(2) in e : e && e.item && k.slice(2) in e.item)).slice(0, 6).map(e => { const o = {}; for (const k in e) if (k !== 'item') o[k] = e[k]; o.item = e.item ? { id: e.item.id, n: e.item.n, extra: Object.fromEntries(Object.entries(e.item).filter(([k]) => rare.includes('i.' + k))) } : null; return o; }); } catch (e) {}
     // Définitions des runes (valeurs) : dans le code du jeu (fichiers JS publics), lues une fois puis gardées une semaine
     try { let defs = null; try { defs = JSON.parse(localStorage.getItem('labo-rune-defs2') || 'null'); } catch (e) {}
       if (!defs || !defs.found || !defs.found.length || Date.now() - defs.t > 7 * 864e5) { const html = await origFetch('/inventaire?onglet=runes', { credentials: 'include' }).then(r => r.text());

@@ -238,8 +238,8 @@ th,td{border-bottom-color:var(--line)}
     <button role="tab" id="t-opt" aria-selected="false" data-tab="opt">Optimiseur</button>
     <button role="tab" id="t-pre" aria-selected="false" data-tab="pre">Prébuilds</button>
     <button role="tab" id="t-mb" aria-selected="false" data-tab="mb">Build manuel</button>
+    <button role="tab" id="t-coll" aria-selected="false" data-tab="coll">Collection</button>
     <button role="tab" id="t-best" aria-selected="false" data-tab="best">Bestiaire</button>
-    <button role="tab" id="t-wip" aria-selected="false" data-tab="wip">Abysses · Écarlate<span class="wipdot">WIP</span></button>
     <button role="tab" id="t-form" aria-selected="false" data-tab="form">Formules</button>
     <button role="tab" id="t-data" aria-selected="false" data-tab="data">Mes données</button>
   </nav>
@@ -484,6 +484,23 @@ th,td{border-bottom-color:var(--line)}
   </section>
 
   <!-- FORMULES -->
+  <section class="tab" id="coll" hidden>
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center">
+        <h2 style="margin:0">Collection</h2>
+        <div class="seg" id="cView" style="min-width:280px"><button type="button" data-v="own" aria-pressed="true">Mes objets</button><button type="button" data-v="miss" aria-pressed="false">Objets manquants</button></div>
+      </div>
+      <p class="note" id="cInfo"></p>
+      <div class="bfilters" style="display:flex;flex-wrap:wrap;gap:8px;align-items:end;margin:8px 0">
+        <label style="display:grid;gap:2px"><span class="lbl">Recherche</span><input id="cQ" type="search" placeholder="nom d'objet…" style="min-width:160px"></label>
+        <label style="display:grid;gap:2px"><span class="lbl">Type</span><select id="cSlot"><option value="">Tous</option></select></label>
+        <label style="display:grid;gap:2px"><span class="lbl">Niveau min</span><input id="cMin" type="number" min="1" max="200" value="1" style="width:5em"></label>
+        <label style="display:grid;gap:2px"><span class="lbl">Niveau max</span><input id="cMax" type="number" min="1" max="200" value="200" style="width:5em"></label>
+        <label style="display:grid;gap:2px"><span class="lbl">Panoplie</span><select id="cSet" style="max-width:220px"><option value="">Toutes</option></select></label>
+      </div>
+      <div id="cOut"></div>
+    </div>
+  </section>
   <section class="tab" id="best" hidden>
     <div class="panel">
       <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center">
@@ -817,7 +834,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     }
     // Runes gravées : leurs stats profitent du bonus Prestige/Forge/Compagnon, au plus ×2
     { let paUsed = 0; const rm = Math.min(2, pMult);
-      for (const g of gear) { if (!g || !g.item) continue; const codes = runeCodes(g.ru || g.item.ru); if (!codes.length) continue;
+      for (const g of gear) { if (!g || !g.item || g.item.s === 'dofus') continue; const codes = runeCodes(g.ru || g.item.ru); if (!codes.length) continue; // Dofus et trophées : plus de runes (patch V3)
         const r = runeStats(itemStats(g.item, g.f), codes, 1 - paUsed); paUsed += r.pa;
         for (const k in r.st) { const v = r.st[k]; const keys = k === 'resPctAll' ? ['resPctNeutre', 'resPctTerre', 'resPctFeu', 'resPctEau', 'resPctAir'] : [k];
           for (const kk of keys) { if (CAP3.includes(kk)) { raw3[kk] = (raw3[kk] || 0) + v; continue; } tot[kk] = (tot[kk] || 0) + (NOT_SCALED.includes(kk) ? v : jsRound(v * rm)); } } } }
@@ -936,18 +953,19 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
 
   // opts: {S, deck:[cards], weapon, monsters:[defs], maxRounds}
   // Prestige (patch du 12/10) : sorts de sa classe et passif de classe +10 % par Prestige (+200 % au P20) ; réductions de dégâts et chances de déclenchement inchangées
-  const CLS_SCALE_K = ['dmg', 'steal', 'heal', 'healPct', 'shieldHp', 'shieldLvl', 'bomb', 'dmgCasterHp'];
-  function clsScale(c, pm) {
-    const sc = l => CLS_SCALE_K.includes(l.k) ? Object.assign({}, l, { min: Math.round((l.min || 0) * pm), max: Math.round((l.max || 0) * pm) }) : l;
+  // Patch V3 (13/10) : sorts de dégâts de classe +10 %/P, sorts de boost +2 %/P, passif +5 %/P (soins et boucliers de classe : plus de bonus)
+  const CLS_SCALE_K = ['dmg', 'steal', 'bomb', 'dmgCasterHp'];
+  function clsScale(c, pm, pb) {
+    const sc = l => CLS_SCALE_K.includes(l.k) ? Object.assign({}, l, { min: Math.round((l.min || 0) * pm), max: Math.round((l.max || 0) * pm) }) : l.k === 'buff' && pb > 1 ? Object.assign({}, l, { min: Math.round((l.min || 0) * pb), max: Math.round((l.max || 0) * pb) }) : l;
     const eff = c.eff.map(sc), isDmg = l => l.k === 'dmg' || l.k === 'steal';
     return Object.assign({}, c, { eff, dmgLines: eff.filter(isDmg), chanceLines: eff.filter(l => l.chance), summon: c.summon ? Object.assign({}, c.summon, { min: Math.round(c.summon.min * pm), max: Math.round(c.summon.max * pm) }) : null });
   }
   function simulateFight(opts) {
     const S = opts.S, maxHp = S._maxHp;
-    const PM = 1 + 0.1 * Math.min(20, S._prestige || 0);
+    const PRE = Math.min(20, S._prestige || 0), PMd = 1 + 0.1 * PRE, PMb = 1 + 0.02 * PRE, PM = 1 + 0.05 * PRE; // PM : multiplicateur du passif
     const P = { hp: Math.min(maxHp, opts.startHp > 0 ? opts.startHp : maxHp), shields: [], apNext: 0 };
     const mons = opts.monsters.map(makeMonster);
-    let pile = shuffle(opts.deck.map(c => PM > 1 && c.cls != null && c.cls === S._breed ? clsScale(c, PM) : c)), discard = [], hand = [];
+    let pile = shuffle(opts.deck.map(c => PRE > 0 && c.cls != null && c.cls === S._breed ? clsScale(c, PMd, PMb) : c)), discard = [], hand = [];
     const shieldCap = Math.floor(maxHp * SUSTAIN.maxPctHp / 100);
     const specP = S._spectral / 100;
     let dmgDone = 0, hpLost = 0;
@@ -967,17 +985,17 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const clsPct0 = (m, c, bomb) => {
       if (!PK) return 0; const w = c && c.weapon, cur = C.cur || {};
       switch (PK) {
-        case 'feca': return 6 * C.n;
+        case 'feca': return 4 * C.n; // Armure : 20 % au plus (patch V3, avant 30 %)
         case 'osamodas': { const n = summons.length; return 20 * Math.min(3, n) + (n ? 25 : 0); } // Dompteur : +20 % par invocation active (3 au plus) ; Attaques coordonnées (patch du 12/10) : les invocations répercutent 25 % de ses dégâts (compté une fois tant qu'au moins une invocation est là)
-        case 'enutrof': return 5 * C.n;
-        case 'xelor': return 6 * C.n;
-        case 'eniripsa': return 9 * C.n;
+        case 'enutrof': return 5.5 * C.n;
+        case 'xelor': return 6.6 * C.n;
+        case 'eniripsa': return 9.9 * C.n;
         case 'pandawa': return 5 * C.n;
-        case 'sram': { const r = m ? m.hp / m.maxHp : 1; return r < 0.25 ? 60 : r < 0.5 ? 30 : 0; }
+        case 'sram': { const r = m ? m.hp / m.maxHp : 1; return r < 0.25 ? 66 : r < 0.5 ? 33 : 0; }
         case 'sacrieur': return Math.min(63, 7 * Math.floor(missPct() / 10));
-        case 'roublard': return (bomb ? 50 : 0) + 10 * Math.min(3, C.bombN);
+        case 'roublard': return (bomb ? 55 : 0) + 11 * Math.min(3, C.bombN);
         case 'zobal': { const k = (T.round - 1) % 3; return k === 0 ? 10 : k === 1 ? 25 : 0; }
-        case 'steamer': return 7 * Math.min(6, Math.max(0, T.round - 1));
+        case 'steamer': return 7.7 * Math.min(6, Math.max(0, T.round - 1));
         case 'eliotrope': return cur.portal ? 50 : 0;
         case 'huppermage': return 11 * Math.min(4, C.runes.size);
         case 'ouginak': return m && m === C.prey ? 12 * C.preyN : 0;
@@ -985,7 +1003,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       }
       return 0;
     };
-    const clsTaken = () => PK === 'feca' ? 6 * C.n : PK === 'zobal' ? [10, 0, 25][(T.round - 1) % 3] : 0; // % de dégâts subis en moins
+    const clsTaken = () => PK === 'feca' ? 4 * C.n : PK === 'zobal' ? [10, 0, 25][(T.round - 1) % 3] : 0; // % de dégâts subis en moins
     const ECA = PK === 'ecaflip';
     const saved = () => { if (P.hp <= 0 && !emeraudeUsed) { emeraudeUsed = true; P.hp = Math.max(1, Math.round(maxHp * 0.2)); } return P.hp > 0; }; // Émeraude : survit une fois avec 20 % de PV
     // Mécaniques de boss : chaque boss encore debout applique les siennes (bestiaire + mécaniques apprises en combat)
@@ -998,7 +1016,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     if (DF.argente) P.shields.push({ value: Math.floor(maxHp * 0.08), turns: 99 }); // Argenté Scintillant : bouclier de 8 % des PV max au début
     // Pioches en plus (bouton « Piocher ») : réserve plafonnée par la stat Invocations, qui se recharge de 1 par tour (Dofoozbz : 2)
     const drawCap = opts.abyss ? 0 : Math.min(4, Math.max(0, Math.round(S.invocations || 0))); let drawsLeft = drawCap; // stat Invocations : 1 pioche en plus par point, 4 au plus, pas dans les Abysses
-    const summons = []; const sumMult = () => PK === 'osamodas' ? 1 + PM : PK === 'roublard' ? 1 + 0.5 * PM : PK === 'steamer' ? 1 + 0.07 * PM * Math.min(6, Math.max(0, T.round - 1)) : 1; // Dompteur ×2, Artificier +50 %, Évolution du Steamer // invocations actives : { name, min, max, el, left } — attaquent au début de tes tours
+    const summons = []; const sumMult = () => PK === 'osamodas' ? 1 + PM : PK === 'roublard' ? 1 + 0.55 * PM : PK === 'steamer' ? 1 + 0.077 * PM * Math.min(6, Math.max(0, T.round - 1)) : 1; // Dompteur ×2, Artificier +50 %, Évolution du Steamer // invocations actives : { name, min, max, el, left } — attaquent au début de tes tours
     let olStreak = 0; // Sorts à une seule ligne (patch du 12/10) : +50 %, puis +20 % par tour sans lancer à plusieurs lignes, +150 % au plus ; un lancer à plusieurs lignes (sort ou corps à corps) remet à zéro jusqu'au tour suivant
     const deckBonus = opts.abyss ? 0 : Math.min(25, 5 * Math.max(0, (opts.deck || []).length - 7)); // patch du 12/10 : +5 % de dégâts des sorts par carte au-delà de 7, +25 % au plus (hors Abysses)
     const surprised = !opts.noSurprise && (S._surprise || 0) > 0 && RND() < S._surprise; // ennemis pris de vitesse : ils passent leur premier tour
@@ -1125,7 +1143,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     return result(false, opts.maxRounds || 30);
 
     function result(win, rounds) { const tm = mons.reduce((a, m) => a + m.maxHp, 0) || 1; return { trace, win, rounds, hpLost, dmgDone, perCard, progress: win ? 1 : 1 - mons.reduce((a, m) => a + (m.alive ? Math.max(0, m.hp) + (m.mech && m.mech.revive && !m.revived ? m.maxHp * (m.mech.revivePct != null ? m.mech.revivePct / 100 : 0.5) : 0) : 0), 0) / tm, kills: mons.filter(m => !m.alive).length }; }
-    function healP(a) { if (T.inv) { P.hp -= a; hpLost += a; } else { a = PK === 'eniripsa' ? Math.floor(a * (1 + 0.09 * PM * C.n)) : a; const h = T.half ? Math.floor(a / 2) : a, over = P.hp + h - maxHp; P.hp = Math.min(maxHp, P.hp + h); if (DF.dotruche && over > 0) { const cap = Math.floor(maxHp * 0.1), add = Math.min(over, cap - truche); if (add > 0) { truche += add; P.shields.push({ value: add, turns: 2 }); } } } } // Dotruche : soin en trop → bouclier (10 % des PV max au plus)
+    function healP(a) { if (T.inv) { P.hp -= a; hpLost += a; } else { a = PK === 'eniripsa' ? Math.floor(a * (1 + 0.099 * PM * C.n)) : a; const h = T.half ? Math.floor(a / 2) : a, over = P.hp + h - maxHp; P.hp = Math.min(maxHp, P.hp + h); if (DF.dotruche && over > 0) { const cap = Math.floor(maxHp * 0.1), add = Math.min(over, cap - truche); if (add > 0) { truche += add; P.shields.push({ value: add, turns: 2 }); } } } } // Dotruche : soin en trop → bouclier (10 % des PV max au plus)
     function draw() { if (!pile.length) { if (!discard.length) return null; pile = shuffle(discard); discard = []; } return pile.pop(); }
     function reflects(m) { return !!(m.mech && m.mech.reflectFrom && T.round >= m.mech.reflectFrom && (!m.mech.reflectTo || T.round <= m.mech.reflectTo)); }
     // Mode auto : le jeu vise le premier boss encore debout. Mode manuel : le plus entamé, en évitant celui qui renvoie les coups.
@@ -1355,7 +1373,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
           P.shields.push({ value: Math.min(amount, room), turns: l.dur || 1 });
         } else if ((l.k === 'heal' || l.k === 'healPct') && l.tgt === 'self') {
           if (!c.hasDmg) { if (T.sustainLeft <= 0 && !sustainUsed) continue; sustainUsed = true; }
-          const amount = Math.floor((l.k === 'healPct' ? maxHp * l.max / 100 : (l.max + (S.soins || 0))) * (PK === 'eniripsa' ? 1 + 0.09 * C.n : 1));
+          const amount = Math.floor((l.k === 'healPct' ? maxHp * l.max / 100 : (l.max + (S.soins || 0)))); // le bonus Eniripsa est appliqué dans healP (il l'était deux fois)
           healP(amount);
         } else if (l.k === 'apRemove' && l.tgt === 'enemy') {
           const n = l.max; if (n <= 0) continue;
@@ -2269,7 +2287,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
 <script type="text/plain" id="src-userscript">// ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.12.21
+// @version      2.12.23
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -2451,7 +2469,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     }
     // Runes gravées : leurs stats profitent du bonus Prestige/Forge/Compagnon, au plus ×2
     { let paUsed = 0; const rm = Math.min(2, pMult);
-      for (const g of gear) { if (!g || !g.item) continue; const codes = runeCodes(g.ru || g.item.ru); if (!codes.length) continue;
+      for (const g of gear) { if (!g || !g.item || g.item.s === 'dofus') continue; const codes = runeCodes(g.ru || g.item.ru); if (!codes.length) continue; // Dofus et trophées : plus de runes (patch V3)
         const r = runeStats(itemStats(g.item, g.f), codes, 1 - paUsed); paUsed += r.pa;
         for (const k in r.st) { const v = r.st[k]; const keys = k === 'resPctAll' ? ['resPctNeutre', 'resPctTerre', 'resPctFeu', 'resPctEau', 'resPctAir'] : [k];
           for (const kk of keys) { if (CAP3.includes(kk)) { raw3[kk] = (raw3[kk] || 0) + v; continue; } tot[kk] = (tot[kk] || 0) + (NOT_SCALED.includes(kk) ? v : jsRound(v * rm)); } } } }
@@ -2570,18 +2588,19 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
 
   // opts: {S, deck:[cards], weapon, monsters:[defs], maxRounds}
   // Prestige (patch du 12/10) : sorts de sa classe et passif de classe +10 % par Prestige (+200 % au P20) ; réductions de dégâts et chances de déclenchement inchangées
-  const CLS_SCALE_K = ['dmg', 'steal', 'heal', 'healPct', 'shieldHp', 'shieldLvl', 'bomb', 'dmgCasterHp'];
-  function clsScale(c, pm) {
-    const sc = l => CLS_SCALE_K.includes(l.k) ? Object.assign({}, l, { min: Math.round((l.min || 0) * pm), max: Math.round((l.max || 0) * pm) }) : l;
+  // Patch V3 (13/10) : sorts de dégâts de classe +10 %/P, sorts de boost +2 %/P, passif +5 %/P (soins et boucliers de classe : plus de bonus)
+  const CLS_SCALE_K = ['dmg', 'steal', 'bomb', 'dmgCasterHp'];
+  function clsScale(c, pm, pb) {
+    const sc = l => CLS_SCALE_K.includes(l.k) ? Object.assign({}, l, { min: Math.round((l.min || 0) * pm), max: Math.round((l.max || 0) * pm) }) : l.k === 'buff' && pb > 1 ? Object.assign({}, l, { min: Math.round((l.min || 0) * pb), max: Math.round((l.max || 0) * pb) }) : l;
     const eff = c.eff.map(sc), isDmg = l => l.k === 'dmg' || l.k === 'steal';
     return Object.assign({}, c, { eff, dmgLines: eff.filter(isDmg), chanceLines: eff.filter(l => l.chance), summon: c.summon ? Object.assign({}, c.summon, { min: Math.round(c.summon.min * pm), max: Math.round(c.summon.max * pm) }) : null });
   }
   function simulateFight(opts) {
     const S = opts.S, maxHp = S._maxHp;
-    const PM = 1 + 0.1 * Math.min(20, S._prestige || 0);
+    const PRE = Math.min(20, S._prestige || 0), PMd = 1 + 0.1 * PRE, PMb = 1 + 0.02 * PRE, PM = 1 + 0.05 * PRE; // PM : multiplicateur du passif
     const P = { hp: Math.min(maxHp, opts.startHp > 0 ? opts.startHp : maxHp), shields: [], apNext: 0 };
     const mons = opts.monsters.map(makeMonster);
-    let pile = shuffle(opts.deck.map(c => PM > 1 && c.cls != null && c.cls === S._breed ? clsScale(c, PM) : c)), discard = [], hand = [];
+    let pile = shuffle(opts.deck.map(c => PRE > 0 && c.cls != null && c.cls === S._breed ? clsScale(c, PMd, PMb) : c)), discard = [], hand = [];
     const shieldCap = Math.floor(maxHp * SUSTAIN.maxPctHp / 100);
     const specP = S._spectral / 100;
     let dmgDone = 0, hpLost = 0;
@@ -2601,17 +2620,17 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const clsPct0 = (m, c, bomb) => {
       if (!PK) return 0; const w = c && c.weapon, cur = C.cur || {};
       switch (PK) {
-        case 'feca': return 6 * C.n;
+        case 'feca': return 4 * C.n; // Armure : 20 % au plus (patch V3, avant 30 %)
         case 'osamodas': { const n = summons.length; return 20 * Math.min(3, n) + (n ? 25 : 0); } // Dompteur : +20 % par invocation active (3 au plus) ; Attaques coordonnées (patch du 12/10) : les invocations répercutent 25 % de ses dégâts (compté une fois tant qu'au moins une invocation est là)
-        case 'enutrof': return 5 * C.n;
-        case 'xelor': return 6 * C.n;
-        case 'eniripsa': return 9 * C.n;
+        case 'enutrof': return 5.5 * C.n;
+        case 'xelor': return 6.6 * C.n;
+        case 'eniripsa': return 9.9 * C.n;
         case 'pandawa': return 5 * C.n;
-        case 'sram': { const r = m ? m.hp / m.maxHp : 1; return r < 0.25 ? 60 : r < 0.5 ? 30 : 0; }
+        case 'sram': { const r = m ? m.hp / m.maxHp : 1; return r < 0.25 ? 66 : r < 0.5 ? 33 : 0; }
         case 'sacrieur': return Math.min(63, 7 * Math.floor(missPct() / 10));
-        case 'roublard': return (bomb ? 50 : 0) + 10 * Math.min(3, C.bombN);
+        case 'roublard': return (bomb ? 55 : 0) + 11 * Math.min(3, C.bombN);
         case 'zobal': { const k = (T.round - 1) % 3; return k === 0 ? 10 : k === 1 ? 25 : 0; }
-        case 'steamer': return 7 * Math.min(6, Math.max(0, T.round - 1));
+        case 'steamer': return 7.7 * Math.min(6, Math.max(0, T.round - 1));
         case 'eliotrope': return cur.portal ? 50 : 0;
         case 'huppermage': return 11 * Math.min(4, C.runes.size);
         case 'ouginak': return m && m === C.prey ? 12 * C.preyN : 0;
@@ -2619,7 +2638,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       }
       return 0;
     };
-    const clsTaken = () => PK === 'feca' ? 6 * C.n : PK === 'zobal' ? [10, 0, 25][(T.round - 1) % 3] : 0; // % de dégâts subis en moins
+    const clsTaken = () => PK === 'feca' ? 4 * C.n : PK === 'zobal' ? [10, 0, 25][(T.round - 1) % 3] : 0; // % de dégâts subis en moins
     const ECA = PK === 'ecaflip';
     const saved = () => { if (P.hp <= 0 && !emeraudeUsed) { emeraudeUsed = true; P.hp = Math.max(1, Math.round(maxHp * 0.2)); } return P.hp > 0; }; // Émeraude : survit une fois avec 20 % de PV
     // Mécaniques de boss : chaque boss encore debout applique les siennes (bestiaire + mécaniques apprises en combat)
@@ -2632,7 +2651,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     if (DF.argente) P.shields.push({ value: Math.floor(maxHp * 0.08), turns: 99 }); // Argenté Scintillant : bouclier de 8 % des PV max au début
     // Pioches en plus (bouton « Piocher ») : réserve plafonnée par la stat Invocations, qui se recharge de 1 par tour (Dofoozbz : 2)
     const drawCap = opts.abyss ? 0 : Math.min(4, Math.max(0, Math.round(S.invocations || 0))); let drawsLeft = drawCap; // stat Invocations : 1 pioche en plus par point, 4 au plus, pas dans les Abysses
-    const summons = []; const sumMult = () => PK === 'osamodas' ? 1 + PM : PK === 'roublard' ? 1 + 0.5 * PM : PK === 'steamer' ? 1 + 0.07 * PM * Math.min(6, Math.max(0, T.round - 1)) : 1; // Dompteur ×2, Artificier +50 %, Évolution du Steamer // invocations actives : { name, min, max, el, left } — attaquent au début de tes tours
+    const summons = []; const sumMult = () => PK === 'osamodas' ? 1 + PM : PK === 'roublard' ? 1 + 0.55 * PM : PK === 'steamer' ? 1 + 0.077 * PM * Math.min(6, Math.max(0, T.round - 1)) : 1; // Dompteur ×2, Artificier +50 %, Évolution du Steamer // invocations actives : { name, min, max, el, left } — attaquent au début de tes tours
     let olStreak = 0; // Sorts à une seule ligne (patch du 12/10) : +50 %, puis +20 % par tour sans lancer à plusieurs lignes, +150 % au plus ; un lancer à plusieurs lignes (sort ou corps à corps) remet à zéro jusqu'au tour suivant
     const deckBonus = opts.abyss ? 0 : Math.min(25, 5 * Math.max(0, (opts.deck || []).length - 7)); // patch du 12/10 : +5 % de dégâts des sorts par carte au-delà de 7, +25 % au plus (hors Abysses)
     const surprised = !opts.noSurprise && (S._surprise || 0) > 0 && RND() < S._surprise; // ennemis pris de vitesse : ils passent leur premier tour
@@ -2759,7 +2778,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     return result(false, opts.maxRounds || 30);
 
     function result(win, rounds) { const tm = mons.reduce((a, m) => a + m.maxHp, 0) || 1; return { trace, win, rounds, hpLost, dmgDone, perCard, progress: win ? 1 : 1 - mons.reduce((a, m) => a + (m.alive ? Math.max(0, m.hp) + (m.mech && m.mech.revive && !m.revived ? m.maxHp * (m.mech.revivePct != null ? m.mech.revivePct / 100 : 0.5) : 0) : 0), 0) / tm, kills: mons.filter(m => !m.alive).length }; }
-    function healP(a) { if (T.inv) { P.hp -= a; hpLost += a; } else { a = PK === 'eniripsa' ? Math.floor(a * (1 + 0.09 * PM * C.n)) : a; const h = T.half ? Math.floor(a / 2) : a, over = P.hp + h - maxHp; P.hp = Math.min(maxHp, P.hp + h); if (DF.dotruche && over > 0) { const cap = Math.floor(maxHp * 0.1), add = Math.min(over, cap - truche); if (add > 0) { truche += add; P.shields.push({ value: add, turns: 2 }); } } } } // Dotruche : soin en trop → bouclier (10 % des PV max au plus)
+    function healP(a) { if (T.inv) { P.hp -= a; hpLost += a; } else { a = PK === 'eniripsa' ? Math.floor(a * (1 + 0.099 * PM * C.n)) : a; const h = T.half ? Math.floor(a / 2) : a, over = P.hp + h - maxHp; P.hp = Math.min(maxHp, P.hp + h); if (DF.dotruche && over > 0) { const cap = Math.floor(maxHp * 0.1), add = Math.min(over, cap - truche); if (add > 0) { truche += add; P.shields.push({ value: add, turns: 2 }); } } } } // Dotruche : soin en trop → bouclier (10 % des PV max au plus)
     function draw() { if (!pile.length) { if (!discard.length) return null; pile = shuffle(discard); discard = []; } return pile.pop(); }
     function reflects(m) { return !!(m.mech && m.mech.reflectFrom && T.round >= m.mech.reflectFrom && (!m.mech.reflectTo || T.round <= m.mech.reflectTo)); }
     // Mode auto : le jeu vise le premier boss encore debout. Mode manuel : le plus entamé, en évitant celui qui renvoie les coups.
@@ -2989,7 +3008,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
           P.shields.push({ value: Math.min(amount, room), turns: l.dur || 1 });
         } else if ((l.k === 'heal' || l.k === 'healPct') && l.tgt === 'self') {
           if (!c.hasDmg) { if (T.sustainLeft <= 0 && !sustainUsed) continue; sustainUsed = true; }
-          const amount = Math.floor((l.k === 'healPct' ? maxHp * l.max / 100 : (l.max + (S.soins || 0))) * (PK === 'eniripsa' ? 1 + 0.09 * C.n : 1));
+          const amount = Math.floor((l.k === 'healPct' ? maxHp * l.max / 100 : (l.max + (S.soins || 0)))); // le bonus Eniripsa est appliqué dans healP (il l'était deux fois)
           healP(amount);
         } else if (l.k === 'apRemove' && l.tgt === 'enemy') {
           const n = l.max; if (n <= 0) continue;
@@ -3771,6 +3790,9 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     let runesProbe = (() => { try { const hits = runeHits(inv); const j = JSON.stringify(hits); return { invKeys: Object.keys(I), hits: j.length < 300000 ? hits : j.slice(0, 300000) }; } catch (e) { return { err: String(e) }; } })();
     if (!(runesProbe.hits || []).length) for (const path of ['/inventaire?onglet=runes', '/inventaire?tab=runes', '/inventaire/runes']) { try { const pg = await rsc(path); const h = runeHits(pg); if (h.length) { const j = JSON.stringify(h); runesProbe.hits = j.length < 300000 ? h : j.slice(0, 300000); runesProbe.from = path; break; } } catch (e) {} }
     try { runesProbe.snap = JSON.parse(localStorage.getItem(RUNE_SNAP) || 'null'); } catch (e) {}
+    // Objet runé : format encore inconnu → clés présentes sur les objets de l'inventaire, et exemples d'objets aux clés inhabituelles
+    try { const cnt = {}, all = (I.entries || []).concat(I.slots || []); for (const e of all) { for (const k of Object.keys(e || {})) cnt['e.' + k] = (cnt['e.' + k] || 0) + 1; for (const k of Object.keys((e && e.item) || {})) cnt['i.' + k] = (cnt['i.' + k] || 0) + 1; }
+      const rare = Object.keys(cnt).filter(k => cnt[k] < all.length * 0.05); runesProbe.keys = cnt; runesProbe.odd = all.filter(e => rare.some(k => k.startsWith('e.') ? e && k.slice(2) in e : e && e.item && k.slice(2) in e.item)).slice(0, 6).map(e => { const o = {}; for (const k in e) if (k !== 'item') o[k] = e[k]; o.item = e.item ? { id: e.item.id, n: e.item.n, extra: Object.fromEntries(Object.entries(e.item).filter(([k]) => rare.includes('i.' + k))) } : null; return o; }); } catch (e) {}
     // Définitions des runes (valeurs) : dans le code du jeu (fichiers JS publics), lues une fois puis gardées une semaine
     try { let defs = null; try { defs = JSON.parse(localStorage.getItem('labo-rune-defs2') || 'null'); } catch (e) {}
       if (!defs || !defs.found || !defs.found.length || Date.now() - defs.t > 7 * 864e5) { const html = await origFetch('/inventaire?onglet=runes', { credentials: 'include' }).then(r => r.text());
@@ -4699,8 +4721,42 @@ function importText(txt){
 }
 
 /* ---------- Onglets & réglages ---------- */
-function showTab(id){if(id==='sim')id='mb';{const pm=document.querySelector('.playmode');if(pm)pm.hidden=(id==='best'||id==='wip'||id==='form');}if(id==='asc')id='opt';if(id==='farm'||id==='items')id='perso';document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===id?'true':'false'));document.querySelectorAll('section.tab').forEach(s=>s.hidden=s.id!==id);try{localStorage.setItem('labo-tab',id)}catch(e){}if(id==='perso'){try{renderPV()}catch(e){}}if(id==='mb'){try{setupMB();renderMB()}catch(e){$('#mbMsg').textContent='Erreur : '+e.message}}if(id==='pre'){try{renderPrebuilds()}catch(e){$('#preOut').textContent='Erreur : '+e.message}}if(id==='farm'){try{renderFarm()}catch(e){$('#fZones').textContent='Erreur : '+e.message}try{renderPredict()}catch(e){$('#fPredict').textContent='Erreur : '+e.message}}if(id==='data'){try{renderChanges()}catch(e){}try{healthCheck(false)}catch(e){$('#healthOut').textContent='Erreur : '+e.message}}if(id==='items'){TL=null;if(LPROF==='saison')$('#tlFor').value='principal';renderItemsTab()}}
+function showTab(id){if(id==='sim')id='mb';if(id==='wip')id='perso';{const pm=document.querySelector('.playmode');if(pm)pm.hidden=(id==='best'||id==='wip'||id==='form');}if(id==='asc')id='opt';if(id==='farm'||id==='items')id='perso';document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===id?'true':'false'));document.querySelectorAll('section.tab').forEach(s=>s.hidden=s.id!==id);try{localStorage.setItem('labo-tab',id)}catch(e){}if(id==='perso'){try{renderPV()}catch(e){}}if(id==='mb'){try{setupMB();renderMB()}catch(e){$('#mbMsg').textContent='Erreur : '+e.message}}if(id==='coll'){try{renderColl()}catch(e){$('#cOut').textContent='Erreur : '+e.message}}if(id==='pre'){try{renderPrebuilds()}catch(e){$('#preOut').textContent='Erreur : '+e.message}}if(id==='farm'){try{renderFarm()}catch(e){$('#fZones').textContent='Erreur : '+e.message}try{renderPredict()}catch(e){$('#fPredict').textContent='Erreur : '+e.message}}if(id==='data'){try{renderChanges()}catch(e){}try{healthCheck(false)}catch(e){$('#healthOut').textContent='Erreur : '+e.message}}if(id==='items'){TL=null;if(LPROF==='saison')$('#tlFor').value='principal';renderItemsTab()}}
 document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+/* Collection : mes objets au meilleur rang (avec ce qu'il manque pour fusionner) et objets manquants (où les trouver) */
+let C_VIEW='own';try{C_VIEW=localStorage.getItem('labo-cview')||'own'}catch(e){}
+const C_TL={chapeau:'Chapeau',cape:'Cape',amulette:'Amulette',anneau:'Anneau',ceinture:'Ceinture',bottes:'Bottes',arme:'Arme',bouclier:'Bouclier',familier:'Familier',dofus:'Dofus / Trophée'};
+const C_KAM=[0,0,0,3000,6000,9000,12000,15000];
+function collOwned(){const o={};for(const i of (DATA.items||[]).concat(DATA.worn||[])){if(!i||!i.s||i.s==='parchemin')continue;const x=o[i.id]||(o[i.id]={it:i,byF:{},n:0});const f=i.f||0;x.byF[f]=(x.byF[f]||0)+(i.q||1);x.n+=(i.q||1);if(!x.worn&&i.slot)x.worn=true}
+  for(const x of Object.values(o)){let m=-1;for(const k in x.byF)if(x.byF[k]>0&&+k>m)m=+k;x.main=m;const by=Object.assign({},x.byF);by[m]--;let fod=0;for(const k in by)if(+k<=2)fod+=by[k]*fusVal(+k);x.fod=fod;
+    x.next=m>=7?null:{to:m+1,missing:Math.max(0,fusVal(m+1)-fusVal(m)-fod),kam:C_KAM[m+1]||0};x.total=fusNeed(x,7);x.kamTot=C_KAM.slice(m+1).reduce((a,b)=>a+b,0)}
+  return o}
+function collSrc(B,id){const zN={};for(const z of (B.zones||[]))zN[z.id]=z;const ds=[];for(const m of (B.monsters||[]))for(const d of (m.d||[]))if(d[0]===id)ds.push({m,r:d[1]||0});
+  ds.sort((a,b)=>b.r-a.r);if(ds.length)return ds.slice(0,3).map(({m,r})=>{const z=(m.z||[]).map(k=>zN[k]).filter(Boolean)[0];return `${r>0?fmt(r,r<1?2:1)+' % · ':'bonus de victoire · '}${esc(m.n)}${m.isBoss?' (boss)':''}${z?` <span class="muted">— ${esc(z.n)}${z.area?', '+esc(z.area):''}${z.min?' (niv. '+z.min+'-'+z.max+')':''}</span>`:''}`}).join('<br>')+(ds.length>3?`<br><span class="muted">+ ${ds.length-3} autre${ds.length>4?'s':''} monstre${ds.length>4?'s':''}</span>`:'');
+  const it=(B.allItems||[]).find(i=>i.id===id);if(it&&it.src)return `<span class="muted">${esc(it.src)}</span>`;return '<span class="muted">Hors tables de butin : aléatoire (boss, Ascension, coffre, quête ou craft)</span>'}
+function collFilters(list){const sl=$('#cSlot'),st=$('#cSet');const types=[...new Set(list.map(i=>i.s))].filter(t=>C_TL[t]);const cur=sl.value;sl.innerHTML='<option value="">Tous</option>'+Object.keys(C_TL).filter(t=>types.includes(t)).map(t=>`<option value="${t}" ${t===cur?'selected':''}>${C_TL[t]}</option>`).join('');
+  const sets=[...new Set(list.map(i=>i.setName).filter(Boolean))].sort((a,b)=>a.localeCompare(b));const cs=st.value;st.innerHTML='<option value="">Toutes</option>'+sets.map(n=>`<option ${n===cs?'selected':''}>${esc(n)}</option>`).join('')}
+function collPassF(){const q=($('#cQ').value||'').trim().toLowerCase(),sl=$('#cSlot').value,set=$('#cSet').value,mn=+$('#cMin').value||1,mx=+$('#cMax').value||200;return i=>{const L=i.lvl||0;return (!q||String(i.n).toLowerCase().includes(q))&&(!sl||i.s===sl)&&(!set||i.setName===set)&&L>=mn&&L<=mx}}
+function collIcon(it){const src=mbIcon(it);return src?`<img src="${src}" alt="" loading="lazy" style="width:32px;height:32px;object-fit:contain;vertical-align:middle">`:''}
+function renderColl(){const out=$('#cOut');if(!out)return;document.querySelectorAll('#cView button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===C_VIEW?'true':'false'));
+  const B=bestData()||{},A=mbAll().m;const setOf=i=>{const c=A[i.id]||i;return Object.assign({},i,{setName:i.setName||c.setName||(c.setId?mbSetName(c):null),icon:i.icon||c.icon})};
+  if(C_VIEW==='own'){const O2=collOwned(),items=Object.values(O2).map(x=>Object.assign(x,{it:setOf(x.it)}));collFilters(items.map(x=>x.it));
+    const pass=collPassF(),rows=items.filter(x=>pass(x.it));$('#cInfo').textContent=`${items.length} objets différents possédés · chaque objet n'apparaît qu'une fois, à son meilleur rang ; les exemplaires de rang inférieur (jusqu'à Rayonnant +0) comptent comme matière de fusion. Coût : 3 Tiers 1 → Tiers 2, 3 Tiers 2 → Rayonnant, puis Rayonnant +1/+2 : +1 Rayonnant +0, +3/+4/+5 : +2.`;
+    if(!rows.length){out.innerHTML='<p class="note">Aucun objet avec ces filtres. Importe ton export (script) pour voir ton inventaire.</p>';return}
+    let html='';for(let r=7;r>=0;r--){const g=rows.filter(x=>x.main===r).sort((a,b)=>(b.it.lvl||0)-(a.it.lvl||0)||String(a.it.n).localeCompare(b.it.n));if(!g.length)continue;
+      html+=`<h3 style="margin:14px 0 6px">${MB_FUS[r]} <span class="note">(${g.length})</span></h3><div class="tablewrap"><table><tr><th></th><th>Objet</th><th>${r>=7?'En trop (à vendre)':'Autres exemplaires'}</th><th>Rang suivant</th><th>Jusqu'à Rayonnant +5</th></tr>`+g.map(x=>{const others=Object.entries(x.byF).filter(([f,q])=>q>0).sort((a,b)=>b[0]-a[0]).map(([f,q])=>`${+f===x.main?q-1?(q-1)+'× '+MB_FUS[f]+' en plus':'':q+'× '+MB_FUS[f]}`).filter(Boolean).join(', ');
+        const nx=x.next?(x.next.missing?`→ ${MB_FUS[x.next.to]} : encore ~${x.next.missing} T1${x.next.missing>=9?' (≈ '+Math.ceil(x.next.missing/9)+' Rayonnant'+(Math.ceil(x.next.missing/9)>1?'s':'')+' +0)':''}`:`<strong style="color:var(--good,#4caf50)">✓ prêt → ${MB_FUS[x.next.to]}</strong>`)+(x.next.kam?` <span class="muted">· ~${fmt(x.next.kam)} k</span>`:''):'<span class="muted">rang max</span>';
+        const tot=x.main>=7?'—':x.total.missing?`~${x.total.missing} T1${x.kamTot?` <span class="muted">· ~${fmt(x.kamTot)} k</span>`:''}`:'<span class="muted">matière suffisante</span>';
+        return `<tr><td>${collIcon(x.it)}</td><td><span data-tip="${x.it.id}:${x.main}">${esc(x.it.n)}</span><div class="note">${C_TL[x.it.s]||esc(x.it.s)} · niv. ${x.it.lvl||'?'}${x.worn?' · équipé':''}${x.it.setName?' · '+esc(x.it.setName):''}</div></td><td class="note">${others||'—'}</td><td>${nx}</td><td>${tot}</td></tr>`}).join('')+'</table></div>'}
+    out.innerHTML=html+'<p class="note">T1 = exemplaire de base (Tiers 1). Kamas : fusions Rayonnant au niveau 200 (3 000 au premier palier, 15 000 au dernier ; paliers intermédiaires estimés). Dofus et familiers suivent la même règle.</p>';return}
+  // manquants
+  const own=new Set((DATA.items||[]).concat(DATA.worn||[]).map(i=>i.id));const cat=(B.allItems&&B.allItems.length?B.allItems:bItems(B)).filter(i=>i&&i.s&&i.s!=='parchemin'&&!own.has(i.id)).map(setOf);
+  if($('#cMin').dataset.init!=='1'){$('#cMin').value=180;$('#cMin').dataset.init='1'}collFilters(cat);
+  const rows=cat.filter(collPassF()).sort((a,b)=>(b.lvl||0)-(a.lvl||0)||String(a.n).localeCompare(b.n));
+  $('#cInfo').textContent=`${cat.length} objets du catalogue que tu n'as pas · ${rows.length} avec ces filtres. Où les trouver : monstres qui les lâchent (taux de base, zone), sinon leur source connue.`;
+  const shown=rows.slice(0,300);out.innerHTML=shown.length?`<div class="tablewrap"><table><tr><th></th><th>Objet</th><th>Où le trouver</th></tr>${shown.map(i=>`<tr><td>${collIcon(i)}</td><td><span data-tip="${i.id}:0">${esc(i.n)}</span><div class="note">${C_TL[i.s]||esc(i.s)} · niv. ${i.lvl||'?'}${i.setName?' · '+esc(i.setName):''}</div></td><td class="note">${collSrc(B,i.id)}</td></tr>`).join('')}</table></div>${rows.length>300?`<p class="note">300 premiers affichés sur ${rows.length} : affine les filtres.</p>`:''}`:'<p class="note">Aucun objet manquant avec ces filtres.</p>'}
+document.querySelectorAll('#cView button').forEach(b=>b.addEventListener('click',()=>{C_VIEW=b.dataset.v;try{localStorage.setItem('labo-cview',C_VIEW)}catch(e){}renderColl()}));
+['cQ','cSlot','cMin','cMax','cSet'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener(el.tagName==='SELECT'?'change':'input',()=>{try{renderColl()}catch(e){}})});
 document.querySelectorAll('.seg:not(#playMode):not(#bView):not(#profMode)').forEach(g=>g.querySelectorAll('button').forEach(b=>b.onclick=()=>{g.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b?'true':'false'))}));
 const dv=v=>'×'+Number(v).toLocaleString('fr-FR',{minimumFractionDigits:1,maximumFractionDigits:2});
 $('#simDiff').oninput=e=>$('#simDiffV').textContent=dv(e.target.value);
@@ -5401,7 +5457,7 @@ function runeVal(c){const r=R.RUNES[c];if(!r)return '';if(r.pct)return `+${r.pct
 function renderMBRunes(){const box=$('#mbRunes');if(!box)return;const st=runeStock(),own=Object.keys(st).filter(c=>st[c]>0);
   if(!own.length){box.innerHTML='<p class="note">Aucune rune connue : ouvre l\'onglet Runes de ton inventaire dans le jeu, puis « Envoyer au Labo » (script 2.12.20 ou plus).</p>';return}
   const b=mbLoad();let base;try{base=mbState(b)}catch(e){box.textContent='Calcul impossible : '+e.message;return}const I0=R.dmgIndex(base.S,base.deck);
-  const slots=Object.keys(b.gear).filter(s=>b.gear[s]&&(b.gear[s].ru||[]).length<2);if(!slots.length){box.innerHTML='<p class="note">Tous les objets ont déjà 2 runes.</p>';return}
+  const slots=Object.keys(b.gear).filter(s=>b.gear[s]&&!/^dofus/.test(s)&&(b.gear[s].ru||[]).length<2);if(!slots.length){box.innerHTML='<p class="note">Tous les objets ont déjà 2 runes.</p>';return}
   const A=mbAll().m,try1=(s,c)=>{const g=JSON.parse(JSON.stringify(b.gear));g[s].ru=(g[s].ru||[]).concat([c]);try{const x=mbState(Object.assign({},b,{gear:g}));return R.dmgIndex(x.S,x.deck)/I0-1}catch(e){return 0}};
   const SURV=/^(vitalite|resPct|soins)/,UTIL=/^(sagesse|prospection|initiative|tacle|fuite|po|pm|invocations)$/;
   const rows=own.map(c=>{const r=R.RUNES[c];let gain,where=null;if(r.pct||r.elem){gain=-1;for(const s of slots){const v=try1(s,c);if(v>gain){gain=v;where=s}}}else gain=try1(slots[0],c);
@@ -5425,7 +5481,7 @@ function renderMB(){if(!$('#mb'))return;const b=mbLoad();
   // emplacement choisi : nom, amélioration (fusion) bien visible au centre, et retrait
   $('#mbSel').innerHTML=`<div><strong>${esc(SLOT_LABEL[MB_SEL]||MB_SEL)}</strong></div>${it?`<div>${esc(it.n)} <span class="muted">niv. ${it.lvl||'?'}${own?' · possédé':''}</span></div>
     <label style="display:grid;gap:2px;margin-top:4px"><span class="lbl">Amélioration</span><span style="display:flex;gap:4px;align-items:center"><button class="btn" type="button" id="mbFusM" style="padding:1px 8px" title="Baisser">−</button><select id="mbFus" style="flex:1;min-width:0">${MB_FUS.map((l,i)=>`<option value="${i}" ${i===(x.f||0)?'selected':''}>${l}${own&&own.f===i?' (le tien)':''}</option>`).join('')}</select><button class="btn" type="button" id="mbFusP" style="padding:1px 8px" title="Monter">+</button></span></label>
-    ${(()=>{const st=runeStock(),ru=x.ru||[];const opt=v=>`<option value="">— aucune —</option>`+RUNE_ORDER.map(c=>`<option value="${c}" ${c===v?'selected':''}>${esc(runeLabel(c))}${st[c]?' · ×'+st[c]+' en stock':''}</option>`).join('');return `<label style="display:grid;gap:2px;margin-top:4px"><span class="lbl">Runes (2 max)</span><select data-mbru="0">${opt(ru[0])}</select><select data-mbru="1">${opt(ru[1])}</select></label>`})()}
+    ${it.s==='dofus'?'<p class="note" style="margin:4px 0 0">Dofus et trophées : pas de runes (patch V3).</p>':(()=>{const st=runeStock(),ru=x.ru||[];const opt=v=>`<option value="">— aucune —</option>`+RUNE_ORDER.map(c=>`<option value="${c}" ${c===v?'selected':''}>${esc(runeLabel(c))}${st[c]?' · ×'+st[c]+' en stock':''}</option>`).join('');return `<label style="display:grid;gap:2px;margin-top:4px"><span class="lbl">Runes (2 max)</span><select data-mbru="0">${opt(ru[0])}</select><select data-mbru="1">${opt(ru[1])}</select></label>`})()}
     <button class="btn" type="button" id="mbRemove" style="margin-top:4px;justify-self:start">Retirer</button>`:'<div class="muted">vide : choisis un objet dans la liste à droite</div>'}`;
   $('#mbSlotInfo').innerHTML=it?`<p class="note" style="margin:0">${esc(it.n)} (${MB_FUS[x.f||0]}) : ${esc(mbShort(mbStats(it,x.f),12))}</p>`:'';
   const setF=f=>{b.gear[MB_SEL].f=Math.max(0,Math.min(7,f));mbSave();renderMB()};
