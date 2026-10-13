@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.12.24
+// @version      2.13.0
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -1901,7 +1901,8 @@
     }
     panel.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px"><strong style="color:#e0b04f">Labo · cette session</strong><button data-a="min" style="${btn()}" title="Réduire">–</button></div>
-      <div style="display:flex;gap:4px;align-items:center;margin-bottom:6px"><span style="color:#a89a85">Perso :</span><button data-a="prof-principal" style="${btn(PROFILE === 'principal')}">Principal</button><button data-a="prof-saison" style="${btn(PROFILE === 'saison')}">Saison</button>${profileLocked() ? '<button data-a="prof-auto" style="' + btn() + '" title="Détection automatique">auto</button>' : ''}</div>${profileFixed ? '<div style="color:#e0b04f;margin-bottom:4px">' + profileFixed + '</div>' : ''}${PROFILE === 'saison' ? '<div style="color:#ec7a70;margin-bottom:4px">Héroïque : une défaite contre un boss = mort définitive.</div>' : ''}
+      <div style="margin-bottom:4px;color:${bridgeOn() ? '#7fd18b' : '#a89a85'}">${bridgeOn() ? '● Relié au Labo : il se met à jour quand tu y retournes' : '○ Labo pas ouvert : « Envoyer au Labo ↗ » pour le relier'}</div>${buildBlock()}
+      <div style="display:none;gap:4px;align-items:center;margin-bottom:6px"><span style="color:#a89a85">Perso :</span><button data-a="prof-principal" style="${btn(PROFILE === 'principal')}">Principal</button><button data-a="prof-saison" style="${btn(PROFILE === 'saison')}">Saison</button>${profileLocked() ? '<button data-a="prof-auto" style="' + btn() + '" title="Détection automatique">auto</button>' : ''}</div>${profileFixed ? '<div style="color:#e0b04f;margin-bottom:4px">' + profileFixed + '</div>' : ''}${PROFILE === 'saison' ? '<div style="color:#ec7a70;margin-bottom:4px">Héroïque : une défaite contre un boss = mort définitive.</div>' : ''}
       <div style="display:grid;grid-template-columns:1fr auto;gap:1px 10px;font-variant-numeric:tabular-nums">
         <span>Combats</span><span>${s.fights} (${fmt(s.winRate * 100)} % gagnés)</span>
         <span>Tours moyens</span><span>${s.wins ? fmt(s.avgRounds, 2) : '—'}</span>
@@ -1938,7 +1939,38 @@
     document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
   }
   function btn(primary) { return `cursor:pointer;font:600 12px system-ui,sans-serif;border-radius:6px;padding:3px 8px;border:1px solid ${primary ? '#e0b04f' : '#4a3f30'};background:${primary ? '#e0b04f' : 'transparent'};color:${primary ? '#15120d' : '#efe6d6'}`; }
-  function laboUrl() { try { return localStorage.getItem('labo-url') || ''; } catch (e) { return ''; } }
+  const LABO_DEFAULT = 'https://venominones.github.io/Dofusrpg/';
+  function laboUrl() { try { return localStorage.getItem('labo-url') || LABO_DEFAULT; } catch (e) { return LABO_DEFAULT; } }
+  function laboOrigin() { try { return new URL(laboUrl()).origin; } catch (e) { return ''; } }
+  // ---------- Pont avec le Labo (onglet ouvert par « Envoyer au Labo ») : lecture seule côté jeu ----------
+  // Le Labo se signale toutes les quelques secondes ; il peut demander une mise à jour (même lecture que le bouton) et renvoyer un build à copier.
+  const BRIDGE = { win: null, seen: 0, lastExport: 0, busy: false };
+  const LAST_BUILD_KEY = 'labo-lastbuild';
+  function lastBuild() { try { return JSON.parse(localStorage.getItem(LAST_BUILD_KEY) || 'null'); } catch (e) { return null; } }
+  function bridgeOn() { return BRIDGE.win && !BRIDGE.win.closed && Date.now() - BRIDGE.seen < 20000; }
+  window.addEventListener('message', async e => {
+    const o = laboOrigin(); if (!o || e.origin !== o) return; const d = e.data; if (!d || typeof d !== 'object') return;
+    if (d.type === 'labo-hello') { const was = bridgeOn(); BRIDGE.win = e.source; BRIDGE.seen = Date.now(); try { e.source.postMessage({ type: 'labo-hi', v: (typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) || '', last: (db.fights[db.fights.length - 1] || {}).t || 0 }, o); } catch (er) {} if (!was) try { render(); } catch (er) {} return; }
+    if (d.type === 'labo-request-export') {
+      if (BRIDGE.busy || Date.now() - BRIDGE.lastExport < 45000) { try { e.source.postMessage({ type: 'labo-export-wait', s: Math.ceil((45000 - (Date.now() - BRIDGE.lastExport)) / 1000) }, o); } catch (er) {} return; }
+      BRIDGE.busy = true; try { const json = JSON.stringify(await exportForLabo()); BRIDGE.lastExport = Date.now(); e.source.postMessage({ type: 'labo-export', json, auto: !!d.auto }, o); } catch (er) { try { e.source.postMessage({ type: 'labo-export-error', msg: String(er && er.message || er) }, o); } catch (_) {} } finally { BRIDGE.busy = false; }
+      return;
+    }
+    if (d.type === 'labo-build') {
+      const ok = c => typeof c === 'string' && /^DM-[ES]-[0-9A-Z]{4,400}-[0-9A-Z]{4}$/.test(c);
+      const b = { name: String(d.name || 'Build du Labo').slice(0, 80), gear: ok(d.gear) ? d.gear : '', deck: ok(d.deck) ? d.deck : '', t: Date.now() };
+      if (!b.gear && !b.deck) return;
+      try { localStorage.setItem(LAST_BUILD_KEY, JSON.stringify(b)); } catch (er) {}
+      minimized = false; view = 'stats'; try { render(); } catch (er) {}
+      try { e.source.postMessage({ type: 'labo-build-ok' }, o); } catch (er) {}
+    }
+  });
+  function buildBlock() {
+    const b = lastBuild(); if (!b) return '';
+    return `<div style="margin-top:6px;padding:6px;border:1px solid #e0b04f;border-radius:6px"><div style="color:#e0b04f;font-weight:700">Build du Labo : ${String(b.name).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${b.gear ? `<button data-a="cpgear" style="${btn(true)}">Copier le stuff</button>` : ''}${b.deck ? `<button data-a="cpdeck" style="${btn(true)}">Copier le deck</button>` : ''}<button data-a="cpclear" style="${btn()}" title="Ne plus afficher">×</button></div>
+      <div style="color:#a89a85;margin-top:3px">Puis colle le code en jeu : page Personnage → « Codes d'équipement » (stuff) ou page Deck (deck).</div></div>`;
+  }
   let resetArmed = false;
   async function onClick(ev) {
     const a = ev.target && ev.target.dataset && ev.target.dataset.a; if (!a) return;
@@ -1956,7 +1988,7 @@
       const url = laboUrl(); if (!url) { view = 'labourl'; render(); return; }
       // la fenêtre s'ouvre tout de suite (sinon le navigateur la bloque), les données suivent dès que le Labo est prêt
       const origin = new URL(url).origin; const fresh = (() => { try { const u = new URL(url); u.searchParams.set('v', Date.now().toString(36)); return u.toString(); } catch (e) { return url; } })(); // paramètre unique : le navigateur recharge toujours la dernière version du Labo
-      const w = window.open(fresh, 'labo-rpgmasters');
+      const w = window.open(fresh, 'labo-rpgmasters'); if (w) { BRIDGE.win = w; }
       if (!w) { msg().textContent = 'Fenêtre bloquée par le navigateur : autorise les pop-ups pour ce site.'; return; }
       let json = null, ready = false, sent = false;
       const trySend = () => { if (json && ready && !sent) { sent = true; w.postMessage({ type: 'labo-export', json }, origin); msg().textContent = 'Envoyé au Labo ✓'; window.removeEventListener('message', onMsg); } };
@@ -1967,6 +1999,8 @@
       setTimeout(() => { if (!sent) { window.removeEventListener('message', onMsg); navigator.clipboard.writeText(json).then(() => { msg().textContent = 'Le Labo n’a pas répondu : export copié, fais Ctrl+V sur le Labo.'; }).catch(() => { msg().textContent = 'Le Labo n’a pas répondu. Vérifie son adresse avec le bouton ⚙.'; }); } }, 25000);
       return;
     }
+    if (a === 'cpgear' || a === 'cpdeck') { const b = lastBuild(); const c = b && (a === 'cpgear' ? b.gear : b.deck); if (c) navigator.clipboard.writeText(c).then(() => { msg().textContent = (a === 'cpgear' ? 'Code du stuff' : 'Code du deck') + ' copié : colle-le en jeu.'; }).catch(() => { msg().textContent = c; }); return; }
+    if (a === 'cpclear') { try { localStorage.removeItem(LAST_BUILD_KEY); } catch (e) {} render(); return; }
     if (a === 'back') { view = 'stats'; render(); return; }
     if (a === 'saveb') {
       try { const d = JSON.parse(panel.querySelector('#labo-bin').value); if (!Array.isArray(d.builds)) throw new Error('champ « builds » manquant'); localStorage.setItem(BUILDS_KEY, JSON.stringify(d)); view = 'stats'; render(); msg().textContent = d.builds.length + ' builds enregistrés.'; }

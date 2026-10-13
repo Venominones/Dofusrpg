@@ -433,7 +433,7 @@ th,td{border-bottom-color:var(--line)}
           <div id="mbCards" class="mb-list" style="max-height:260px"></div>
         </details>
         <h3 style="margin:4px 0 0">Codes et sauvegardes</h3>
-        <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" type="button" id="mbCopyE">Copier le stuff (DM-E)</button><button class="btn" type="button" id="mbCopyD">Copier le deck (DM-S)</button><button class="btn" type="button" id="mbToOpt">Envoyer à l'optimiseur</button></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" type="button" id="mbSendGame">Envoyer au jeu ↗</button><button class="btn" type="button" id="mbCopyE">Copier le stuff (DM-E)</button><button class="btn" type="button" id="mbCopyD">Copier le deck (DM-S)</button><button class="btn" type="button" id="mbToOpt">Envoyer à l'optimiseur</button></div>
         <div style="display:flex;gap:6px;flex-wrap:wrap"><input type="text" id="mbCode" placeholder="Coller un code DM-E-… ou DM-S-…" style="flex:1;min-width:180px"><button class="btn" type="button" id="mbCodeLoad">Charger</button></div>
         <div style="display:flex;gap:6px;flex-wrap:wrap"><input type="text" id="mbName" placeholder="Nom du build" style="flex:1;min-width:140px"><button class="btn" type="button" id="mbSave">Sauvegarder</button></div>
         <div id="mbSaves"></div>
@@ -754,6 +754,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
           <li>Joue normalement : tes combats s'enregistrent tout seuls.</li>
           <li>Pour mettre le Labo à jour : <strong>« Envoyer au Labo ↗ »</strong> dans ce panneau. Le Labo s'ouvre et importe tout (stuff, inventaire, deck, combats, bestiaire).</li>
           <li>Runes : ouvre une fois l'onglet <strong>Runes</strong> de ton inventaire avant d'envoyer.</li>
+          <li><strong>Garde les deux onglets ouverts</strong> : le Labo se remet à jour tout seul quand tu reviens dessus (pastille « Relié au jeu » en bas à droite). Le bouton <strong>« Envoyer au jeu ↗ »</strong> d'un build le fait apparaître dans le panneau du jeu, avec « Copier le stuff / le deck » à coller dans Personnage → Codes d'équipement.</li>
         </ol>
         <p class="note" style="margin:6px 0 0">Le Labo ne s'ouvre pas ? « Exporter pour le Labo » dans le panneau, puis <kbd>Ctrl</kbd>+<kbd>V</kbd> n'importe où sur cette page.</p></div>
         <h3>Méthode conseillée : le script de collecte</h3>
@@ -2424,7 +2425,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
 <script type="text/plain" id="src-userscript">// ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.12.24
+// @version      2.13.0
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -4324,7 +4325,8 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     }
     panel.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px"><strong style="color:#e0b04f">Labo · cette session</strong><button data-a="min" style="${btn()}" title="Réduire">–</button></div>
-      <div style="display:flex;gap:4px;align-items:center;margin-bottom:6px"><span style="color:#a89a85">Perso :</span><button data-a="prof-principal" style="${btn(PROFILE === 'principal')}">Principal</button><button data-a="prof-saison" style="${btn(PROFILE === 'saison')}">Saison</button>${profileLocked() ? '<button data-a="prof-auto" style="' + btn() + '" title="Détection automatique">auto</button>' : ''}</div>${profileFixed ? '<div style="color:#e0b04f;margin-bottom:4px">' + profileFixed + '</div>' : ''}${PROFILE === 'saison' ? '<div style="color:#ec7a70;margin-bottom:4px">Héroïque : une défaite contre un boss = mort définitive.</div>' : ''}
+      <div style="margin-bottom:4px;color:${bridgeOn() ? '#7fd18b' : '#a89a85'}">${bridgeOn() ? '● Relié au Labo : il se met à jour quand tu y retournes' : '○ Labo pas ouvert : « Envoyer au Labo ↗ » pour le relier'}</div>${buildBlock()}
+      <div style="display:none;gap:4px;align-items:center;margin-bottom:6px"><span style="color:#a89a85">Perso :</span><button data-a="prof-principal" style="${btn(PROFILE === 'principal')}">Principal</button><button data-a="prof-saison" style="${btn(PROFILE === 'saison')}">Saison</button>${profileLocked() ? '<button data-a="prof-auto" style="' + btn() + '" title="Détection automatique">auto</button>' : ''}</div>${profileFixed ? '<div style="color:#e0b04f;margin-bottom:4px">' + profileFixed + '</div>' : ''}${PROFILE === 'saison' ? '<div style="color:#ec7a70;margin-bottom:4px">Héroïque : une défaite contre un boss = mort définitive.</div>' : ''}
       <div style="display:grid;grid-template-columns:1fr auto;gap:1px 10px;font-variant-numeric:tabular-nums">
         <span>Combats</span><span>${s.fights} (${fmt(s.winRate * 100)} % gagnés)</span>
         <span>Tours moyens</span><span>${s.wins ? fmt(s.avgRounds, 2) : '—'}</span>
@@ -4361,7 +4363,38 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
   }
   function btn(primary) { return `cursor:pointer;font:600 12px system-ui,sans-serif;border-radius:6px;padding:3px 8px;border:1px solid ${primary ? '#e0b04f' : '#4a3f30'};background:${primary ? '#e0b04f' : 'transparent'};color:${primary ? '#15120d' : '#efe6d6'}`; }
-  function laboUrl() { try { return localStorage.getItem('labo-url') || ''; } catch (e) { return ''; } }
+  const LABO_DEFAULT = 'https://venominones.github.io/Dofusrpg/';
+  function laboUrl() { try { return localStorage.getItem('labo-url') || LABO_DEFAULT; } catch (e) { return LABO_DEFAULT; } }
+  function laboOrigin() { try { return new URL(laboUrl()).origin; } catch (e) { return ''; } }
+  // ---------- Pont avec le Labo (onglet ouvert par « Envoyer au Labo ») : lecture seule côté jeu ----------
+  // Le Labo se signale toutes les quelques secondes ; il peut demander une mise à jour (même lecture que le bouton) et renvoyer un build à copier.
+  const BRIDGE = { win: null, seen: 0, lastExport: 0, busy: false };
+  const LAST_BUILD_KEY = 'labo-lastbuild';
+  function lastBuild() { try { return JSON.parse(localStorage.getItem(LAST_BUILD_KEY) || 'null'); } catch (e) { return null; } }
+  function bridgeOn() { return BRIDGE.win && !BRIDGE.win.closed && Date.now() - BRIDGE.seen < 20000; }
+  window.addEventListener('message', async e => {
+    const o = laboOrigin(); if (!o || e.origin !== o) return; const d = e.data; if (!d || typeof d !== 'object') return;
+    if (d.type === 'labo-hello') { const was = bridgeOn(); BRIDGE.win = e.source; BRIDGE.seen = Date.now(); try { e.source.postMessage({ type: 'labo-hi', v: (typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) || '', last: (db.fights[db.fights.length - 1] || {}).t || 0 }, o); } catch (er) {} if (!was) try { render(); } catch (er) {} return; }
+    if (d.type === 'labo-request-export') {
+      if (BRIDGE.busy || Date.now() - BRIDGE.lastExport < 45000) { try { e.source.postMessage({ type: 'labo-export-wait', s: Math.ceil((45000 - (Date.now() - BRIDGE.lastExport)) / 1000) }, o); } catch (er) {} return; }
+      BRIDGE.busy = true; try { const json = JSON.stringify(await exportForLabo()); BRIDGE.lastExport = Date.now(); e.source.postMessage({ type: 'labo-export', json, auto: !!d.auto }, o); } catch (er) { try { e.source.postMessage({ type: 'labo-export-error', msg: String(er && er.message || er) }, o); } catch (_) {} } finally { BRIDGE.busy = false; }
+      return;
+    }
+    if (d.type === 'labo-build') {
+      const ok = c => typeof c === 'string' && /^DM-[ES]-[0-9A-Z]{4,400}-[0-9A-Z]{4}$/.test(c);
+      const b = { name: String(d.name || 'Build du Labo').slice(0, 80), gear: ok(d.gear) ? d.gear : '', deck: ok(d.deck) ? d.deck : '', t: Date.now() };
+      if (!b.gear && !b.deck) return;
+      try { localStorage.setItem(LAST_BUILD_KEY, JSON.stringify(b)); } catch (er) {}
+      minimized = false; view = 'stats'; try { render(); } catch (er) {}
+      try { e.source.postMessage({ type: 'labo-build-ok' }, o); } catch (er) {}
+    }
+  });
+  function buildBlock() {
+    const b = lastBuild(); if (!b) return '';
+    return `<div style="margin-top:6px;padding:6px;border:1px solid #e0b04f;border-radius:6px"><div style="color:#e0b04f;font-weight:700">Build du Labo : ${String(b.name).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${b.gear ? `<button data-a="cpgear" style="${btn(true)}">Copier le stuff</button>` : ''}${b.deck ? `<button data-a="cpdeck" style="${btn(true)}">Copier le deck</button>` : ''}<button data-a="cpclear" style="${btn()}" title="Ne plus afficher">×</button></div>
+      <div style="color:#a89a85;margin-top:3px">Puis colle le code en jeu : page Personnage → « Codes d'équipement » (stuff) ou page Deck (deck).</div></div>`;
+  }
   let resetArmed = false;
   async function onClick(ev) {
     const a = ev.target && ev.target.dataset && ev.target.dataset.a; if (!a) return;
@@ -4379,7 +4412,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       const url = laboUrl(); if (!url) { view = 'labourl'; render(); return; }
       // la fenêtre s'ouvre tout de suite (sinon le navigateur la bloque), les données suivent dès que le Labo est prêt
       const origin = new URL(url).origin; const fresh = (() => { try { const u = new URL(url); u.searchParams.set('v', Date.now().toString(36)); return u.toString(); } catch (e) { return url; } })(); // paramètre unique : le navigateur recharge toujours la dernière version du Labo
-      const w = window.open(fresh, 'labo-rpgmasters');
+      const w = window.open(fresh, 'labo-rpgmasters'); if (w) { BRIDGE.win = w; }
       if (!w) { msg().textContent = 'Fenêtre bloquée par le navigateur : autorise les pop-ups pour ce site.'; return; }
       let json = null, ready = false, sent = false;
       const trySend = () => { if (json && ready && !sent) { sent = true; w.postMessage({ type: 'labo-export', json }, origin); msg().textContent = 'Envoyé au Labo ✓'; window.removeEventListener('message', onMsg); } };
@@ -4390,6 +4423,8 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       setTimeout(() => { if (!sent) { window.removeEventListener('message', onMsg); navigator.clipboard.writeText(json).then(() => { msg().textContent = 'Le Labo n’a pas répondu : export copié, fais Ctrl+V sur le Labo.'; }).catch(() => { msg().textContent = 'Le Labo n’a pas répondu. Vérifie son adresse avec le bouton ⚙.'; }); } }, 25000);
       return;
     }
+    if (a === 'cpgear' || a === 'cpdeck') { const b = lastBuild(); const c = b && (a === 'cpgear' ? b.gear : b.deck); if (c) navigator.clipboard.writeText(c).then(() => { msg().textContent = (a === 'cpgear' ? 'Code du stuff' : 'Code du deck') + ' copié : colle-le en jeu.'; }).catch(() => { msg().textContent = c; }); return; }
+    if (a === 'cpclear') { try { localStorage.removeItem(LAST_BUILD_KEY); } catch (e) {} render(); return; }
     if (a === 'back') { view = 'stats'; render(); return; }
     if (a === 'saveb') {
       try { const d = JSON.parse(panel.querySelector('#labo-bin').value); if (!Array.isArray(d.builds)) throw new Error('champ « builds » manquant'); localStorage.setItem(BUILDS_KEY, JSON.stringify(d)); view = 'stats'; render(); msg().textContent = d.builds.length + ' builds enregistrés.'; }
@@ -4839,7 +4874,7 @@ function renderOpt(res,opts,pack,mult,deckIdx){lastOpt=res;
   html+=`<h3>Sorts qui portent le build</h3><p class="note">${per.map(([n])=>esc(n)).join(' · ')}</p>`; // pas de chiffres de combat affichés
   const gCode=O.encodeGear(st.gear),dCode=O.encodeDeck(st.deck,DATA.meta.breedId);lines.push('Code équipement : '+gCode);lines.push('Code deck : '+dCode);
   const SUM=optSummary(st,Sb,b,opts,res);lines.splice(1,0,'En bref : '+SUM.short);
-  const top=`<div class="otop"><div><strong>En bref.</strong> ${esc(SUM.short)}</div><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" type="button" data-copy="${gCode}">Copier le stuff</button><button class="btn" type="button" data-copy="${dCode}">Copier le deck</button><button class="btn ghost" id="copySum" type="button">Copier le résumé</button><button class="btn ghost" id="oToMb" type="button">Ouvrir dans le Build manuel</button></div><span class="toast muted" id="copyMsg"></span>
+  const top=`<div class="otop"><div><strong>En bref.</strong> ${esc(SUM.short)}</div><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" type="button" data-send-g="${gCode}" data-send-d="${dCode}" data-send-n="Optimiseur">Envoyer au jeu ↗</button><button class="btn ghost" type="button" data-copy="${gCode}">Copier le stuff</button><button class="btn ghost" type="button" data-copy="${dCode}">Copier le deck</button><button class="btn ghost" id="copySum" type="button">Copier le résumé</button><button class="btn ghost" id="oToMb" type="button">Ouvrir dans le Build manuel</button></div><span class="toast muted" id="copyMsg"></span>
     <details><summary><strong>Explication détaillée</strong> : principe du build et pourquoi ces objets</summary><div class="prose" style="margin-top:6px">${SUM.long}</div></details></div>
     <h3>Contrôle de composition</h3>${compoChecks(st,Sb,b,opts,pack)}`;
   html=top+html;
@@ -4868,6 +4903,7 @@ function setupData(){
   window.addEventListener('message',e=>{if(!/^https:\/\/rpgmasters\.houk\.fr$/.test(e.origin||''))return;const d=e.data;if(d&&d.type==='labo-export'&&d.json)importText(d.json)});
   // ouvert par le bouton « Envoyer au Labo » du script : on signale qu'on est prêt à recevoir
   try{if(window.opener)window.opener.postMessage({type:'labo-ready'},'https://rpgmasters.houk.fr')}catch(e){}
+  bridgeInit();
 function flash(t){let el=document.getElementById('laboFlash');if(!el){el=document.createElement('div');el.id='laboFlash';el.setAttribute('role','status');el.style.cssText='position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:50;max-width:min(560px,92vw);padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--panel,var(--bg));box-shadow:0 6px 20px rgba(0,0,0,.35);font-size:.92rem';document.body.appendChild(el)}el.textContent=t;el.hidden=false;clearTimeout(flash.t);flash.t=setTimeout(()=>el.hidden=true,6000)}
 function looksExport(t){return typeof t==='string'&&t.length>200&&/^\s*\{/.test(t)&&t.includes('"meta"')&&t.includes('"cards"')}
 function importText(txt){
@@ -4878,6 +4914,26 @@ function importText(txt){
   $('#resetBtn').onclick=()=>{try{dsDel(dataKey(LPROF))}catch(e){};loadProfile();init();$('#importMsg').textContent='Instantané rétabli.'};
 }
 
+/* ---------- Pont avec le jeu (onglet ouvert par « Envoyer au Labo ») ----------
+   Le Labo se signale au panneau du jeu ; il lui demande une mise à jour quand tu reviens sur cet onglet (même lecture que le bouton du jeu, 2 min d'écart au moins)
+   et peut lui envoyer un build : le panneau du jeu l'affiche avec « Copier le stuff / le deck ». Rien n'est joué ni équipé à ta place. */
+const GAME_O='https://rpgmasters.houk.fr';const BR={on:false,seen:0,last:0,asked:0,v:''};
+function bridgeOn(){return BR.on&&Date.now()-BR.seen<15000}
+function bridgeBar(){let el=document.getElementById('bridgeBar');if(!el){el=document.createElement('div');el.id='bridgeBar';el.style.cssText='position:fixed;right:12px;bottom:12px;z-index:50;display:flex;gap:8px;align-items:center;padding:6px 10px;border-radius:999px;border:1px solid var(--line2);background:var(--bg);box-shadow:0 4px 16px rgba(0,0,0,.35);font-size:.82rem';document.body.appendChild(el)}
+  if(!window.opener){el.hidden=true;return}el.hidden=false;const on=bridgeOn();
+  el.innerHTML=on?`<span style="color:#7fd18b">●</span><span>Relié au jeu${BR.last?' · à jour '+new Date(BR.last).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):''}</span><button class="btn ghost" type="button" id="brSync" style="padding:2px 10px">Mettre à jour</button>`:(BR.seen?`<span style="color:#a89a85">○</span><span>Onglet du jeu fermé ou rechargé sans le script</span>`:`<span style="color:#a89a85">○</span><span>Connexion au jeu…</span>`);
+  const b=document.getElementById('brSync');if(b)b.onclick=()=>bridgeAsk(false)}
+function bridgeAsk(auto){if(!window.opener||!bridgeOn())return;if(auto&&Date.now()-Math.max(BR.asked,BR.last,(DATA&&DATA._importedAt)||0)<120000)return;BR.asked=Date.now();try{window.opener.postMessage({type:'labo-request-export',auto},GAME_O)}catch(e){}if(!auto)flash('Lecture de tes données dans le jeu…')}
+function sendToGame(name,g,d){if(window.opener&&bridgeOn()){try{window.opener.postMessage({type:'labo-build',name,gear:g||'',deck:d||''},GAME_O);flash('Envoyé au jeu : ouvre l\'onglet du jeu, le build t\'attend dans le panneau Labo (bouton « Copier le stuff »).');return}catch(e){}}
+  try{navigator.clipboard.writeText(g||d)}catch(e){}flash('Jeu pas relié (ouvre le Labo avec « Envoyer au Labo ↗ » dans le jeu). Code du stuff copié à la place : colle-le en jeu, page Personnage → Codes d\'équipement.')}
+function bridgeInit(){if(!window.opener)return;const hello=()=>{try{window.opener.postMessage({type:'labo-hello'},GAME_O)}catch(e){}bridgeBar()};hello();setInterval(hello,5000);
+  window.addEventListener('message',e=>{if(e.origin!==GAME_O)return;const d=e.data;if(!d||typeof d!=='object')return;
+    if(d.type==='labo-hi'){const first=!BR.on;BR.on=true;BR.seen=Date.now();BR.v=d.v||'';bridgeBar();if(first&&!document.hidden)bridgeAsk(true)}
+    if(d.type==='labo-export'){BR.last=Date.now();bridgeBar();if(d.auto)flash('Mis à jour depuis le jeu ✓')}
+    if(d.type==='labo-export-wait'&&!d.auto)flash(`Une mise à jour vient d'être faite : réessaie dans ${d.s} s.`);
+    if(d.type==='labo-export-error')flash('Mise à jour impossible : '+d.msg)});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)bridgeAsk(true)});}
+document.addEventListener('click',e=>{const b=e.target&&e.target.closest&&e.target.closest('[data-send-g],[data-send-d]');if(b)sendToGame(b.dataset.sendN||'Build du Labo',b.dataset.sendG,b.dataset.sendD)});
 /* ---------- Onglets & réglages ---------- */
 function showTab(id){if(id==='sim')id='mb';if(id==='wip'||id==='form')id='perso';{const pm=document.querySelector('.playmode');if(pm)pm.hidden=pm.dataset.off==='1'||(id==='best'||id==='wip'||id==='form');}if(id==='asc')id='opt';if(id==='farm')id='perso';document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===id?'true':'false'));document.querySelectorAll('section.tab').forEach(s=>s.hidden=s.id!==id);try{localStorage.setItem('labo-tab',id)}catch(e){}if(id==='perso'){try{renderPV()}catch(e){}}if(id==='mb'){try{setupMB();renderMB()}catch(e){$('#mbMsg').textContent='Erreur : '+e.message}}if(id==='coll'){try{renderColl()}catch(e){$('#cOut').textContent='Erreur : '+e.message}}if(id==='pre'){try{renderPrebuilds()}catch(e){$('#preOut').textContent='Erreur : '+e.message}}if(id==='farm'){try{renderFarm()}catch(e){$('#fZones').textContent='Erreur : '+e.message}try{renderPredict()}catch(e){$('#fPredict').textContent='Erreur : '+e.message}}if(id==='data'){try{renderChanges()}catch(e){}try{healthCheck(false)}catch(e){$('#healthOut').textContent='Erreur : '+e.message}}if(id==='items'){TL=null;if(LPROF==='saison')$('#tlFor').value='principal';renderItemsTab()}}
 document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
@@ -5865,6 +5921,7 @@ function setupMB(){if(!$('#mb')||setupMB.done)return;setupMB.done=true;
   $('#mbCardQ').addEventListener('input',renderMBDeck);$('#mbCardType').addEventListener('change',renderMBDeck);
   $('#mbLoadCur').onclick=()=>{MB=mbFresh();mbSave();renderMB();$('#mbMsg').textContent='Ton stuff, tes points et ton deck actuels sont chargés.'};
   $('#mbClear').onclick=()=>{MB={gear:{},alloc:{},deck:[]};mbSave();renderMB()};
+  $('#mbSendGame').onclick=()=>{try{const b=mbLoad();sendToGame('Build manuel',O.encodeGear(b.gear),O.encodeDeck((b.deck||[]).filter(k=>cardsByKey[k]),DATA.meta.breedId))}catch(e){$('#mbMsg').textContent='Erreur : '+e.message}};
   $('#mbCopyE').onclick=()=>{try{copyText(O.encodeGear(mbLoad().gear),$('#mbMsg'))}catch(e){$('#mbMsg').textContent='Erreur : '+e.message}};
   $('#mbToOpt').onclick=()=>{const b=mbLoad();const nm=($('#mbName').value||'').trim()||'ton build manuel';setOptStart({name:nm,gear:mbGear(b.gear),alloc:Object.assign({},b.alloc),deck:b.deck.filter(k=>cardsByKey[k])});showTab('opt');window.scrollTo({top:0,behavior:'smooth'})};
   ['mbCmpA','mbCmpB'].forEach(id=>$('#'+id).addEventListener('change',renderMBCmp));$('#mbCmpW').addEventListener('toggle',renderMBCmp);
@@ -5914,7 +5971,7 @@ function renderPreDetail(){const el=$('#preDetail');const b=PRE_SEL&&preList().f
     <div class="mb-dofus">${MB_DOF.map(big).join('')}</div>
     <div><strong>Points</strong> : ${esc(b.vit?'tes points actuels ('+(allocText(curAlloc)||'—')+')':allocText(b.alloc||{})||'—')}</div>
     <div><strong>Deck (${b.deck.length})</strong><div>${b.deck.map(c=>`<span class="mb-card" style="cursor:default" ${ownC.has(c.id)?'':'title="Sort que tu n\'as pas"'}>${ownC.has(c.id)?'':'⚠ '}${esc(c.n)} <span class="muted">${c.ap} PA</span></span>`).join('')}</div></div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap">${ce?`<button class="btn" type="button" data-pcopy="${ce}">Copier le stuff</button>`:''}${cd?`<button class="btn" type="button" data-pcopy="${cd}">Copier le deck</button>`:''}<button class="btn" type="button" id="preToMb">Ouvrir dans le Build manuel</button><button class="btn ghost" type="button" id="preToOpt" title="Part de ce build avec les objets que tu possèdes (les autres emplacements gardent ton stuff actuel), puis optimise">Adapter à mon inventaire</button></div><span class="note" id="preMsg"></span>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">${ce?`<button class="btn" type="button" data-send-g="${ce}" data-send-d="${cd}" data-send-n="${esc(b.label)}">Envoyer au jeu ↗</button><button class="btn ghost" type="button" data-pcopy="${ce}">Copier le stuff</button>`:''}${cd?`<button class="btn" type="button" data-pcopy="${cd}">Copier le deck</button>`:''}<button class="btn" type="button" id="preToMb">Ouvrir dans le Build manuel</button><button class="btn ghost" type="button" id="preToOpt" title="Part de ce build avec les objets que tu possèdes (les autres emplacements gardent ton stuff actuel), puis optimise">Adapter à mon inventaire</button></div><span class="note" id="preMsg"></span>
   </div><div><h3 style="margin:0 0 6px">Stats <span class="note">(écart avec ton stuff actuel, avec ton niveau et ton prestige)</span></h3><div id="preStats">${S?mbStatsBlock(S,mbCurS(),full,PRE_TAB,'preTab'):'<p class="note">Calcul impossible.</p>'}</div></div></div>`;
   el.querySelectorAll('[data-pcopy]').forEach(bt=>bt.onclick=()=>copyText(bt.dataset.pcopy,$('#preMsg')));
   $('#preClose').onclick=()=>{PRE_SEL=null;renderPrebuilds()};
