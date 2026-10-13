@@ -160,6 +160,8 @@ textarea{min-height:110px;font-family:var(--f-mono);font-size:.8rem}
 .pre-mid{display:grid;place-content:center;text-align:center;border:1px solid var(--line);border-radius:9px;padding:6px;background:var(--panel);gap:2px}
 .pre-mid .v{font:700 1.35rem var(--f-display);color:var(--gold)}
 .pre-dof{display:grid;grid-template-columns:repeat(6,36px);gap:4px;justify-content:center}
+.mb-slot{position:relative}.mb-ru{position:absolute;left:2px;top:2px;font-size:.62rem;font-weight:800;padding:0 4px;border-radius:6px;background:#6b5bff;color:#fff;line-height:1.4}
+.tm-tiers{display:grid;gap:4px;border:1px solid var(--line);border-radius:10px;overflow:hidden}.tm-row{display:grid;grid-template-columns:90px 1fr;min-height:64px;background:var(--bg)}.tm-lab{display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;color:#1b1b1b;cursor:text;text-align:center;padding:4px;word-break:break-word}.tm-drop{display:flex;flex-wrap:wrap;gap:4px;padding:6px;align-content:flex-start}.tm-drop.over,.tm-pool.over{outline:2px dashed var(--gold);outline-offset:-3px}.tm-pool{display:flex;flex-wrap:wrap;gap:4px;min-height:60px;max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:6px}.tm-it{width:52px;height:52px;border:1px solid var(--line2);border-radius:8px;background:var(--bg2,var(--bg));display:flex;align-items:center;justify-content:center;cursor:grab;position:relative;font-size:.7rem;text-align:center;overflow:hidden}.tm-it img{width:44px;height:44px;object-fit:contain;pointer-events:none}.tm-it.sel{outline:2px solid var(--gold)}
 .pre-tier{min-width:min(100%,420px)}.pre-tier button{font-size:1rem!important;padding:10px 14px!important;font-weight:700}
 .pre-card h3{margin:0;font-size:1.05rem}.pre-card p{margin:0}
 .pre-det{display:grid;grid-template-columns:minmax(0,430px) minmax(0,1fr);gap:14px;align-items:start}
@@ -241,6 +243,7 @@ th,td{border-bottom-color:var(--line)}
     <button role="tab" id="t-pre" aria-selected="false" data-tab="pre">Prébuilds</button>
     <button role="tab" id="t-mb" aria-selected="false" data-tab="mb">Build manuel</button>
     <button role="tab" id="t-coll" aria-selected="false" data-tab="coll">Collection</button>
+    <button role="tab" id="t-items" aria-selected="false" data-tab="items">Tier listes</button>
     <button role="tab" id="t-best" aria-selected="false" data-tab="best">Bestiaire</button>
     <button role="tab" id="t-notes" aria-selected="false" data-tab="notes">Patch notes</button>
     <button role="tab" id="t-form" aria-selected="false" data-tab="form" hidden>Formules</button>
@@ -401,7 +404,7 @@ th,td{border-bottom-color:var(--line)}
   <!-- PRÉBUILDS -->
   <section class="tab" id="pre" hidden>
     <div class="panel">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><h2 style="margin:0">Prébuilds niveau 200</h2><div class="seg pre-tier" id="preTier"><button type="button" data-v="budget" aria-pressed="true">Budget</button><button type="button" data-v="opti" aria-pressed="false">Opti</button><button type="button" data-v="vit" aria-pressed="false">Vitrines ♥</button></div></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><h2 style="margin:0">Prébuilds niveau 200</h2><div class="seg pre-tier" id="preTier"><button type="button" data-v="vit" aria-pressed="true">Vitrines ♥</button><button type="button" data-v="budget" aria-pressed="false">Budget</button><button type="button" data-v="opti" aria-pressed="false">Opti</button></div></div>
       <div class="alert theory"><strong>Suggestions de builds, loin d'être optimisées</strong><span>Ces prébuilds sont là pour donner des idées : des builds « de joueur normal » qui ont du sens, pas le meilleur stuff possible. Calculés au prestige 6, sans passif de classe. Pour un build adapté à ton perso, passe par l'Optimiseur ou le Build manuel.</span></div><p class="note"><strong>Budget</strong> : pas d'objet Légendaire, pas de Rayonnant, pas de vrai Dofus (les petits Dofus de stats sont permis). <strong>Opti</strong> : tous les objets du jeu, en +0. Clique un build pour voir ses stats, son deck et ses codes ; survole un objet pour son détail (bordure pointillée = objet que tu n'as pas).</p>
       <div id="preOut"></div>
     </div>
@@ -547,6 +550,54 @@ th,td{border-bottom-color:var(--line)}
     </div>
   </section>
   <section class="tab" id="items" hidden>
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:end">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end">
+          <label style="display:grid;gap:2px"><span class="lbl">Tier list</span><select id="tmList" style="min-width:180px"></select></label>
+          <label style="display:grid;gap:2px"><span class="lbl">Nom</span><input type="text" id="tmName" style="min-width:200px" placeholder="Ma tier list"></label>
+          <button class="btn ghost" type="button" id="tmNew">+ Nouvelle</button>
+          <button class="btn ghost" type="button" id="tmDel">Supprimer</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" type="button" id="tmJpg">Exporter en JPEG</button>
+          <button class="btn" type="button" id="tmPdf">Exporter en PDF</button>
+          <button class="btn ghost" type="button" id="tmClear">Vider les rangs</button>
+        </div>
+      </div>
+      <p class="note">Glisse les objets de la réserve vers un rang (ou clique un objet puis clique un rang). Double-clic sur un objet classé pour le renvoyer dans la réserve. Clique un nom de rang pour le renommer.</p>
+      <div id="tmTiers" class="tm-tiers"></div>
+      <div style="display:flex;gap:8px;margin:6px 0 14px"><button class="btn ghost" type="button" id="tmAddRow" style="padding:3px 10px">+ Rang</button><button class="btn ghost" type="button" id="tmDelRow" style="padding:3px 10px">− Dernier rang</button></div>
+      <h3 style="margin:0 0 6px">Réserve</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-bottom:8px">
+        <label style="display:grid;gap:2px"><span class="lbl">Type</span><select id="tmType"><option value="">Tous</option><option value="chapeau">Chapeau</option><option value="cape">Cape</option><option value="amulette">Amulette</option><option value="anneau">Anneau</option><option value="ceinture">Ceinture</option><option value="bottes">Bottes</option><option value="arme">Arme</option><option value="bouclier">Bouclier</option><option value="familier">Familier</option><option value="dofus">Dofus / Trophée</option><option value="rune">Runes</option></select></label>
+        <label style="display:grid;gap:2px"><span class="lbl">Objets</span><select id="tmSrc"><option value="own">Mes objets</option><option value="all">Tout le catalogue</option></select></label>
+        <label style="display:grid;gap:2px"><span class="lbl">Niveau min</span><input type="number" id="tmMin" value="1" min="1" max="200" style="width:5em"></label>
+        <label style="display:grid;gap:2px"><span class="lbl">Recherche</span><input type="search" id="tmQ" placeholder="nom…" style="min-width:150px"></label>
+      </div>
+      <div id="tmPool" class="tm-pool"></div>
+    </div>
+    <div hidden data-off="1">
+    <div class="panel">
+      <h2 style="margin-top:0">Tier list des runes par concept</h2>
+      <p class="note" style="margin-top:0">Pour ton build actuel (stuff porté, points, deck actif) : ce que chaque rune apporte selon ce que tu cherches. Une rune peut être S dans un concept et inutile dans un autre (plafond de PA ou de critique déjà atteint, carac que ton deck n'utilise pas…). ×N = ton stock.</p>
+      <div id="tlRunes"></div>
+    </div>
+    <div class="panel">
+      <h2 style="margin-top:0">Tier list des Dofus et trophées par contenu</h2>
+      <p class="note" style="margin-top:0">Chacun de tes Dofus et trophées est testé seul sur ton build (stuff porté sans ses Dofus, tes points, ton deck), avec leurs effets spéciaux, contre les adversaires de chaque contenu. Le classement compare ce qu'ils apportent dans chaque contenu ; c'est un repère, pas un score de combat. Calcul en arrière-plan (1 à 3 min).</p>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn" type="button" id="dtRun">Calculer la tier list des Dofus</button><span class="note" id="dtStatus"></span></div>
+      <div id="tlDofus" style="margin-top:10px"></div>
+    </div>
+    <div class="panel">
+      <h2 style="margin-top:0">Objets à monter en Rayonnant +5</h2>
+      <p class="note" style="margin-top:0">Tes objets pas encore au +5, classés par ce que le passage au +5 leur fait gagner (valeur dans ton profil de dégâts et de survie). Coût = exemplaires Tiers 1 qu'il te manque, matière en stock déduite.</p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:end;margin:8px 0">
+        <div class="field" style="margin:0"><label for="upSlot">Emplacement</label><select id="upSlot"><option value="">Tous</option><option value="chapeau">Chapeau</option><option value="cape">Cape</option><option value="amulette">Amulette</option><option value="anneau">Anneau</option><option value="ceinture">Ceinture</option><option value="bottes">Bottes</option><option value="arme">Arme</option><option value="bouclier">Bouclier</option><option value="familier">Familier</option><option value="dofus">Dofus / Trophée</option></select></div>
+        <div class="field" style="margin:0"><label for="upMin">Niveau min</label><input type="number" id="upMin" min="1" max="200" value="180" style="width:5em"></div>
+        <div class="field" style="margin:0"><label for="upStyle">Style</label><select id="upStyle"><option value="0.3">Dégâts</option><option value="0.6" selected>Équilibré</option><option value="1.2">Survie</option></select></div>
+      </div>
+      <div class="tablewrap" id="tlUp"></div>
+    </div>
     <div class="panel" id="bank2Wrap" hidden data-off="1">
       <h2 style="margin-top:0">Banque de fin de saison</h2>
       <p class="note" id="bank2Note"></p>
@@ -555,7 +606,7 @@ th,td{border-bottom-color:var(--line)}
       </div>
       <div class="tablewrap" id="bank2Out"></div>
     </div>
-    <div class="panel">
+    <div class="panel" hidden>
       <h2 style="margin-top:0">Stuffs les plus aimés (vitrines)</h2>
       <p class="note" style="margin-top:0">Lus par le script sur la page Vitrines du jeu (une fois par jour, à l'export). « Ouvrir » charge le stuff et le deck dans le Build manuel pour voir leurs stats : les objets que tu n'as pas sont pris tels quels, les sorts que tu n'as pas sont ignorés.</p>
       <div class="tablewrap" id="vitOut"></div>
@@ -580,7 +631,8 @@ th,td{border-bottom-color:var(--line)}
       <div id="tlSum" class="note"></div>
       <div class="tablewrap" id="tlOut"></div>
     </div>
-  </section>
+      </div>
+</section>
   <section class="tab" id="wip" hidden>
     <div class="panel">
       <h2 style="margin:0">En chantier</h2>
@@ -2320,7 +2372,16 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const off = 100 * Math.log(o1 / o0), def = 100 * Math.log(d1 / d0);
     return { v: off + lam * def, off, def };
   }
-  const api = { statVal, consOk, consPenalty, iniEst, SPELL_TYPES, statWeights, valueProfile, itemValue, optimizeDeep, deepRuns, deepPart, deepStart, deepMerge, ARCHS, weaponSteals, normSus, encodeGear, encodeDeck, decodeCode, sustainAllowed, SLOTS, ORIENT, optimize, evaluate, buildState, itemPool, allocTemplates, score, cardAllowed };
+  // Tier list des Dofus : chaque Dofus seul (les 6 emplacements vidés), comparé au build sans Dofus, pour un objectif et des adversaires donnés
+  function dofusTier(data, o) {
+    data._cardsByKey = data._cardsByKey || Object.fromEntries(data.cards.map(c => [c.key, c]));
+    const g0 = Object.assign({}, o.gear); for (const [sl, t] of SLOTS) if (t === 'dofus') delete g0[sl];
+    const ev = g => evaluate(data, { gear: g, alloc: o.alloc, deck: o.deck }, o.ctx, o.monsters, o.n || 200, o.objective, o.fight).score;
+    const s0 = ev(g0), out = [];
+    o.cands.forEach((c, i) => { const s1 = ev(Object.assign({}, g0, { dofus1: c })); out.push({ id: c.id, g: s1 - s0 }); o.onProgress && o.onProgress({ phase: 'Dofus', done: i + 1, of: o.cands.length }); });
+    return out;
+  }
+  const api = { dofusTier, statVal, consOk, consPenalty, iniEst, SPELL_TYPES, statWeights, valueProfile, itemValue, optimizeDeep, deepRuns, deepPart, deepStart, deepMerge, ARCHS, weaponSteals, normSus, encodeGear, encodeDeck, decodeCode, sustainAllowed, SLOTS, ORIENT, optimize, evaluate, buildState, itemPool, allocTemplates, score, cardAllowed };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.OPT = api;
 })(typeof self !== 'undefined' ? self : this);
 </script>
@@ -4619,7 +4680,7 @@ function deepParallel(data,opts,statusEl,barEl,onDone,onErr){
   }catch(e){try{console.warn('calcul réparti indisponible :',e&&e.message)}catch(_){}return false}
 }
 function makeWorker(){
-  const src=engineSrc+'\n'+optSrc+`\nvar BS=-Infinity,BT=0,BP=null;function bestOf(p){if(p.best&&p.state&&isFinite(p.best.score)&&p.best.score>BS){BS=p.best.score;BP={label:String(p.phase||'').split(' (')[0].replace(/^Confirmation · /,''),state:p.state,final:{r:p.best.r,score:p.best.score,S:p.best.S}}}if(BP&&Date.now()-BT>700){BT=Date.now();self.postMessage({type:'best',b:BP});BP=null}}\nself.onmessage=function(e){const a=e.data;a.data._cardsByKey=null;if(a.mode){const prog=function(p){bestOf(p);self.postMessage({type:'progress',p:{phase:p.phase,done:p.done,of:p.of,evals:p.evals}})};const o=Object.assign({},a.opts,{onProgress:prog});if(a.mode==='start'){const r=OPT.deepStart(a.data,o);self.postMessage({type:'start',res:{r:r.r,score:r.score,S:r.S}});return}const part=OPT.deepPart(a.data,o,a.ids,2);self.postMessage({type:'part',res:{evals:part.evals,saturated:part.saturated,results:part.results.map(function(r){return {id:r.id,label:r.label,state:r.state,confirmed:r.confirmed,saturated:r.saturated,start:r.start&&{r:r.start.r,score:r.start.score,S:r.start.S},final:{r:r.final.r,score:r.final.score,S:r.final.S},evals:r.evals}})}});return}const res=OPT.optimizeDeep(a.data,Object.assign({},a.opts,{onProgress:function(p){bestOf(p);self.postMessage({type:'progress',p:{phase:p.phase,done:p.done,of:p.of,evals:p.evals,score:p.best&&p.best.score,rounds:p.best&&p.best.r.avgRounds}})}}));self.postMessage({type:'done',res:{state:res.state,start:{r:res.start.r,score:res.start.score,S:res.start.S},final:{r:res.final.r,score:res.final.score,S:res.final.S},evals:res.evals,archs:res.archs,archetype:res.archetype,saturated:res.saturated}})};`;
+  const src=engineSrc+'\n'+optSrc+`\nvar BS=-Infinity,BT=0,BP=null;function bestOf(p){if(p.best&&p.state&&isFinite(p.best.score)&&p.best.score>BS){BS=p.best.score;BP={label:String(p.phase||'').split(' (')[0].replace(/^Confirmation · /,''),state:p.state,final:{r:p.best.r,score:p.best.score,S:p.best.S}}}if(BP&&Date.now()-BT>700){BT=Date.now();self.postMessage({type:'best',b:BP});BP=null}}\nself.onmessage=function(e){const a=e.data;a.data._cardsByKey=null;if(a.mode){const prog=function(p){bestOf(p);self.postMessage({type:'progress',p:{phase:p.phase,done:p.done,of:p.of,evals:p.evals}})};const o=Object.assign({},a.opts,{onProgress:prog});if(a.mode==='dofus'){const r=OPT.dofusTier(a.data,o);self.postMessage({type:'dofus',res:r});return}if(a.mode==='start'){const r=OPT.deepStart(a.data,o);self.postMessage({type:'start',res:{r:r.r,score:r.score,S:r.S}});return}const part=OPT.deepPart(a.data,o,a.ids,2);self.postMessage({type:'part',res:{evals:part.evals,saturated:part.saturated,results:part.results.map(function(r){return {id:r.id,label:r.label,state:r.state,confirmed:r.confirmed,saturated:r.saturated,start:r.start&&{r:r.start.r,score:r.start.score,S:r.start.S},final:{r:r.final.r,score:r.final.score,S:r.final.S},evals:r.evals}})}});return}const res=OPT.optimizeDeep(a.data,Object.assign({},a.opts,{onProgress:function(p){bestOf(p);self.postMessage({type:'progress',p:{phase:p.phase,done:p.done,of:p.of,evals:p.evals,score:p.best&&p.best.score,rounds:p.best&&p.best.r.avgRounds}})}}));self.postMessage({type:'done',res:{state:res.state,start:{r:res.start.r,score:res.start.score,S:res.start.S},final:{r:res.final.r,score:res.final.score,S:res.final.S},evals:res.evals,archs:res.archs,archetype:res.archetype,saturated:res.saturated}})};`;
   return new Worker(URL.createObjectURL(new Blob([src],{type:'text/javascript'})));
 }
 function segVal(id){const b=document.querySelector(`#${id} [aria-pressed="true"]`);return b?b.dataset.v:null}
@@ -4818,7 +4879,7 @@ function importText(txt){
 }
 
 /* ---------- Onglets & réglages ---------- */
-function showTab(id){if(id==='sim')id='mb';if(id==='wip'||id==='form')id='perso';{const pm=document.querySelector('.playmode');if(pm)pm.hidden=pm.dataset.off==='1'||(id==='best'||id==='wip'||id==='form');}if(id==='asc')id='opt';if(id==='farm'||id==='items')id='perso';document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===id?'true':'false'));document.querySelectorAll('section.tab').forEach(s=>s.hidden=s.id!==id);try{localStorage.setItem('labo-tab',id)}catch(e){}if(id==='perso'){try{renderPV()}catch(e){}}if(id==='mb'){try{setupMB();renderMB()}catch(e){$('#mbMsg').textContent='Erreur : '+e.message}}if(id==='coll'){try{renderColl()}catch(e){$('#cOut').textContent='Erreur : '+e.message}}if(id==='pre'){try{renderPrebuilds()}catch(e){$('#preOut').textContent='Erreur : '+e.message}}if(id==='farm'){try{renderFarm()}catch(e){$('#fZones').textContent='Erreur : '+e.message}try{renderPredict()}catch(e){$('#fPredict').textContent='Erreur : '+e.message}}if(id==='data'){try{renderChanges()}catch(e){}try{healthCheck(false)}catch(e){$('#healthOut').textContent='Erreur : '+e.message}}if(id==='items'){TL=null;if(LPROF==='saison')$('#tlFor').value='principal';renderItemsTab()}}
+function showTab(id){if(id==='sim')id='mb';if(id==='wip'||id==='form')id='perso';{const pm=document.querySelector('.playmode');if(pm)pm.hidden=pm.dataset.off==='1'||(id==='best'||id==='wip'||id==='form');}if(id==='asc')id='opt';if(id==='farm')id='perso';document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===id?'true':'false'));document.querySelectorAll('section.tab').forEach(s=>s.hidden=s.id!==id);try{localStorage.setItem('labo-tab',id)}catch(e){}if(id==='perso'){try{renderPV()}catch(e){}}if(id==='mb'){try{setupMB();renderMB()}catch(e){$('#mbMsg').textContent='Erreur : '+e.message}}if(id==='coll'){try{renderColl()}catch(e){$('#cOut').textContent='Erreur : '+e.message}}if(id==='pre'){try{renderPrebuilds()}catch(e){$('#preOut').textContent='Erreur : '+e.message}}if(id==='farm'){try{renderFarm()}catch(e){$('#fZones').textContent='Erreur : '+e.message}try{renderPredict()}catch(e){$('#fPredict').textContent='Erreur : '+e.message}}if(id==='data'){try{renderChanges()}catch(e){}try{healthCheck(false)}catch(e){$('#healthOut').textContent='Erreur : '+e.message}}if(id==='items'){TL=null;if(LPROF==='saison')$('#tlFor').value='principal';renderItemsTab()}}
 document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
 /* Collection : mes objets au meilleur rang (avec ce qu'il manque pour fusionner) et objets manquants (où les trouver) */
 let C_VIEW='own';try{C_VIEW=localStorage.getItem('labo-cview')||'own'}catch(e){}
@@ -4849,11 +4910,11 @@ function renderColl(){const out=$('#cOut');if(!out)return;['cRankL','cOrdL'].for
   if(C_VIEW==='sell'){const O2=collOwned(),items=Object.values(O2).map(x=>Object.assign(x,{it:setOf(x.it)}));collFilters(items.map(x=>x.it));const pass=collPassF();
     const rows=[];for(const x of items){if(!pass(x.it))continue;const rm=(f,q)=>q-Math.max((x.keep&&x.keep[f])||0,+f===x.main?1:0);const dup=Object.entries(x.byF).filter(([f,q])=>+f>2&&q>0).map(([f,q])=>[+f,rm(f,q)]).filter(([f,q])=>q>0);
       const need=x.main>=7?0:fusVal(7)-fusVal(Math.max(0,x.main));const fodCopies=Object.entries(x.byF).filter(([f])=>+f<=2).map(([f,q])=>[+f,rm(f,q)]).filter(([f,q])=>q>0);
-      const sur=x.main>=2?Math.max(0,x.fod-need):0;if(!dup.length&&sur<1&&!(x.main>=7&&fodCopies.length))continue;
+      if(x.main<7)continue;const sur=0; // on ne vend que quand l'objet est déjà au Rayonnant +5
       const fodTxt=x.main>=7?fodCopies.map(([f,q])=>q+'× '+MB_FUS[f]).join(', '):sur>=1?`~${sur} T1 de trop, même après le passage au Rayonnant +5`:'';
       rows.push({x,txt:[dup.map(([f,q])=>q+'× '+MB_FUS[f]+' (doublon)').join(', '),fodTxt].filter(Boolean).join(' · '),w:sur+dup.reduce((a,[f,q])=>a+q*fusVal(f),0)})}
     rows.sort((a,b)=>(b.x.it.lvl||0)-(a.x.it.lvl||0)||b.w-a.w);
-    $('#cInfo').textContent=`${rows.length} objets avec des exemplaires en trop : copies qui ne servent plus à fusionner (objet déjà au Rayonnant +5, ou plus de matière qu'il n'en faut pour y arriver) et doublons de rang élevé. Les objets équipés ou runés ne sont jamais comptés comme « en trop ».`;
+    $('#cInfo').textContent=`${rows.length} objets déjà au Rayonnant +5 avec des exemplaires en trop : toutes les autres copies ne servent plus à rien. Les objets équipés ou runés ne sont jamais comptés comme « en trop ».`;
     out.innerHTML=rows.length?`<div class="tablewrap"><table><tr><th></th><th>Objet</th><th>Rang gardé</th><th>En trop (à vendre)</th></tr>${rows.slice(0,400).map(({x,txt})=>`<tr><td>${collIcon(x.it)}</td><td><span data-tip="${x.it.id}:${x.main}">${esc(x.it.n)}</span><div class="note">${C_TL[x.it.s]||esc(x.it.s)} · niv. ${x.it.lvl||'?'}</div></td><td>${MB_FUS[x.main]}</td><td class="note">${txt}</td></tr>`).join('')}</table></div>`:'<p class="note">Rien en trop avec ces filtres.</p>';return}
   // manquants
   const own=new Set((DATA.items||[]).concat(DATA.worn||[]).map(i=>i.id));const cat=(B.allItems&&B.allItems.length?B.allItems:bItems(B)).filter(i=>i&&i.s&&i.s!=='parchemin'&&!own.has(i.id)).map(setOf);
@@ -5462,7 +5523,7 @@ function cardTile(c,extra){if(!c)return '';const src=cardImg(c),el=mainEl(c);con
   return `<div class="ctile" title="${esc(c.n+' · '+c.ap+' PA'+(c.d?' — '+c.d:''))}">${src?`<img src="${src}" alt="" loading="lazy" onerror="this.outerHTML=this.dataset.ph" data-ph="${esc(ph)}">`:ph}<span class="ap">${c.ap}</span><span>${esc(c.n)}</span>${extra||''}</div>`}
 // ---------- Vue du personnage (onglet Mon personnage) ----------
 let PV_TAB='car';
-function dollHtml(gear,own,center){const big=s=>{const x=gear[s],it=x&&mbAll().m[x.id];const src=it&&mbIcon(it);return `<span class="mb-slot" style="cursor:default${it&&own&&!own.has(it.id)?';border-style:dashed':''}" ${it?`data-tip="${it.id}:${x.f||0}"`:`title="${esc(SLOT_LABEL[s]||s)}"`}>${it?(src?`<img src="${src}" alt="" loading="lazy">`:`<span class="mb-ini">${mbIni(it)}</span>`):emptyLbl(s)}${it&&x.f?`<span class="mb-f">${x.f>=2?'★'+(x.f>2?'+'+(x.f-2):''):'T'+(x.f+1)}</span>`:''}</span>`};
+function dollHtml(gear,own,center){const big=s=>{const x=gear[s],it=x&&mbAll().m[x.id];const src=it&&mbIcon(it);return `<span class="mb-slot" style="cursor:default${it&&own&&!own.has(it.id)?';border-style:dashed':''}" ${it?`data-tip="${it.id}:${x.f||0}:${R.runeCodes(x.ru).join(',')}"`:`title="${esc(SLOT_LABEL[s]||s)}"`}>${it?(src?`<img src="${src}" alt="" loading="lazy">`:`<span class="mb-ini">${mbIni(it)}</span>`):emptyLbl(s)}${it&&x.f?`<span class="mb-f">${x.f>=2?'★'+(x.f>2?'+'+(x.f-2):''):'T'+(x.f+1)}</span>`:''}${it&&R.runeCodes(x.ru).length?`<span class="mb-ru" title="Runes : ${esc(R.runeCodes(x.ru).map(c=>R.RUNE_NAMES[c]).join(', '))}">◆${R.runeCodes(x.ru).length}</span>`:''}</span>`};
   return `<div class="mb-doll"><div class="mb-col">${MB_LEFT.map(big).join('')}</div><div class="mb-center">${center||''}</div><div class="mb-col">${MB_RIGHT.map(big).join('')}</div></div><div class="mb-dofus">${MB_DOF.map(big).join('')}</div>`}
 function pvGearOpts(){const o=[['cur','Équipement porté']];(DATA.meta.presets||[]).forEach((p,i)=>{if(p&&p.gear&&Object.keys(p.gear).length)o.push(['p'+i,'Enregistré en jeu : '+p.name])});mbSavesL().forEach((x,i)=>o.push(['s'+i,'Build manuel : '+x.name]));return o}
 function pvGearBuild(v){if(v&&v[0]==='p'){const p=(DATA.meta.presets||[])[+v.slice(1)];if(p)return {gear:p.gear,alloc:p.alloc||null,name:p.name,dom:p.src==='dom',missing:p.missing||[]}}if(v&&v[0]==='s'){const x=mbSavesL()[+v.slice(1)];if(x)return {gear:x.gear,alloc:x.alloc,deck:x.deck,name:x.name}}const f=mbFresh();return {gear:f.gear,alloc:f.alloc,name:'Équipement porté'}}
@@ -5561,9 +5622,100 @@ function mbGear(g){const A=mbAll().m,o={};for(const [s,x] of Object.entries(g||{
 function runeStock(){const P=(DATA&&DATA.meta&&DATA.meta.runesProbe)||{};const h=(P.stock&&P.stock.length?P.stock:P.hits)||[];const o={};if(Array.isArray(h))for(const x of h)if(x&&x.rune&&R.RUNES[x.rune])o[x.rune]=Math.max(o[x.rune]||0,+x.qty||0);return o}
 function runeVal(c){const r=R.RUNES[c];if(!r)return '';if(r.pct)return `+${r.pct} % des stats de l'objet`;if(r.elem)return 'double les dommages élémentaires de l\'objet';return Object.entries(r.st).map(([k,v])=>k==='resPctAll'?`+${v} % toutes rés.`:k==='dmgPctCrit'?`+${v} % dommages critiques`:k==='dmgPctSorts'?`+${v} % dommages aux sorts`:(L=>`+${v}${/^resPct|critique/.test(k)&&!/%/.test(L)?' %':''} ${L}`)(MB_LBL[k]||STAT_LABEL[k]||k)).join(', ')}
 /* Placement automatique des runes du stock (runes déjà gravées conservées) : ajout glouton de la rune qui améliore le plus le build, selon l'orientation */
+const RUNE_MODES=[['equilibre','Polyvalent'],['kralamoure','Dégâts'],['tank','Tank'],['ascension','Ascension (dégâts + survie)'],['pvp','PvP one-shot'],['pvp-ini','Initiative (PvP)'],['pp','Prospection (butin)'],['sagesse','Sagesse (XP)']];
+/* Tier list des runes par concept, pour le build porté */
+const RT_CONCEPTS=[['kralamoure','Dégâts'],['tank','Tank / survie'],['ascension','Ascension'],['pvp','PvP one-shot'],['pvp-ini','PvP initiative'],['pp','Butin (PP)'],['sagesse','XP (Sagesse)']];
+function renderRuneTiers(){const box=$('#tlRunes');if(!box)return;const st=runeStock();const gear={};for(const [s0,it] of Object.entries(curGear||{}))if(it)gear[s0]=Object.assign({},it,{ru:R.runeCodes(it.ru)});const deck=(DATA.meta.decks[DATA.meta.active]||[]).filter(k=>cardsByKey[k]);
+  const slots=Object.keys(gear).filter(sl=>gear[sl].s!=='dofus'&&gear[sl].ru.length<2);if(!slots.length){box.innerHTML='<p class="note">Aucun emplacement de rune libre sur ton stuff porté.</p>';return}
+  const val=(g,obj)=>{try{const b=O.buildState(DATA,{gear:g,alloc:curAlloc,deck},ctx);return runeMetric(b.S,b.deck,obj)}catch(e){return 0}};
+  const codes=RUNE_ORDER.filter(c=>c!=='pa'||!Object.values(gear).some(it=>it.ru.includes('pa')));
+  box.innerHTML='<div class="pre-grid">'+RT_CONCEPTS.map(([obj,lab])=>{const v0=val(gear,obj);const gains=codes.map(c=>{const r=R.RUNES[c];let best=0;for(const sl of (r.pct||r.elem?slots:[slots[0]])){const g=Object.assign({},gear,{[sl]:Object.assign({},gear[sl],{ru:gear[sl].ru.concat([c])})});best=Math.max(best,val(g,obj)-v0)}return {c,g:best}});
+    const mx=Math.max(1e-9,...gains.map(x=>x.g));const T=x=>x.g<=1e-6?'—':x.g>=0.6*mx?'S':x.g>=0.3*mx?'A':x.g>=0.1*mx?'B':'C';
+    return `<div class="optcard"><h3>${esc(lab)}</h3>${['S','A','B','C'].map(t=>{const L=gains.filter(x=>T(x)===t).sort((a,b)=>b.g-a.g);return L.length?`<div><strong>${t}</strong> · ${L.map(x=>`<span title="${esc(runeVal(x.c))}">${esc(R.RUNE_NAMES[x.c])}${st[x.c]?` <span class="muted">×${st[x.c]}</span>`:''}</span>`).join(', ')}</div>`:''}).join('')}<div class="note">Sans effet : ${esc(gains.filter(x=>T(x)==='—').map(x=>R.RUNE_NAMES[x.c]).join(', ')||'aucune')}</div></div>`}).join('')+'</div>'}
+
+/* ---------- Tier listes perso (glisser-déposer, export JPEG / PDF) ---------- */
+const TM_KEY='labo-tierlists',TM_CUR='labo-tiercur',TM_COLORS=['#ff7f7f','#ffbf7f','#ffdf7f','#ffff7f','#bfff7f','#7fffff','#7fbfff','#bf7fbf'];
+let TM_SEL=null;
+function tmLoad(){let L=[];try{L=JSON.parse(localStorage.getItem(TM_KEY)||'[]')}catch(e){}if(!Array.isArray(L)||!L.length)L=[tmBlank('Ma tier list')];return L}
+function tmBlank(name){return {id:'t'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),name,tiers:['S','A','B','C','D'].map((l,i)=>({l,c:TM_COLORS[i],ids:[]}))}}
+function tmSave(L){try{localStorage.setItem(TM_KEY,JSON.stringify(L))}catch(e){flash('Sauvegarde impossible (stockage plein ?)')}}
+function tmCurId(L){let c=null;try{c=localStorage.getItem(TM_CUR)}catch(e){}return L.some(t=>t.id===c)?c:L[0].id}
+function tmCur(){const L=tmLoad();const id=tmCurId(L);return {L,T:L.find(t=>t.id===id)}}
+function tmItem(key){if(key[0]==='r'){const c=key.slice(2);return R.RUNES[c]?{key,rune:c,n:R.RUNE_NAMES[c]}:null}const id=+key.slice(2);const it=mbAll().m[id]||(bestData()&&(bestData().allItems||[]).find(i=>i.id===id));return it?{key,it,n:it.n}:null}
+const TM_RCOL={legendaire:'#ffb347',epique:'#c58cff'};
+function tmTile(x){if(!x)return '';if(x.rune)return `<span class="tm-it" draggable="true" data-k="${x.key}" title="${esc('Rune '+x.n+' : '+runeVal(x.rune))}" style="border-color:${TM_RCOL[R.RUNE_RARITY[x.rune]]||'#8fd0ff'};color:${TM_RCOL[R.RUNE_RARITY[x.rune]]||'#8fd0ff'}">◆<br>${esc(x.n)}</span>`;
+  const src=mbIcon(x.it);return `<span class="tm-it" draggable="true" data-k="${x.key}" data-tip="${x.it.id}:0">${src?`<img src="${src}" alt="${esc(x.n)}" loading="lazy">`:esc(mbIni(x.it))}</span>`}
+function tmPoolKeys(T){const placed=new Set(T.tiers.flatMap(t=>t.ids));const ty=$('#tmType').value,src=$('#tmSrc').value,mn=+$('#tmMin').value||1,q=norm($('#tmQ').value||'').trim();
+  if(ty==='rune')return RUNE_ORDER.map(c=>'r:'+c).filter(k=>!placed.has(k)&&(!q||norm(R.RUNE_NAMES[k.slice(2)]).includes(q)));
+  let list;if(src==='own'){const by={};for(const it of (DATA.items||[]).concat(DATA.worn||[]))if(it&&it.s&&it.s!=='parchemin')by[it.id]=it;list=Object.values(by)}else{const B=bestData()||{};list=(B.allItems&&B.allItems.length?B.allItems:bItems(B)).filter(i=>i&&i.s&&i.s!=='parchemin')}
+  return list.filter(i=>(!ty||i.s===ty)&&(i.lvl||0)>=mn&&(!q||norm(i.n).includes(q))).sort((a,b)=>(b.lvl||0)-(a.lvl||0)||String(a.n).localeCompare(b.n)).map(i=>'i:'+i.id).filter(k=>!placed.has(k))}
+function renderTM(){const {L,T}=tmCur();const ls=$('#tmList');ls.innerHTML=L.map(t=>`<option value="${t.id}" ${t.id===T.id?'selected':''}>${esc(t.name||'Sans nom')}</option>`).join('');if(document.activeElement!==$('#tmName'))$('#tmName').value=T.name||'';
+  $('#tmTiers').innerHTML=T.tiers.map((t,i)=>`<div class="tm-row"><div class="tm-lab" style="background:${t.c}" data-row="${i}" title="Clique pour renommer">${esc(t.l)}</div><div class="tm-drop" data-drop="${i}">${t.ids.map(k=>tmTile(tmItem(k))).join('')}</div></div>`).join('');
+  const keys=tmPoolKeys(T);$('#tmPool').innerHTML=keys.slice(0,300).map(k=>tmTile(tmItem(k))).join('')+(keys.length>300?`<span class="note" style="align-self:center">+ ${keys.length-300} autres : filtre ou cherche.</span>`:'')||'<span class="note">Rien à afficher avec ces filtres.</span>';$('#tmPool').dataset.drop='pool';TM_SEL=null}
+function tmMove(key,to){const {L,T}=tmCur();for(const t of T.tiers)t.ids=t.ids.filter(k=>k!==key);if(to!=='pool'&&T.tiers[+to])T.tiers[+to].ids.push(key);tmSave(L);renderTM()}
+(function(){const root=document.getElementById('items');if(!root)return;
+  root.addEventListener('dragstart',e=>{const el=e.target.closest&&e.target.closest('.tm-it');if(el){e.dataTransfer.setData('text/plain',el.dataset.k);e.dataTransfer.effectAllowed='move'}});
+  root.addEventListener('dragover',e=>{const d=e.target.closest&&e.target.closest('[data-drop]');if(d){e.preventDefault();d.classList.add('over')}});
+  root.addEventListener('dragleave',e=>{const d=e.target.closest&&e.target.closest('[data-drop]');if(d)d.classList.remove('over')});
+  root.addEventListener('drop',e=>{const d=e.target.closest&&e.target.closest('[data-drop]');if(!d)return;e.preventDefault();d.classList.remove('over');const k=e.dataTransfer.getData('text/plain');if(k)tmMove(k,d.dataset.drop)});
+  root.addEventListener('click',e=>{const it=e.target.closest&&e.target.closest('.tm-it');if(it){root.querySelectorAll('.tm-it.sel').forEach(x=>x.classList.remove('sel'));TM_SEL=TM_SEL===it.dataset.k?null:it.dataset.k;if(TM_SEL)it.classList.add('sel');return}
+    const lab=e.target.closest&&e.target.closest('.tm-lab');if(lab&&!TM_SEL){const {L,T}=tmCur();const t=T.tiers[+lab.dataset.row];const n=prompt('Nom du rang',t.l);if(n!=null&&n.trim()){t.l=n.trim().slice(0,24);tmSave(L);renderTM()}return}
+    const d=e.target.closest&&e.target.closest('[data-drop]');if(d&&TM_SEL){tmMove(TM_SEL,d.dataset.drop);return}if(lab&&TM_SEL){tmMove(TM_SEL,lab.dataset.row)}});
+  root.addEventListener('dblclick',e=>{const it=e.target.closest&&e.target.closest('.tm-drop .tm-it');if(it)tmMove(it.dataset.k,'pool')});
+  ['tmType','tmSrc','tmMin','tmQ'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener(el.tagName==='SELECT'?'change':'input',()=>renderTM())});
+  $('#tmList').onchange=()=>{try{localStorage.setItem(TM_CUR,$('#tmList').value)}catch(e){}renderTM()};
+  $('#tmName').oninput=()=>{const {L,T}=tmCur();T.name=$('#tmName').value.slice(0,60);tmSave(L);const o=$('#tmList').selectedOptions[0];if(o)o.textContent=T.name||'Sans nom'};
+  $('#tmNew').onclick=()=>{const L=tmLoad();const t=tmBlank('Tier list '+(L.length+1));L.push(t);tmSave(L);try{localStorage.setItem(TM_CUR,t.id)}catch(e){}renderTM()};
+  $('#tmDel').onclick=()=>{const {L,T}=tmCur();if(!confirm(`Supprimer « ${T.name} » ?`))return;tmSave(L.filter(t=>t.id!==T.id));renderTM()};
+  $('#tmClear').onclick=()=>{const {L,T}=tmCur();T.tiers.forEach(t=>t.ids=[]);tmSave(L);renderTM()};
+  $('#tmAddRow').onclick=()=>{const {L,T}=tmCur();if(T.tiers.length>=8)return;T.tiers.push({l:String.fromCharCode(65+T.tiers.length-1),c:TM_COLORS[T.tiers.length],ids:[]});tmSave(L);renderTM()};
+  $('#tmDelRow').onclick=()=>{const {L,T}=tmCur();if(T.tiers.length<=1)return;T.tiers.pop();tmSave(L);renderTM()};
+  $('#tmJpg').onclick=()=>tmExportJpg();$('#tmPdf').onclick=()=>tmExportPdf()})();
+function tmImg(src){return new Promise(res=>{if(!src)return res(null);const im=new Image();im.crossOrigin='anonymous';im.onload=()=>res(im);im.onerror=()=>res(null);im.src=src;setTimeout(()=>res(null),6000)})}
+async function tmExportJpg(){const {T}=tmCur();const W=1100,LAB=110,SZ=56,G=6,per=Math.floor((W-LAB-12)/(SZ+G));
+  const rows=T.tiers.map(t=>({t,items:t.ids.map(tmItem).filter(Boolean)}));const H=70+rows.reduce((a,r)=>a+Math.max(1,Math.ceil(r.items.length/per))*(SZ+G)+G+4,0)+30;
+  const draw=async(withImg)=>{const cv=document.createElement('canvas');cv.width=W;cv.height=H;const x=cv.getContext('2d');x.fillStyle='#1b1712';x.fillRect(0,0,W,H);x.fillStyle='#f3d27a';x.font='bold 28px sans-serif';x.fillText(T.name||'Tier list',16,44);
+    let y=64;for(const r of rows){const h=Math.max(1,Math.ceil(r.items.length/per))*(SZ+G)+G;x.fillStyle=r.t.c;x.fillRect(8,y,LAB-8,h);x.fillStyle='#1b1b1b';x.font='bold 22px sans-serif';x.textAlign='center';x.fillText(r.t.l,8+(LAB-8)/2,y+h/2+8,LAB-16);x.textAlign='left';x.fillStyle='#2a241c';x.fillRect(LAB+2,y,W-LAB-10,h);
+      let i=0;for(const it of r.items){const cx=LAB+8+(i%per)*(SZ+G),cy=y+G+Math.floor(i/per)*(SZ+G);x.fillStyle='#3a3226';x.fillRect(cx,cy,SZ,SZ);let ok=false;if(withImg&&it.it){const im=await tmImg(mbIcon(it.it));if(im){x.drawImage(im,cx+4,cy+4,SZ-8,SZ-8);ok=true}}
+        if(!ok){x.fillStyle=it.rune?(TM_RCOL[R.RUNE_RARITY[it.rune]]||'#8fd0ff'):'#e8e0d0';x.font='bold 10px sans-serif';const words=String(it.n).split(/\s+/);let ly=cy+16;for(let k=0;k<Math.min(4,words.length);k++){x.fillText(words[k].slice(0,9),cx+3,ly);ly+=11}}i++}y+=h+4}
+    x.fillStyle='#8a7f6a';x.font='12px sans-serif';x.fillText('Labo RpgMasters',16,H-10);return cv};
+  let cv=await draw(true),url;try{url=cv.toDataURL('image/jpeg',0.92)}catch(e){cv=await draw(false);url=cv.toDataURL('image/jpeg',0.92);flash('Images du jeu non exportables ici : noms des objets à la place.')}
+  const a=document.createElement('a');a.href=url;a.download=(T.name||'tier-list').replace(/[^\w\- ]+/g,'_')+'.jpg';document.body.appendChild(a);a.click();a.remove()}
+function tmExportPdf(){const {T}=tmCur();const w=window.open('','_blank');if(!w){flash('Autorise les fenêtres pop-up pour exporter en PDF.');return}
+  const cell=it=>it.rune?`<span class="i r">◆ ${esc(it.n)}</span>`:`<span class="i">${mbIcon(it.it)?`<img src="${mbIcon(it.it)}">`:''}<small>${esc(it.n)}</small></span>`;
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(T.name||'Tier list')}</title><style>body{font-family:sans-serif;margin:16px}h1{font-size:22px}table{border-collapse:collapse;width:100%}td{border:1px solid #999;padding:6px;vertical-align:middle}td.l{width:80px;font-weight:800;font-size:20px;text-align:center}.i{display:inline-flex;flex-direction:column;align-items:center;width:70px;margin:3px;font-size:10px;text-align:center}.i img{width:44px;height:44px;object-fit:contain}.r{border:1px solid #888;border-radius:6px;padding:4px}@media print{button{display:none}}</style></head><body><h1>${esc(T.name||'Tier list')}</h1><table>${T.tiers.map(t=>`<tr><td class="l" style="background:${t.c}">${esc(t.l)}</td><td>${t.ids.map(tmItem).filter(Boolean).map(cell).join('')}</td></tr>`).join('')}</table><p style="color:#888;font-size:11px">Labo RpgMasters</p><button onclick="print()">Imprimer / Enregistrer en PDF</button><script>setTimeout(()=>print(),800)<\/script></body></html>`);w.document.close()}
+/* Tier list des Dofus par contenu (un worker par contenu, en parallèle) */
+const DT_CONCEPTS=[['vitesse','Farm rapide'],['ascension','Ascension'],['survie','Tank'],['kralamoure','Dégâts (Kralamoure)'],['pvp','PvP one-shot'],['pp','Butin (PP)'],['sagesse','XP']];
+let DT_RES=null;
+function dtPack(obj){if(obj==='kralamoure')return kralaPack();if(obj==='pvp')return pvpPack();if(obj==='ascension'){try{return ascPolyPack()}catch(e){}}return polyPack()}
+function dtCands(){const by={};for(const it of (DATA.items||[]).concat(DATA.worn||[])){if(!it||it.s!=='dofus'||!it.st)continue;const p=by[it.id];if(!p||(it.f||0)>(p.f||0))by[it.id]=it}return Object.values(by)}
+function runDofusTier(){const btn=$('#dtRun'),stt=$('#dtStatus');const cands=dtCands();if(!cands.length){stt.textContent='Aucun Dofus ou trophée dans ton inventaire.';return}
+  btn.disabled=true;stt.textContent=`Calcul de ${cands.length} Dofus/trophées sur ${DT_CONCEPTS.length} contenus…`;const res={};let left=DT_CONCEPTS.length;const prog={};const slim=optData();
+  const fin=()=>{btn.disabled=false;stt.textContent='Terminé.';DT_RES={res,cands,t:Date.now()};renderDofusTier()};
+  const CC=Math.max(1,Math.min(3,(navigator.hardwareConcurrency||2)-1));const queue=DT_CONCEPTS.map(x=>x[0]);const next=()=>{const obj=queue.shift();if(obj)runOne(obj)};
+  const runOne=(obj)=>{let pack=null;try{pack=dtPack(obj)}catch(e){}if(!pack){res[obj]=[];if(!--left)fin();else next();return}
+    const o={gear:curGear,alloc:curAlloc,deck:(DATA.meta.decks[DATA.meta.active]||[]).filter(k=>cardsByKey[k]),ctx:obj==='pp'?Object.assign({},ctx,{lootE:lootPerFight()}):ctx,monsters:monstersFor(pack,1),objective:obj,fight:fightOpts('o'),cands,n:160};
+    const done=r=>{res[obj]=r;if(!--left)fin();else{stt.textContent=`${DT_CONCEPTS.length-left}/${DT_CONCEPTS.length} contenus calculés…`;next()}};
+    let w=null;try{w=makeWorker()}catch(e){}
+    if(!w){setTimeout(()=>{try{done(O.dofusTier(slim,o))}catch(e){done([])}},0);return}
+    w.onmessage=e=>{const m=e.data;if(m.type==='dofus'){try{w.terminate()}catch(_){}done(m.res)}};w.onerror=()=>{try{w.terminate()}catch(_){}try{done(O.dofusTier(slim,o))}catch(e){done([])}};
+    w.postMessage({mode:'dofus',data:slim,opts:o})};for(let i=0;i<CC;i++)next()}
+function renderDofusTier(){const box=$('#tlDofus');if(!box)return;if(!DT_RES){box.innerHTML='<p class="note">Clique « Calculer » pour classer tes Dofus et trophées selon chaque contenu.</p>';return}
+  const byId=Object.fromEntries(DT_RES.cands.map(c=>[c.id,c]));
+  box.innerHTML='<div class="pre-grid">'+DT_CONCEPTS.map(([obj,lab])=>{const L=(DT_RES.res[obj]||[]).filter(x=>byId[x.id]);const mx=Math.max(1e-9,...L.map(x=>x.g));const T=g=>g<=0?'—':g>=0.6*mx?'S':g>=0.3*mx?'A':g>=0.1*mx?'B':'C';
+    return `<div class="optcard"><h3>${esc(lab)}</h3>${['S','A','B','C'].map(t=>{const R2=L.filter(x=>T(x.g)===t).sort((a,b)=>b.g-a.g);return R2.length?`<div><strong>${t}</strong> · ${R2.map(x=>`<span data-tip="${x.id}:${byId[x.id].f||0}">${esc(byId[x.id].n)}</span>`).join(', ')}</div>`:''}).join('')||'<div class="note">Rien de mesurable.</div>'}${L.some(x=>T(x.g)==='—')?`<div class="note">Sans effet ici : ${L.filter(x=>T(x.g)==='—').map(x=>esc(byId[x.id].n)).join(', ')}</div>`:''}</div>`}).join('')+'</div><p class="note">Testés à ta fusion actuelle. Les Dofus ne se cumulent pas toujours bien entre eux : utilise l\'Optimiseur pour choisir les 6.</p>'}
+document.addEventListener('click',e=>{if(e.target&&e.target.id==='dtRun')runDofusTier()});
+/* Objets à monter en R+5 : gain de valeur entre le rang actuel et le +5 */
+function renderUpTiers(){const out=$('#tlUp');if(!out)return;const O2=collOwned(),A=mbAll().m;const P=O.valueProfile(DATA.cards,DATA.meta.decks[DATA.meta.active],DATA.meta);const lam=+$('#upStyle').value||0.6,sl=$('#upSlot').value,mn=+$('#upMin').value||1;
+  const v5={},rows=[];const V=(b,f)=>{try{return O.itemValue(Object.assign({},b,{f}),P,{lambda:lam}).v}catch(e){return 0}};
+  for(const x of Object.values(O2)){const it=x.it;if((it.lvl||0)<mn)continue;const base=A[it.id]||it;const v=V(base,7);v5[it.s]=Math.max(v5[it.s]||0,v);if(x.main>=7||(sl&&it.s!==sl))continue;const g=v-V(base,x.main);if(g>0)rows.push({x,it:base,g,v})}
+  for(const r of rows)r.g=r.g*Math.pow(Math.max(0,r.v)/Math.max(1e-9,v5[r.it.s]||1),2); // un objet qui restera faible même au +5 descend
+  rows.sort((a,b)=>b.g-a.g);const mx=rows.length?rows[0].g:1;const T=g=>g>=0.6*mx?'S':g>=0.35*mx?'A':g>=0.15*mx?'B':'C';
+  out.innerHTML=rows.length?`<table><tr><th>Tier</th><th></th><th>Objet</th><th>Rang actuel</th><th>Il manque pour le +5</th></tr>${rows.slice(0,80).map(({x,it,g})=>`<tr><td><strong>${T(g)}</strong></td><td>${collIcon(it)}</td><td><span data-tip="${it.id}:${x.main}">${esc(it.n)}</span><div class="note">${C_TL[it.s]||esc(it.s)} · niv. ${it.lvl||'?'}${x.worn?' · équipé':''}</div></td><td>${MB_FUS[x.main]}</td><td>${x.total.missing?`~${x.total.missing} T1`:'<strong style="color:var(--good,#4caf50)">matière suffisante</strong>'}${x.kamTot?` <span class="muted">· ~${fmt(x.kamTot)} k</span>`:''}</td></tr>`).join('')}</table>${rows.length>80?`<p class="note">80 premiers sur ${rows.length}.</p>`:''}`:'<p class="note">Aucun objet à monter avec ces filtres.</p>'}
+['upSlot','upMin','upStyle'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener(el.tagName==='SELECT'?'change':'input',()=>{try{renderUpTiers()}catch(e){}})});
 function runeMetric(S,deck,obj){const D=Math.max(1,R.dmgIndex(S,deck)),res=['resPctNeutre','resPctTerre','resPctFeu','resPctEau','resPctAir'].reduce((a,k)=>a+Math.min(50,S[k]||0),0)/5,EHP=Math.max(1,S._maxHp||1)/(1-res/100),L=Math.log;
   switch(obj){case 'pp':return 3*L(Math.max(1,S._pp||1))+0.5*L(D)+0.3*L(EHP);case 'sagesse':return 3*L(100+(S.sagesse||0))+0.5*L(D)+0.3*L(EHP);case 'pvp-ini':return 2*L(Math.max(1,S.initiative||1))+L(D);
-    case 'survie':case 'ascension-tank':return L(D)+1.5*L(EHP);case 'ascension':return L(D)+L(EHP);case 'kralamoure':return L(D);default:return L(D)+0.4*L(EHP)}}
+    case 'tank':return L(EHP)+0.1*L(D);case 'survie':case 'ascension-tank':return L(D)+1.5*L(EHP);case 'ascension':return L(D)+L(EHP);case 'kralamoure':return L(D);default:return L(D)+0.4*L(EHP)}}
 function runePlan(gear,alloc,deck,obj,stock){gear=Object.fromEntries(Object.entries(gear).map(([k,v])=>[k,v?Object.assign({},v,{ru:R.runeCodes(v.ru)}):v]));const st=Object.assign({},stock);
   const val=g=>{try{const b=O.buildState(DATA,{gear:g,alloc,deck},ctx);return runeMetric(b.S,b.deck,obj)}catch(e){return -Infinity}};
   let paUsed=Object.values(gear).some(it=>it&&it.s!=='dofus'&&(it.ru||[]).includes('pa'));let cur=val(gear);const plan=[];
@@ -5578,15 +5730,17 @@ function runePlanHtml(plan,gearFull){if(!plan.length)return '<p class="note">Auc
 function renderMBRunes(){const box=$('#mbRunes');if(!box)return;const st=runeStock(),own=Object.keys(st).filter(c=>st[c]>0);
   if(!own.length){box.innerHTML='<p class="note">Aucune rune connue : ouvre l\'onglet Runes de ton inventaire dans le jeu, puis « Envoyer au Labo » (script 2.12.20 ou plus).</p>';return}
   const b=mbLoad();let base;try{base=mbState(b)}catch(e){box.textContent='Calcul impossible : '+e.message;return}const I0=R.dmgIndex(base.S,base.deck);
-  const slots=Object.keys(b.gear).filter(s=>b.gear[s]&&!/^dofus/.test(s)&&(b.gear[s].ru||[]).length<2);if(!slots.length){box.innerHTML='<p class="note">Tous les objets ont déjà 2 runes.</p>';return}
+  const slots0=Object.keys(b.gear).filter(s=>b.gear[s]&&!/^dofus/.test(s)&&(b.gear[s].ru||[]).length<2);const slots=slots0.length?slots0:Object.keys(b.gear).filter(s=>b.gear[s]&&!/^dofus/.test(s)).slice(0,1);
   const A=mbAll().m,try1=(s,c)=>{const g=JSON.parse(JSON.stringify(b.gear));g[s].ru=(g[s].ru||[]).concat([c]);try{const x=mbState(Object.assign({},b,{gear:g}));return R.dmgIndex(x.S,x.deck)/I0-1}catch(e){return 0}};
   const SURV=/^(vitalite|resPct|soins)/,UTIL=/^(sagesse|prospection|initiative|tacle|fuite|po|pm|invocations)$/;
   const rows=own.map(c=>{const r=R.RUNES[c];let gain,where=null;if(r.pct||r.elem){gain=-1;for(const s of slots){const v=try1(s,c);if(v>gain){gain=v;where=s}}}else gain=try1(slots[0],c);
     const keys=Object.keys(r.st||{});const t=gain>=0.04?'S':gain>=0.015?'A':gain>=0.003?'B':keys.some(k=>SURV.test(k))?'Survie':keys.some(k=>UTIL.test(k))?'Selon l\'objectif':'Inutile ici';return {c,t,gain,where}});
   const ORD=['S','A','B','Survie','Selon l\'objectif','Inutile ici'],HINT={S:'à graver en premier',A:'bon gain de dégâts',B:'petit gain de dégâts',Survie:'PV / résistances / soins : pour les boss qui tapent fort','Selon l\'objectif':'Sagesse (XP), Prospection (butin), Initiative (PvP)…','Inutile ici':'plafond déjà atteint (PA, critique) ou sans effet sur ce build'};
-  const planBtn='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 8px"><button class="btn" type="button" id="mbRunePlan">Placer mes runes automatiquement</button><span class="note">Remplit les emplacements libres (hors Dofus) avec les runes de ton stock qui servent le plus ce build ; les runes déjà gravées restent.</span></div>';
+  const RM=(()=>{try{return localStorage.getItem('labo-runemode')||'equilibre'}catch(e){return 'equilibre'}})();
+  const planBtn=`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 8px"><select id="mbRuneMode" title="Ce que les runes doivent renforcer">${RUNE_MODES.map(([v,l])=>`<option value="${v}" ${v===RM?'selected':''}>${l}</option>`).join('')}</select><button class="btn" type="button" id="mbRunePlan">Placer mes runes automatiquement</button><button class="btn ghost" type="button" id="mbRuneClear">Enlever toutes les runes</button></div><p class="note" style="margin:0 0 8px">Remplit les emplacements libres (hors Dofus) avec les runes de ton stock qui servent le plus le mode choisi ; les runes déjà présentes restent (« Enlever toutes les runes » pour repartir de zéro).</p>`;
   box.innerHTML=planBtn+'<div class="tablewrap"><table><tr><th>Tier</th><th>Runes</th></tr>'+ORD.filter(t=>rows.some(r=>r.t===t)).map(t=>`<tr><td><strong>${esc(t)}</strong><div class="note">${esc(HINT[t])}</div></td><td>${rows.filter(r=>r.t===t).sort((x,y)=>y.gain-x.gain).map(r=>`${esc(runeLabel(r.c))} ×${st[r.c]}${r.where&&A[b.gear[r.where].id]?` <span class="note">→ sur ${esc(A[b.gear[r.where].id].n)}</span>`:''}`).join('<br>')}</td></tr>`).join('')+'</table></div><p class="note">Classement des dégâts sans hasard, pour le build affiché ci-dessus (stuff, points, deck). 1 rune d\'Action par personnage.</p>';
-  const pb=$('#mbRunePlan');if(pb)pb.onclick=()=>{const full=mbGear(b.gear);const P=runePlan(full,b.alloc||{},(b.deck||[]).filter(k=>cardsByKey[k]),'equilibre',st);for(const p of P.plan){const g=b.gear[p.slot];if(g){g.ru=(g.ru||[]).concat([p.c]).slice(0,2)}}mbSave();renderMB();const m=$('#mbMsg');if(m)m.textContent=P.plan.length?`${P.plan.length} rune${P.plan.length>1?'s':''} placée${P.plan.length>1?'s':''} (voir chaque emplacement).`:'Aucune rune utile à placer.'}}
+  const ms=$('#mbRuneMode');if(ms)ms.onchange=()=>{try{localStorage.setItem('labo-runemode',ms.value)}catch(e){}};const pc=$('#mbRuneClear');if(pc)pc.onclick=()=>{for(const g of Object.values(b.gear))if(g)delete g.ru;mbSave();renderMB()};
+  const pb=$('#mbRunePlan');if(pb)pb.onclick=()=>{const full=mbGear(b.gear);const P=runePlan(full,b.alloc||{},(b.deck||[]).filter(k=>cardsByKey[k]),($('#mbRuneMode')||{}).value||'equilibre',st);for(const p of P.plan){const g=b.gear[p.slot];if(g){g.ru=(g.ru||[]).concat([p.c]).slice(0,2)}}mbSave();renderMB();const m=$('#mbMsg');if(m)m.textContent=P.plan.length?`${P.plan.length} rune${P.plan.length>1?'s':''} placée${P.plan.length>1?'s':''} (voir chaque emplacement).`:'Aucune rune utile à placer.'}}
 function runeLabel(c){return `${R.RUNE_NAMES[c]||c} (${runeVal(c)})`}
 const RUNE_ORDER=Object.keys(R.RUNES||{}).sort((a,b)=>({legendaire:0,epique:1}[R.RUNE_RARITY[a]]??2)-({legendaire:0,epique:1}[R.RUNE_RARITY[b]]??2));
 function mbState(b){return O.buildState(DATA,{gear:mbGear(b.gear),alloc:b.alloc||{},deck:(b.deck||[]).filter(k=>cardsByKey[k])},ctx)}
@@ -5645,7 +5799,7 @@ function mbTipHtml(it,f){const st=mbStats(it,f);const ord=MB_STATS.map(([k])=>k)
   return `<strong>${esc(it.n)}</strong><div class="muted">${esc(it.s||'')} · niv. ${it.lvl||'?'} · ${MB_RAR[it.r||0]||''} · ${MB_FUS[f||0]}</div>${it.setId?`<div class="muted">${esc(mbSetName(it))}</div>`:''}${w?`<div>${w.ap} PA · ${(w.lines||[]).map(l=>`${l.min}-${l.max} ${l.k==='steal'?'vol ':''}${EL[l.el]||'meilleur élément'}`).join(', ')}${w.twoHanded?' · deux mains':''}</div>`:''}<div class="tipst">${L.map(([k,v])=>`<span>${MB_LBL[k]}</span><span class="${v>0?'up':'down'}">${v>0?'+':''}${fmt(v)}</span>`).join('')||'<span class="muted">aucune stat</span>'}</div>${own?`<div class="note" style="margin-top:4px">✓ possédé${own.f?' ('+MB_FUS[own.f]+')':''}</div>`:''}${fusLine(it,own)}`}
 (function(){const tip=document.createElement('div');tip.id='mbTip';tip.hidden=true;document.body.appendChild(tip);
   const place=e=>{const r=tip.getBoundingClientRect();let x=e.clientX+14,y=e.clientY+14;if(x+r.width>innerWidth-8)x=e.clientX-r.width-14;if(y+r.height>innerHeight-8)y=Math.max(8,innerHeight-r.height-8);tip.style.left=Math.max(8,x)+'px';tip.style.top=y+'px'};
-  document.addEventListener('mouseover',e=>{const el=e.target.closest&&e.target.closest('[data-tip]');if(!el){tip.hidden=true;return}const [id,f]=el.dataset.tip.split(':').map(Number);const it=mbAll().m[id];if(!it){tip.hidden=true;return}tip.innerHTML=mbTipHtml(it,f);tip.hidden=false;place(e)});
+  document.addEventListener('mouseover',e=>{const el=e.target.closest&&e.target.closest('[data-tip]');if(!el){tip.hidden=true;return}const tp=el.dataset.tip.split(':'),id=+tp[0],f=+tp[1],ru=(tp[2]||'').split(',').filter(c=>R.RUNES[c]);const it=mbAll().m[id];if(!it){tip.hidden=true;return}tip.innerHTML=mbTipHtml(it,f)+(ru.length?`<div class="note" style="margin-top:4px">◆ Runes : ${ru.map(c=>esc(runeLabel(c))).join(', ')}</div>`:'');tip.hidden=false;place(e)});
   document.addEventListener('mousemove',e=>{if(!tip.hidden)place(e)});
   document.addEventListener('scroll',()=>{tip.hidden=true},true)})();
 /* Filtres de stats du Build manuel : plusieurs stats à la fois (toutes / au moins une), avec des raccourcis par spécialisation */
@@ -5723,7 +5877,7 @@ const PRE_WHY={farm:'Pour enchaîner les combats de farm le plus vite possible :
 const PRE_SHORT={farm:'Farm rapide, deck court et rentable.',equilibre:'Polyvalent : farm et Ascension moyenne.',tank:'PV, résistances, boucliers : Ascension.',krala:'Dégâts max en 10 tours.',pp:'Prospection max, 95 % de victoires.',zone:'Que des sorts de zone : groupes.'};
 const PRE_ORDER=['equilibre','farm','tank','krala','pp','zone'];
 let PRE_SEL=null,PRE_TAB='car';
-function preList(){const tier=segVal('preTier')||'budget';if(tier==='vit')return vitPrebuilds();return PRE_ORDER.map(a=>PREBUILDS.find(b=>b.arch===a&&b.tier===tier)).filter(Boolean)}
+function preList(){const tier=segVal('preTier')||'vit';if(tier==='vit')return vitPrebuilds();return PRE_ORDER.map(a=>PREBUILDS.find(b=>b.arch===a&&b.tier===tier)).filter(Boolean)}
 /* Builds des vitrines publiques, les plus likés d'abord, affichés comme des prébuilds */
 function vitPrebuilds(){const V=vitrineData();if(vitPrebuilds.v===V)return vitPrebuilds.c;const cn={};for(const c of (V.cards||[]))cn[c.id]=c;for(const c of (DATA.cards||[]))if(!cn[c.id])cn[c.id]={id:c.id,n:c.n,ap:c.ap};
   const out=(V.builds||[]).slice().sort((a,b)=>(b.likes||0)-(a.likes||0)).slice(0,24).map(v=>{const gear={};let deckIds=v.deck||[];
@@ -5768,7 +5922,7 @@ function renderPreDetail(){const el=$('#preDetail');const b=PRE_SEL&&preList().f
   $('#preToOpt').onclick=()=>{const g=Object.assign({},curGear);const og={};for(const [sl,x] of Object.entries(gear))if(own.has(x.id))og[sl]=x;Object.assign(g,mbGear(og));const dk=deck.filter(k=>cardsByKey[k]);setOptStart({name:b.vit?'Vitrine '+b.label:'Prébuild '+b.label,gear:g,alloc:Object.assign({},b.vit||!b.alloc||!Object.keys(b.alloc).length?curAlloc:b.alloc),deck:dk.length>=5?dk:(DATA.meta.decks[DATA.meta.active]||[])});showTab('opt');try{window.scrollTo({top:0,behavior:'smooth'})}catch(e){}};
   el.querySelectorAll('#preTab button').forEach(x=>x.onclick=()=>{PRE_TAB=x.dataset.v;renderPreDetail()})}
 document.querySelectorAll('#preTier button').forEach(bt=>bt.addEventListener('click',()=>setTimeout(renderPrebuilds,0)));
-function renderItemsTab(){try{renderVitrines()}catch(e){$('#vitOut').textContent='Erreur : '+e.message}try{renderDofusFx()}catch(e){}try{renderBank2()}catch(e){$('#bank2Out').textContent='Erreur : '+e.message}try{renderTierList()}catch(e){$('#tlOut').textContent='Erreur : '+e.message}}
+function renderItemsTab(){try{renderTM()}catch(e){const x=$('#tmTiers');if(x)x.textContent='Erreur : '+e.message}}
 ['tlFor','tlSlot','tlSrc','tlMin','tlMax','tlStyle','tlQ','bkStyle','tlSet'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener(id==='tlQ'||id==='tlMin'||id==='tlMax'||id==='bkLvl'?'input':'change',()=>{if(id.startsWith('tl')){if(id==='tlSet')TL=null;$('#tlOut').dataset.n=150;renderTierList()}else renderBank2()})});
 function init(){prepare();renderPerso();try{renderPV()}catch(e){const x=document.getElementById('pvMsg');if(x)x.textContent='Vue impossible : '+e.message}try{renderCardUse();renderFreePts();renderBank()}catch(e){}renderAscPanel();renderBest();packOptions($('#simPack'));packOptions($('#oPack'));try{optTargetNote()}catch(e){};{const o=document.createElement('option');o.value='poly';o.textContent='Polyvalent · tes adversaires habituels (conseillé)';$('#oPack').insertBefore(o,$('#oPack').firstChild);$('#oPack').value='poly'}deckOptions($('#simDeck'));deckOptions($('#oStart'));try{renderLocks()}catch(e){}try{fillGearStart();renderCons()}catch(e){}setTimeout(()=>{markReady($('#oPack'),'opt');markReady($('#aPack'),'asc')},400);}
 (function(){const set=v=>{if(v==='light')document.documentElement.setAttribute('data-theme','light');else document.documentElement.removeAttribute('data-theme');const b=document.getElementById('themeTg');if(b)b.textContent=v==='light'?'Thème sombre':'Thème clair'};let v='dark';try{v=localStorage.getItem('labo-theme2')||'dark'}catch(e){}set(v);const b=document.getElementById('themeTg');if(b)b.onclick=()=>{v=v==='light'?'dark':'light';set(v);try{localStorage.setItem('labo-theme2',v)}catch(e){}}})();
