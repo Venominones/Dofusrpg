@@ -1680,20 +1680,21 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   // Tous les objets possédés, regroupés par emplacement (instances distinctes via qty)
   function itemPool(data) {
     const pool = {};
-    const seen = new Set();
-    for (const it of data.items.concat(data.worn.map(w => Object.assign({ q: 1 }, w)))) {
-      const key = it.id + ':' + (it.f || 0);
-      if (seen.has(key)) continue; seen.add(key);
+    const byKey = new Map();
+    // Objets portés d'abord : ce sont eux qui portent les runes gravées (même objet, même fusion → on garde l'exemplaire gravé)
+    for (const it of data.worn.map(w => Object.assign({ q: 1 }, w)).concat(data.items)) {
       if (!it.st || typeof it.st !== 'object') continue;
-      (pool[it.s] = pool[it.s] || []).push(it);
+      const key = it.id + ':' + (it.f || 0), prev = byKey.get(key);
+      if (!prev) { byKey.set(key, it); continue; }
+      if (!R.runeCodes(prev.ru).length && R.runeCodes(it.ru).length) byKey.set(key, Object.assign({}, it, { q: Math.max(it.q || 1, prev.q || 1) }));
     }
-    // Même objet à plusieurs fusions : la plus haute est toujours au moins aussi bonne (la fusion n'augmente que les stats positives).
-    // On ne garde donc que la meilleure (le jeu interdit aussi deux anneaux identiques) ; sinon l'optimiseur pouvait proposer un Dofus normal alors qu'on l'a en +5.
+    for (const it of byKey.values()) (pool[it.s] = pool[it.s] || []).push(it);
+    // Même objet à plusieurs fusions : on garde la plus haute (la fusion n'augmente que les stats positives ; le jeu interdit aussi deux anneaux identiques).
+    // Exception : un exemplaire gravé de runes moins fusionné reste candidat, ses runes peuvent valoir plus que la fusion.
     for (const t in pool) {
       const byId = {};
       for (const it of pool[t]) (byId[it.id] = byId[it.id] || []).push(it);
-      const keep = 1;
-      pool[t] = [].concat(...Object.values(byId).map(l => l.sort((a, b) => (b.f || 0) - (a.f || 0)).slice(0, keep)));
+      pool[t] = [].concat(...Object.values(byId).map(l => { l.sort((a, b) => (b.f || 0) - (a.f || 0) || R.runeCodes(b.ru).length - R.runeCodes(a.ru).length); const top = l[0], ru = l.find(x => x !== top && R.runeCodes(x.ru).length && !R.runeCodes(top.ru).length); return ru ? [top, ru] : [top]; }));
     }
     return pool;
   }
@@ -1736,20 +1737,23 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   }
   function orientWeights(w, objective, elem) {
     const o = ORIENT[objective] || {};
-    if (objective === 'sagesse') w.sagesse = (w.sagesse || 0) + 1.5;
+    const wOff = Math.max(0, ...['force', 'intelligence', 'chance', 'agilite', 'puissance'].map(k => w[k] || 0)); // poids d'une carac de dégâts : la stat d'orientation doit passer devant, sinon un objet plein de dégâts éclipse le meilleur objet de prospection
+    if (objective === 'sagesse') w.sagesse = (w.sagesse || 0) + Math.max(1.5, 3 * wOff);
     if (objective === 'pvp-ini') w.initiative = (w.initiative || 0) + 0.6;
     if (objective === 'pvp') w.initiative = (w.initiative || 0) + 0.15;
-    if (objective === 'pp') { w.prospection = (w.prospection || 0) + 4; w.chance = (w.chance || 0) + 0.4; }
+    if (objective === 'pp') { w.prospection = (w.prospection || 0) + Math.max(4, 3 * wOff); w.chance = (w.chance || 0) + 0.4; }
     const E = elemOf(objective, elem); if (E.el !== undefined) { for (let e = 1; e <= 4; e++) if (e !== E.el) { const car = R.CARAC_OF_EL[e]; if (car !== R.CARAC_OF_EL[E.el]) w[car] = (w[car] || 0) * 0.2; } }
     return w;
   }
   function dominates(a, b) {
-    const sa = R.itemStats(a, a.f || 0), sb = R.itemStats(b, b.f || 0); let strict = false;
+    const sa = fullSt(a), sb = fullSt(b); let strict = false;
     for (const k of new Set(Object.keys(sa).concat(Object.keys(sb)))) { const x = sa[k] || 0, y = sb[k] || 0; if (x < y) return false; if (x > y) strict = true; }
     return strict;
   }
+  // Stats d'un objet avec ses runes gravées (pour le tri des candidats ; la simulation, elle, passe par computeStats)
+  function fullSt(it) { const st = R.itemStats(it, it.f || 0), codes = it.s === 'dofus' ? [] : R.runeCodes(it.ru); if (!codes.length) return st; const o = Object.assign({}, st), r = R.runeStats(st, codes, 1).st; for (const k in r) { const ks = k === 'resPctAll' ? ['resPctNeutre', 'resPctTerre', 'resPctFeu', 'resPctEau', 'resPctAir'] : [k]; for (const kk of ks) o[kk] = (o[kk] || 0) + r[k]; } return o; }
   function itemHeur(it, weights) {
-    const st = R.itemStats(it, it.f || 0); let v = 0;
+    const st = fullSt(it); let v = 0;
     for (const k in st) v += (weights[k] || 0) * st[k];
     if (it.w) { for (const l of R.weaponWithFusion(it.w, it.f || 0).lines) if (l.k === 'dmg' || l.k === 'steal') v += (l.min + l.max) / 2 * 3 / Math.max(3, it.w.ap); }
     return v;
@@ -2072,6 +2076,16 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
         // Dofus à effet spécial : leurs stats seules ne disent rien, on les teste toujours en simulation
         if (type === 'dofus') for (const it of list) if (Object.keys(R.dofusFx([it.n || ''])).some(k => k !== 'kaliptus') && !cands[slot].includes(it)) cands[slot].push(it);
         if (cur.gear[slot] && !cands[slot].some(it => it.id === cur.gear[slot].id) && !(NS && slot === 'arme' && weaponSteals(cur.gear[slot])) && !(ONE && slot === 'arme' && cur.gear.arme.w && nLines({ eff: cur.gear.arme.w.lines }) > 1)) cands[slot].push(cur.gear[slot]);
+      }
+      // Orientation Butin / XP / PvP : les 3 meilleurs objets de chaque emplacement pour la stat visée sont toujours candidats, et on les essaie d'abord un par un
+      const FOC = obj === 'pp' ? (t => (t.prospection || 0) + (t.chance || 0) / 10) : obj === 'sagesse' ? (t => t.sagesse || 0) : /^pvp/.test(obj) ? (t => t.initiative || 0) : null; // PvP : l'initiative décide qui joue en premier
+      if (FOC) for (const [slot, type] of SLOTS) { const top = (pool[type] || []).filter(it => (it.lvl || 0) <= ctx.level && FOC(fullSt(it)) > 0).sort((x, y) => FOC(fullSt(y)) - FOC(fullSt(x))).slice(0, 3); for (const it of top) if (!cands[slot].includes(it)) cands[slot].push(it); }
+      // Essais systématiques, emplacement par emplacement : la meilleure fusion possédée de l'objet porté, puis (Butin / XP / PvP) les meilleurs objets pour la stat visée
+      for (const [slot, type] of SLOTS) {
+        const tries = [];
+        const c0 = cur.gear[slot]; if (c0) { const up = (pool[type] || []).find(it => it.id === c0.id && (it.f || 0) > (c0.f || 0)); if (up) tries.push(up); }
+        if (FOC) for (const it of cands[slot]) if (FOC(fullSt(it)) > 0 && !tries.includes(it)) tries.push(it);
+        for (const pick of tries) { if (cur.gear[slot] && pick.id === cur.gear[slot].id && (pick.f || 0) === (cur.gear[slot].f || 0)) continue; const g2 = Object.assign({}, cur.gear, { [slot]: pick }); if (!gearValid(g2)) continue; const cand = Object.assign({}, cur, { gear: g2 }); const e = E(cand); if (e.score > best.score) { best = e; cur = cand; } }
       }
       // panoplies : on essaie exprès de porter ensemble les pièces possédées d'une même panoplie
       const bySet = {};
