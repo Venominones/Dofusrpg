@@ -706,6 +706,14 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     <div class="panel prose">
       <h2 style="margin-top:0">Patch notes du jeu</h2>
       <p class="note">Résumé des mises à jour de RpgMasters et de leur prise en compte dans le Labo.</p>
+      <h3>14/10 · Runes, soins et boucliers</h3>
+      <ul>
+        <li>Rune de Fureur : +8 % → +2 % de dégâts critiques. Pris en compte (simulation, placement des runes, runes à graver).</li>
+        <li>Soins et boucliers limités partout (25 % des PV max, 2 sorts par tour), boucliers du Féca compris : le Labo appliquait déjà cette limite dans tous les combats simulés.</li>
+        <li>Un objet runé peut monter en fusion et être gardé au Prestige, runes conservées : rien à changer, le Labo garde déjà l'exemplaire gravé.</li>
+        <li>Abysses : bonus « % résistances » plafonné à une fois à 50 %. Pas simulé par le Labo.</li>
+        <li>Pages Personnage et Inventaire fusionnées : script 2.13.5 adapté (équipement, caractéristiques et runes lus sur la nouvelle page).</li>
+      </ul>
       <h3>13/10 · Mise à jour V3 : nouveau look, runes, Abysses</h3>
       <ul>
         <li>Nouvelle interface dorée : combat en scène, tableau de bord sur 3 colonnes, inventaire et personnage centrés sur le héros (double clic pour équiper, sélection multiple, confirmation avant « Tout fusionner »).</li>
@@ -921,7 +929,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     rne: { st: { resPctNeutre: 3 } }, rte: { st: { resPctTerre: 3 } }, rfe: { st: { resPctFeu: 3 } }, rea: { st: { resPctEau: 3 } }, rai: { st: { resPctAir: 3 } }, tac: { st: { tacle: 10 } }, fui: { st: { fuite: 10 } },
     pui: { st: { puissance: 25 } }, do: { st: { dommages: 8 } }, dne: { st: { dommagesNeutre: 12 } }, dte: { st: { dommagesTerre: 12 } }, dfe: { st: { dommagesFeu: 12 } }, dea: { st: { dommagesEau: 12 } }, dai: { st: { dommagesAir: 12 } },
     cri: { st: { critique: 3 } }, rall: { st: { resPctAll: 2 } }, so: { st: { soins: 15 } }, dso: { st: { dmgPctSorts: 3 } }, ecl: { pct: 5 },
-    po: { st: { po: 1 } }, pm: { st: { pm: 1 } }, inv: { st: { invocations: 1 } }, pa: { st: { pa: 1 } }, dcr: { st: { dmgPctCrit: 8 } }, eve: { pct: 15 }, ele: { elem: true } };
+    po: { st: { po: 1 } }, pm: { st: { pm: 1 } }, inv: { st: { invocations: 1 } }, pa: { st: { pa: 1 } }, dcr: { st: { dmgPctCrit: 2 } }, eve: { pct: 15 }, ele: { elem: true } };
   const RUNE_NAMES = { vi: 'Vitalité', fo: 'Force', ine: 'Intelligence', cha: 'Chance', age: 'Agilité', sa: 'Sagesse', pros: 'Prospection', ini: 'Initiative', rne: 'Résistance Neutre', rte: 'Résistance Terre', rfe: 'Résistance Feu', rea: 'Résistance Eau', rai: 'Résistance Air', tac: 'Tacle', fui: 'Fuite', pui: 'Puissance', do: 'Dommages', dne: 'Dommages Neutre', dte: 'Dommages Terre', dfe: 'Dommages Feu', dea: 'Dommages Eau', dai: 'Dommages Air', cri: 'Critique', rall: 'Résistance', so: 'Soins', dso: 'Sorts', ecl: 'Éclat', po: 'Portée', pm: 'Mouvement', inv: 'Invocation', pa: 'Action', dcr: 'Fureur', eve: 'Éveil', ele: 'Élémentaire' };
   const RUNE_RARITY = { pui: 'epique', do: 'epique', dne: 'epique', dte: 'epique', dfe: 'epique', dea: 'epique', dai: 'epique', cri: 'epique', rall: 'epique', so: 'epique', dso: 'epique', ecl: 'epique', po: 'legendaire', pm: 'legendaire', inv: 'legendaire', pa: 'legendaire', dcr: 'legendaire', eve: 'legendaire', ele: 'legendaire' };
   function runeCodes(ru) { if (!ru) return []; if (Array.isArray(ru)) return ru.map(x => typeof x === 'string' ? x : x && (x.rune || x.id || x.code)).filter(c => RUNES[c]).slice(0, 2); if (typeof ru === 'object') for (const k in ru) { const c = runeCodes(ru[k]); if (c.length) return c; } return []; }
@@ -2439,7 +2447,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
 <script type="text/plain" id="src-userscript">// ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.13.0
+// @version      2.13.5
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -2587,7 +2595,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     rne: { st: { resPctNeutre: 3 } }, rte: { st: { resPctTerre: 3 } }, rfe: { st: { resPctFeu: 3 } }, rea: { st: { resPctEau: 3 } }, rai: { st: { resPctAir: 3 } }, tac: { st: { tacle: 10 } }, fui: { st: { fuite: 10 } },
     pui: { st: { puissance: 25 } }, do: { st: { dommages: 8 } }, dne: { st: { dommagesNeutre: 12 } }, dte: { st: { dommagesTerre: 12 } }, dfe: { st: { dommagesFeu: 12 } }, dea: { st: { dommagesEau: 12 } }, dai: { st: { dommagesAir: 12 } },
     cri: { st: { critique: 3 } }, rall: { st: { resPctAll: 2 } }, so: { st: { soins: 15 } }, dso: { st: { dmgPctSorts: 3 } }, ecl: { pct: 5 },
-    po: { st: { po: 1 } }, pm: { st: { pm: 1 } }, inv: { st: { invocations: 1 } }, pa: { st: { pa: 1 } }, dcr: { st: { dmgPctCrit: 8 } }, eve: { pct: 15 }, ele: { elem: true } };
+    po: { st: { po: 1 } }, pm: { st: { pm: 1 } }, inv: { st: { invocations: 1 } }, pa: { st: { pa: 1 } }, dcr: { st: { dmgPctCrit: 2 } }, eve: { pct: 15 }, ele: { elem: true } };
   const RUNE_NAMES = { vi: 'Vitalité', fo: 'Force', ine: 'Intelligence', cha: 'Chance', age: 'Agilité', sa: 'Sagesse', pros: 'Prospection', ini: 'Initiative', rne: 'Résistance Neutre', rte: 'Résistance Terre', rfe: 'Résistance Feu', rea: 'Résistance Eau', rai: 'Résistance Air', tac: 'Tacle', fui: 'Fuite', pui: 'Puissance', do: 'Dommages', dne: 'Dommages Neutre', dte: 'Dommages Terre', dfe: 'Dommages Feu', dea: 'Dommages Eau', dai: 'Dommages Air', cri: 'Critique', rall: 'Résistance', so: 'Soins', dso: 'Sorts', ecl: 'Éclat', po: 'Portée', pm: 'Mouvement', inv: 'Invocation', pa: 'Action', dcr: 'Fureur', eve: 'Éveil', ele: 'Élémentaire' };
   const RUNE_RARITY = { pui: 'epique', do: 'epique', dne: 'epique', dte: 'epique', dfe: 'epique', dea: 'epique', dai: 'epique', cri: 'epique', rall: 'epique', so: 'epique', dso: 'epique', ecl: 'epique', po: 'legendaire', pm: 'legendaire', inv: 'legendaire', pa: 'legendaire', dcr: 'legendaire', eve: 'legendaire', ele: 'legendaire' };
   function runeCodes(ru) { if (!ru) return []; if (Array.isArray(ru)) return ru.map(x => typeof x === 'string' ? x : x && (x.rune || x.id || x.code)).filter(c => RUNES[c]).slice(0, 2); if (typeof ru === 'object') for (const k in ru) { const c = runeCodes(ru[k]); if (c.length) return c; } return []; }
@@ -3699,7 +3707,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
   const CAT_KEY = () => 'labo-cat-v1-' + PROFILE;
   function loadCat() { try { return JSON.parse(localStorage.getItem(CAT_KEY()) || 'null'); } catch (e) { return null; } }
   async function fetchCatalog() {
-    const deck = await rsc('/deck'), inv = await rsc('/inventaire');
+    const deck = await rsc('/deck'), inv = await charPages();
     const D = deck.find(p => p.collection && p.initialDecks), I = inv.find(p => p.entries && p.slots);
     if (!D) return null;
     const cat = { t: Date.now(), breedId: D.breedId, level: (I && I.level) || 200, cards: {}, weapons: {} };
@@ -3900,7 +3908,7 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
       if (method === 'POST') res.clone().text().then(t => { detectProfile(t); onPayload(t); }).catch(() => {});
       else if (/x-component/.test(res.headers && res.headers.get ? (res.headers.get('content-type') || '') : '')) res.clone().text().then(t => { detectProfile(t); onPayload(t); }).catch(() => {});
       const u0 = String(req && req.url || req);
-      if (/\/inventaire/.test(location.pathname)) res.clone().text().then(t => { if (/rune/i.test(t)) runeSnap(t, u0); }).catch(() => {});
+      if (/\/(inventaire|personnage)/.test(location.pathname)) res.clone().text().then(t => { if (/rune/i.test(t)) runeSnap(t, u0); }).catch(() => {});
       if (/\/bestiaire/.test(location.pathname) && /onglet=objets/.test(u0)) res.clone().text().then(t => harvestItems(t, 'page')).catch(() => {});
     } catch (e) {}
     return res;
@@ -3926,11 +3934,11 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
 
   // ---------- Export pour le Labo (lecture seule des pages Inventaire, Deck, Personnage) ----------
   async function exportForLabo() {
-    const inv = await rsc('/inventaire'), deck = await rsc('/deck'), perso = await rsc('/personnage');
+    const inv = await charPages(), deck = await rsc('/deck'), perso = inv;
     let best = null; try { best = await fetchBestiary(true); } catch (e) { best = loadBest(); }
     const I = inv.find(p => p.entries && p.slots), D = deck.find(p => p.collection && p.initialDecks);
     const Pp = perso.find(p => p.rows && 'pointsFree' in p), H = perso.find(p => 'prestige' in p && 'level' in p && 'equipped' in p) || {};
-    if (!I || !D || !Pp) throw new Error('pages introuvables (es-tu connecté ?)');
+    if (!I || !D || !Pp) { try { navigator.clipboard.writeText(JSON.stringify({ diag: 'labo-pages', url: location.pathname, pages: (inv && inv._diag) || CP_DIAG })); } catch (e) {} } if (!I || !D || !Pp) throw new Error('diagnostic copié dans le presse-papiers, colle-le au Labo · pages introuvables (' + [!I && 'inventaire', !D && 'deck', !Pp && 'caractéristiques'].filter(Boolean).join(', ') + ') : es-tu connecté ? Sinon envoie ce message au Labo');
     let forge = null; try { const fp = await rsc('/forgemagie'); const F = fp.find(p => 'orbs' in p && 'level' in p && 'xp' in p); if (F) { forge = { level: F.level, xp: F.xp }; for (const k in F) { const v = F[k]; if (typeof v === 'number' && !(k in forge)) forge[k] = v; else if (Array.isArray(v) && v.length && v.length <= 250 && JSON.stringify(v).length < 20000) forge[k] = v; } } } catch (e) {}
     // Compagnon (patch du 10/10, perso principal) : niveau et bonus d'équipement, lus sur sa page si elle existe ; structure encore inconnue, on garde un extrait brut pour l'analyse
     let companion = null; if (PROFILE !== 'saison') for (const path of ['/compagnon', '/companion']) { try { const cp = await rsc(path); const holder = cp.find(p => p && p.initial && typeof p.initial === 'object' && ('kibble' in p.initial || 'bonusPct' in p.initial)); const C = (holder && holder.initial) || cp.find(p => p && typeof p === 'object' && !Array.isArray(p) && Object.keys(p).some(k => /croq|kibble|compan|pet|food/i.test(k))) || cp.find(p => p && typeof p === 'object' && 'level' in p && Object.keys(p).some(k => /bonus|pct|percent|mult/i.test(k))); if (C) { companion = { path }; for (const [k, v] of Object.entries(C)) { if (typeof v === 'number' || typeof v === 'string' && v.length < 60) companion[k] = v; } const pk = Object.keys(C).find(k => /bonus|pct|percent|statmult|mult/i.test(k) && typeof C[k] === 'number'); if ('bonusPct' in C) companion.pct = C.bonusPct; else if (pk) companion.pct = C[pk]; companion.raw = JSON.stringify(C).slice(0, 2000); break; } } catch (e) {} }
@@ -3941,22 +3949,22 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     const runesOf = x => { const o = {}; for (const src of [x, x.item]) for (const k of runeKeys(src)) o[k] = src[k]; return Object.keys(o).length ? o : undefined; };
     let runesProbe = (() => { try { const hits = runeHits(inv); const j = JSON.stringify(hits); return { invKeys: Object.keys(I), hits: j.length < 300000 ? hits : j.slice(0, 300000) }; } catch (e) { return { err: String(e) }; } })();
     // Stock de runes : onglet Runes de l'inventaire (toujours lu : la page Inventaire contient aussi des objets runés, qui ne sont pas le stock)
-    try { const pg = await rsc('/inventaire?onglet=runes'); const st = runeHits(pg).filter(h => h && typeof h.rune === 'string' && 'qty' in h); if (st.length) runesProbe.stock = st; } catch (e) {}
-    if (!(runesProbe.hits || []).length) for (const path of ['/inventaire?onglet=runes', '/inventaire?tab=runes', '/inventaire/runes']) { try { const pg = await rsc(path); const h = runeHits(pg); if (h.length) { const j = JSON.stringify(h); runesProbe.hits = j.length < 300000 ? h : j.slice(0, 300000); runesProbe.from = path; break; } } catch (e) {} }
+    for (const rp of ['/personnage?onglet=runes', '/inventaire?onglet=runes']) try { const pg = await rsc(rp); const st = runeHits(pg).filter(h => h && typeof h.rune === 'string' && 'qty' in h); if (st.length) { runesProbe.stock = st; break; } } catch (e) {}
+    if (!(runesProbe.hits || []).length) for (const path of ['/personnage?onglet=runes', '/inventaire?onglet=runes', '/inventaire?tab=runes']) { try { const pg = await rsc(path); const h = runeHits(pg); if (h.length) { const j = JSON.stringify(h); runesProbe.hits = j.length < 300000 ? h : j.slice(0, 300000); runesProbe.from = path; break; } } catch (e) {} }
     try { runesProbe.snap = JSON.parse(localStorage.getItem(RUNE_SNAP) || 'null'); } catch (e) {}
     // Objet runé : format encore inconnu → clés présentes sur les objets de l'inventaire, et exemples d'objets aux clés inhabituelles
     try { const cnt = {}, all = (I.entries || []).concat(I.slots || []); for (const e of all) { for (const k of Object.keys(e || {})) cnt['e.' + k] = (cnt['e.' + k] || 0) + 1; for (const k of Object.keys((e && e.item) || {})) cnt['i.' + k] = (cnt['i.' + k] || 0) + 1; }
       const rare = Object.keys(cnt).filter(k => cnt[k] < all.length * 0.05); runesProbe.keys = cnt; runesProbe.odd = all.filter(e => rare.some(k => k.startsWith('e.') ? e && k.slice(2) in e : e && e.item && k.slice(2) in e.item)).slice(0, 6).map(e => { const o = {}; for (const k in e) if (k !== 'item') o[k] = e[k]; o.item = e.item ? { id: e.item.id, n: e.item.n, extra: Object.fromEntries(Object.entries(e.item).filter(([k]) => rare.includes('i.' + k))) } : null; return o; }); } catch (e) {}
     // Définitions des runes (valeurs) : dans le code du jeu (fichiers JS publics), lues une fois puis gardées une semaine
     try { let defs = null; try { defs = JSON.parse(localStorage.getItem('labo-rune-defs2') || 'null'); } catch (e) {}
-      if (!defs || !defs.found || !defs.found.length || Date.now() - defs.t > 7 * 864e5) { const html = await origFetch('/inventaire?onglet=runes', { credentials: 'include' }).then(r => r.text());
+      if (!defs || !defs.found || !defs.found.length || Date.now() - defs.t > 7 * 864e5) { const html = await origFetch('/personnage?onglet=runes', { credentials: 'include' }).then(r => r.text());
         let perf = []; try { perf = performance.getEntriesByType('resource').map(e => e.name).filter(u => /\/_next\/static\/.+\.js/.test(u)).map(u => u.replace(/^https?:\/\/[^/]+/, '')); } catch (e) {}
         const srcs = [...new Set(perf.concat([...html.matchAll(/\/_next\/static\/[^"' \\]+?\.js/g)].map(m => m[0])))].slice(0, 150); const found = [];
         for (const src of srcs) { let t = ''; try { t = await origFetch(src).then(r => r.text()); } catch (e) { continue; } const i = t.search(/["'`]rall["'`]|\brall:/); if (i >= 0 && /["'`]dso["'`]|\bdso:/.test(t)) found.push({ src: src.slice(-60), ex: t.slice(Math.max(0, i - 8000), i + 8000) }); if (found.length >= 2) break; }
         const ms = [...html.matchAll(/Rune d/g)];
         defs = { t: Date.now(), n: srcs.length, found, page: ms.slice(0, 4).map(m => html.slice(Math.max(0, m.index - 300), m.index + 300)) }; if (found.length) try { localStorage.setItem('labo-rune-defs2', JSON.stringify(defs)); } catch (e) {} }
       runesProbe.defs = defs; } catch (e) { runesProbe.defsErr = String(e); }
-    if (!(runesProbe.hits || []).length) try { const t = await origFetch('/inventaire', { credentials: 'include' }).then(r => r.text()); const ms = [...t.matchAll(/Rune d/g)]; runesProbe.text = { n: ms.length, size: t.length, ex: ms.slice(0, 3).map(m => t.slice(Math.max(0, m.index - 250), m.index + 250)) }; } catch (e) {}
+    if (!(runesProbe.hits || []).length) try { const t = await origFetch('/personnage', { credentials: 'include' }).then(r => r.text()); const ms = [...t.matchAll(/Rune d/g)]; runesProbe.text = { n: ms.length, size: t.length, ex: ms.slice(0, 3).map(m => t.slice(Math.max(0, m.index - 250), m.index + 250)) }; } catch (e) {}
     const it = (x) => ({ id: x.item.id, n: x.item.n, lvl: x.item.lvl, s: x.item.s, r: x.item.r, setId: x.item.setId || null, st: x.item.st, w: x.item.w || null, icon: x.item.icon || x.item.gfx || null, ru: runesOf(x), uid: x.uid || x.instanceId || x.id || undefined });
     return {
       meta: { scriptV: (typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) || '2.11.10', profile: PROFILE, forge, companion, level: I.level || 200, prestige: H.prestige || 0, breedId: D.breedId, deckSize: D.deckSize, discordBonus: 5, scrolls: I.scrollValues || {}, rows: Pp.rows.map(r => ({ key: r.key, base: r.base, bonus: r.bonus, tiers: r.tiers })), pointsFree: Pp.pointsFree, decks: D.initialDecks, deckNames: D.initialNames, active: D.initialActive, ranked: D.initialRanked || null, presets: (() => { try { return findPresets(perso) || presetsFromDom(I, best); } catch (e) { return null; } })(), diag: (() => { try { let ai = null; try { ai = JSON.parse(localStorage.getItem('labo-allitems-diag') || 'null'); } catch (e) {} return { allItems: ai }; } catch (e) { return null; } })(), runesProbe },
@@ -4057,8 +4065,28 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     return f.v.map((x, i) => x ? { i, name: preName(x) || ('Équipement ' + (i + 1)), gear: preGear(x), alloc: preAlloc(x) } : { i, name: 'Équipement ' + (i + 1), gear: {}, alloc: null });
   }
   function presetsRaw(perso) { const f = presetArrays(perso)[0]; if (f) return JSON.stringify(f.v).slice(0, 40000); const s = JSON.stringify(perso); const m = s.match(/.{0,200}(preset|loadout|enregistr|saved|equipSet)[^]{0,3000}/i); return m ? m[0].slice(0, 6000) : null; }
+  // Pages Personnage + Inventaire (fusionnées en une seule page à onglets le 14/10) : on lit toutes les variantes connues et on garde ce qu'on y trouve
+  // Page fusionnée : les données peuvent être imbriquées (ex. props.inventory.entries) ; on remonte aussi les sous-objets utiles
+  const CP_WANT = [o => o.entries && o.slots, o => o.rows && 'pointsFree' in o, o => 'prestige' in o && 'level' in o && 'equipped' in o];
+  function cpLift(arr) { const out = [], seen = new Set(); const walk = (o, d) => { if (!o || typeof o !== 'object' || d > 7 || seen.has(o)) return; seen.add(o); if (!Array.isArray(o) && CP_WANT.some(f => { try { return f(o); } catch (e) { return false; } })) out.push(o); for (const k in o) walk(o[k], d + 1); }; for (const x of arr) walk(x, 0); return out; }
+  let CP_DIAG = [], RSC_LAST = {};
+  // Diagnostic sans données personnelles : uniquement les noms de champs des objets trouvés sur chaque page
+  function cpNote(path, pg, diag) { const pa = pg && typeof pg.all === 'function' ? pg.all() : (Array.isArray(pg) ? pg : []); pg = pa; const e = Object.assign({ path, n: pa.length }, RSC_LAST); diag.push(e); try { const keys = new Set(); const walk = (o, d) => { if (!o || typeof o !== 'object' || d > 4 || keys.size > 60) return; if (!Array.isArray(o)) { const ks = Object.keys(o); if (ks.length >= 3 && ks.length <= 80) keys.add(ks.slice(0, 25).join(',')); } for (const k in o) { const v = o[k]; if (v && typeof v === 'object') walk(v, d + 1); } }; (Array.isArray(pg) ? pg : []).forEach(x => walk(x, 0)); e.keys = [...keys].slice(0, 50); } catch (err) { e.err = String(err && err.message || err).slice(0, 80); } }
+  async function charPages() {
+    const out = [], diag = []; out._diag = diag; CP_DIAG = diag; const has = () => out.some(p => p && p.entries && p.slots) && out.some(p => p && p.rows && 'pointsFree' in p) && out.some(p => p && 'prestige' in p && 'level' in p && 'equipped' in p);
+    // Lien réel du menu « Personnage et inventaire » (l'adresse a pu changer avec la fusion des pages)
+    const navs = [...document.querySelectorAll('a[href]')].filter(x => /personnage|inventaire/i.test(x.textContent || '') || /personnage|inventaire/i.test(x.getAttribute('href') || '')).map(x => { try { const u = new URL(x.href, location.origin); return u.origin === location.origin ? u.pathname + u.search : null; } catch (e) { return null; } }).filter(Boolean);
+    for (const path of [...new Set(navs)].concat(['/personnage-et-inventaire', '/personnage-inventaire'])) { if (has()) break; try { const pg = await rsc(path); cpNote(path, pg, diag); { const all = pg && typeof pg.all === 'function' ? pg.all() : (Array.isArray(pg) ? pg : []); out.push(...all, ...cpLift(all)); } } catch (e) { diag.push({ path, err: String(e && e.message || e).slice(0, 80) }); } }
+    if (has()) return out;
+    for (const path of ['/inventaire', '/personnage', '/inventaire?onglet=caracteristiques', '/inventaire?onglet=equipement', '/inventaire?onglet=personnage', '/personnage?onglet=caracteristiques', '/inventaire?onglet=objets']) {
+      try { const pg = await rsc(path); cpNote(path, pg, diag); { const all = pg && typeof pg.all === 'function' ? pg.all() : (Array.isArray(pg) ? pg : []); out.push(...all, ...cpLift(all)); } } catch (e) { diag.push({ path, err: String(e && e.message || e).slice(0, 80) }); }
+      if (has()) break;
+    }
+    return out;
+  }
   async function rsc(path, asRsc) {
-      const h = await origFetch(path, asRsc ? { credentials: 'include', headers: { RSC: '1' } } : { credentials: 'include' }).then(r => r.text());
+      const h = await origFetch(path, asRsc ? { credentials: 'include', headers: { RSC: '1' } } : { credentials: 'include' }).then(r => { RSC_LAST = { status: r.status, url: (() => { try { return new URL(r.url).pathname; } catch (e) { return ''; } })() }; return r.text(); });
+      RSC_LAST.size = h.length; RSC_LAST.next = /self\.__next_f/.test(h);
       return parsePage(h);
   }
   // (nom distinct : « parseRsc » est le lecteur des réponses de combat ; un doublon le remplaçait et cassait l'enregistrement des combats en 2.12.x)
@@ -4240,9 +4268,9 @@ Somme de contrôle : FNV-1a 32 bits sur (lettre du type + octets), bits 12 à 31
     if (!LR) { cmp = { status: 'err', msg: 'moteur indisponible' }; render(); return; }
     cmp = { status: 'load' }; render();
     try {
-      const inv = await rsc('/inventaire'), deck = await rsc('/deck'), perso = await rsc('/personnage');
+      const inv = await charPages(), deck = await rsc('/deck'), perso = inv;
       const I = inv.find(p => p.entries && p.slots), D = deck.find(p => p.collection && p.initialDecks), Pp = perso.find(p => p.rows && 'pointsFree' in p), H = perso.find(p => 'prestige' in p && 'level' in p && 'equipped' in p) || {};
-      if (!I || !D || !Pp) throw new Error('pages introuvables (es-tu connecté ?)');
+      if (!I || !D || !Pp) { try { navigator.clipboard.writeText(JSON.stringify({ diag: 'labo-pages', url: location.pathname, pages: (inv && inv._diag) || CP_DIAG })); } catch (e) {} } if (!I || !D || !Pp) throw new Error('diagnostic copié dans le presse-papiers, colle-le au Labo · pages introuvables (' + [!I && 'inventaire', !D && 'deck', !Pp && 'caractéristiques'].filter(Boolean).join(', ') + ') : es-tu connecté ? Sinon envoie ce message au Labo');
       let forgeLv = 0; try { const fp = await rsc('/forgemagie'); const F = fp.find(p => 'orbs' in p && 'level' in p && 'xp' in p); if (F) forgeLv = F.level; } catch (e) {}
       const bench = benchGroup(); if (!bench) throw new Error('pas encore assez de combats enregistrés pour savoir contre qui comparer');
       const level = I.level || 200;
@@ -4893,7 +4921,7 @@ function renderOptI(res,opts,pack,mult,deckIdx){lastOpt=res;
     <details><summary><strong>Explication détaillée</strong> : principe du build et pourquoi ces objets</summary><div class="prose" style="margin-top:6px">${SUM.long}</div></details></div>
     <h3>Contrôle de composition</h3>${compoChecks(st,Sb,b,opts,pack)}`;
   html=top+html;
-  html+=`<details><summary><strong>Codes à importer dans le jeu</strong> (texte)</summary><div class="field"><span class="lbl">Équipement (page Personnage, « Codes d'équipement »)</span><div class="formula" style="white-space:normal;word-break:break-all">${gCode}</div></div><div class="field"><span class="lbl">Deck (page Deck)</span><div class="formula" style="white-space:normal;word-break:break-all">${dCode}</div></div></details>
+  html+=`<details><summary><strong>Codes à importer dans le jeu</strong> (texte)</summary><div class="field"><span class="lbl">Équipement (page Personnage et inventaire, « Codes d'équipement »)</span><div class="formula" style="white-space:normal;word-break:break-all">${gCode}</div></div><div class="field"><span class="lbl">Deck (page Deck)</span><div class="formula" style="white-space:normal;word-break:break-all">${dCode}</div></div></details>
   <p class="note">Les points de caractéristiques ne passent pas par les codes : répartis-les à la main. Le résultat varie un peu d'un lancement à l'autre : relance pour confirmer un gros changement.</p>`;
   $('#oDetails').innerHTML=html;lastSummary=lines.join('\n');
   $('#copySum').onclick=()=>copyText(lastSummary,$('#copyMsg'));
@@ -5611,7 +5639,7 @@ function renderPV(){if(!$('#pvPanel'))return;const gs=$('#pvGear'),ds=$('#pvDeck
   document.querySelectorAll('#pvTab button').forEach(x=>x.onclick=()=>{PV_TAB=x.dataset.v;renderPV()});
   $('#pvDeckN').textContent=`(${deck.length} cartes${deck.some(k=>cardImg(cardsByKey[k]))?'':' · images des sorts : script 2.11 requis'})`;
   $('#pvCards').innerHTML=deck.map(k=>cardTile(cardsByKey[k])).join('')||'<span class="note">Deck vide.</span>';
-  if(B.dom)$('#pvMsg').textContent='Lu sur la page Personnage du jeu : le niveau d\'amélioration affiché est celui de ton exemplaire.'+(B.missing.length?' Introuvables dans ton inventaire : '+B.missing.join(', ')+'.':'');else if(!m.presets)$('#pvMsg').textContent='Pour voir tes équipements enregistrés : script 2.11.2, ouvre la page Personnage du jeu quelques secondes, puis « Envoyer au Labo ».';else if(!(m.presets||[]).some(p=>p&&p.gear&&Object.keys(p.gear).length))$('#pvMsg').textContent='Équipements enregistrés lus mais vides ou format inconnu : envoie ton export à Claude.';else $('#pvMsg').textContent='';
+  if(B.dom)$('#pvMsg').textContent='Lu sur la page Personnage et inventaire du jeu : le niveau d\'amélioration affiché est celui de ton exemplaire.'+(B.missing.length?' Introuvables dans ton inventaire : '+B.missing.join(', ')+'.':'');else if(!m.presets)$('#pvMsg').textContent='Pour voir tes équipements enregistrés : script 2.11.2, ouvre la page Personnage du jeu quelques secondes, puis « Envoyer au Labo ».';else if(!(m.presets||[]).some(p=>p&&p.gear&&Object.keys(p.gear).length))$('#pvMsg').textContent='Équipements enregistrés lus mais vides ou format inconnu : envoie ton export à Claude.';else $('#pvMsg').textContent='';
   $('#pvToMb').onclick=()=>mbOpen({gear:JSON.parse(JSON.stringify(B.gear)),alloc:Object.assign({},alloc),deck:deck.slice()},B.name);
   $('#pvToOpt').onclick=()=>{setOptStart({name:B.name,gear:full,alloc:Object.assign({},alloc),deck:deck.slice()});showTab('opt');try{window.scrollTo({top:0,behavior:'smooth'})}catch(e){}}}
 (function(){const g=document.getElementById('pvGear'),d=document.getElementById('pvDeck');if(g)g.addEventListener('change',()=>{d.dataset.touched='';renderPV()});if(d)d.addEventListener('change',()=>{d.dataset.touched='1';renderPV()})})();
