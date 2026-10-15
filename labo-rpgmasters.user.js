@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.13.4
+// @version      2.13.5
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -1462,7 +1462,7 @@
       if (method === 'POST') res.clone().text().then(t => { detectProfile(t); onPayload(t); }).catch(() => {});
       else if (/x-component/.test(res.headers && res.headers.get ? (res.headers.get('content-type') || '') : '')) res.clone().text().then(t => { detectProfile(t); onPayload(t); }).catch(() => {});
       const u0 = String(req && req.url || req);
-      if (/\/inventaire/.test(location.pathname)) res.clone().text().then(t => { if (/rune/i.test(t)) runeSnap(t, u0); }).catch(() => {});
+      if (/\/(inventaire|personnage)/.test(location.pathname)) res.clone().text().then(t => { if (/rune/i.test(t)) runeSnap(t, u0); }).catch(() => {});
       if (/\/bestiaire/.test(location.pathname) && /onglet=objets/.test(u0)) res.clone().text().then(t => harvestItems(t, 'page')).catch(() => {});
     } catch (e) {}
     return res;
@@ -1503,22 +1503,22 @@
     const runesOf = x => { const o = {}; for (const src of [x, x.item]) for (const k of runeKeys(src)) o[k] = src[k]; return Object.keys(o).length ? o : undefined; };
     let runesProbe = (() => { try { const hits = runeHits(inv); const j = JSON.stringify(hits); return { invKeys: Object.keys(I), hits: j.length < 300000 ? hits : j.slice(0, 300000) }; } catch (e) { return { err: String(e) }; } })();
     // Stock de runes : onglet Runes de l'inventaire (toujours lu : la page Inventaire contient aussi des objets runés, qui ne sont pas le stock)
-    try { const pg = await rsc('/inventaire?onglet=runes'); const st = runeHits(pg).filter(h => h && typeof h.rune === 'string' && 'qty' in h); if (st.length) runesProbe.stock = st; } catch (e) {}
-    if (!(runesProbe.hits || []).length) for (const path of ['/inventaire?onglet=runes', '/inventaire?tab=runes', '/inventaire/runes']) { try { const pg = await rsc(path); const h = runeHits(pg); if (h.length) { const j = JSON.stringify(h); runesProbe.hits = j.length < 300000 ? h : j.slice(0, 300000); runesProbe.from = path; break; } } catch (e) {} }
+    for (const rp of ['/personnage?onglet=runes', '/inventaire?onglet=runes']) try { const pg = await rsc(rp); const st = runeHits(pg).filter(h => h && typeof h.rune === 'string' && 'qty' in h); if (st.length) { runesProbe.stock = st; break; } } catch (e) {}
+    if (!(runesProbe.hits || []).length) for (const path of ['/personnage?onglet=runes', '/inventaire?onglet=runes', '/inventaire?tab=runes']) { try { const pg = await rsc(path); const h = runeHits(pg); if (h.length) { const j = JSON.stringify(h); runesProbe.hits = j.length < 300000 ? h : j.slice(0, 300000); runesProbe.from = path; break; } } catch (e) {} }
     try { runesProbe.snap = JSON.parse(localStorage.getItem(RUNE_SNAP) || 'null'); } catch (e) {}
     // Objet runé : format encore inconnu → clés présentes sur les objets de l'inventaire, et exemples d'objets aux clés inhabituelles
     try { const cnt = {}, all = (I.entries || []).concat(I.slots || []); for (const e of all) { for (const k of Object.keys(e || {})) cnt['e.' + k] = (cnt['e.' + k] || 0) + 1; for (const k of Object.keys((e && e.item) || {})) cnt['i.' + k] = (cnt['i.' + k] || 0) + 1; }
       const rare = Object.keys(cnt).filter(k => cnt[k] < all.length * 0.05); runesProbe.keys = cnt; runesProbe.odd = all.filter(e => rare.some(k => k.startsWith('e.') ? e && k.slice(2) in e : e && e.item && k.slice(2) in e.item)).slice(0, 6).map(e => { const o = {}; for (const k in e) if (k !== 'item') o[k] = e[k]; o.item = e.item ? { id: e.item.id, n: e.item.n, extra: Object.fromEntries(Object.entries(e.item).filter(([k]) => rare.includes('i.' + k))) } : null; return o; }); } catch (e) {}
     // Définitions des runes (valeurs) : dans le code du jeu (fichiers JS publics), lues une fois puis gardées une semaine
     try { let defs = null; try { defs = JSON.parse(localStorage.getItem('labo-rune-defs2') || 'null'); } catch (e) {}
-      if (!defs || !defs.found || !defs.found.length || Date.now() - defs.t > 7 * 864e5) { const html = await origFetch('/inventaire?onglet=runes', { credentials: 'include' }).then(r => r.text());
+      if (!defs || !defs.found || !defs.found.length || Date.now() - defs.t > 7 * 864e5) { const html = await origFetch('/personnage?onglet=runes', { credentials: 'include' }).then(r => r.text());
         let perf = []; try { perf = performance.getEntriesByType('resource').map(e => e.name).filter(u => /\/_next\/static\/.+\.js/.test(u)).map(u => u.replace(/^https?:\/\/[^/]+/, '')); } catch (e) {}
         const srcs = [...new Set(perf.concat([...html.matchAll(/\/_next\/static\/[^"' \\]+?\.js/g)].map(m => m[0])))].slice(0, 150); const found = [];
         for (const src of srcs) { let t = ''; try { t = await origFetch(src).then(r => r.text()); } catch (e) { continue; } const i = t.search(/["'`]rall["'`]|\brall:/); if (i >= 0 && /["'`]dso["'`]|\bdso:/.test(t)) found.push({ src: src.slice(-60), ex: t.slice(Math.max(0, i - 8000), i + 8000) }); if (found.length >= 2) break; }
         const ms = [...html.matchAll(/Rune d/g)];
         defs = { t: Date.now(), n: srcs.length, found, page: ms.slice(0, 4).map(m => html.slice(Math.max(0, m.index - 300), m.index + 300)) }; if (found.length) try { localStorage.setItem('labo-rune-defs2', JSON.stringify(defs)); } catch (e) {} }
       runesProbe.defs = defs; } catch (e) { runesProbe.defsErr = String(e); }
-    if (!(runesProbe.hits || []).length) try { const t = await origFetch('/inventaire', { credentials: 'include' }).then(r => r.text()); const ms = [...t.matchAll(/Rune d/g)]; runesProbe.text = { n: ms.length, size: t.length, ex: ms.slice(0, 3).map(m => t.slice(Math.max(0, m.index - 250), m.index + 250)) }; } catch (e) {}
+    if (!(runesProbe.hits || []).length) try { const t = await origFetch('/personnage', { credentials: 'include' }).then(r => r.text()); const ms = [...t.matchAll(/Rune d/g)]; runesProbe.text = { n: ms.length, size: t.length, ex: ms.slice(0, 3).map(m => t.slice(Math.max(0, m.index - 250), m.index + 250)) }; } catch (e) {}
     const it = (x) => ({ id: x.item.id, n: x.item.n, lvl: x.item.lvl, s: x.item.s, r: x.item.r, setId: x.item.setId || null, st: x.item.st, w: x.item.w || null, icon: x.item.icon || x.item.gfx || null, ru: runesOf(x), uid: x.uid || x.instanceId || x.id || undefined });
     return {
       meta: { scriptV: (typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) || '2.11.10', profile: PROFILE, forge, companion, level: I.level || 200, prestige: H.prestige || 0, breedId: D.breedId, deckSize: D.deckSize, discordBonus: 5, scrolls: I.scrollValues || {}, rows: Pp.rows.map(r => ({ key: r.key, base: r.base, bonus: r.bonus, tiers: r.tiers })), pointsFree: Pp.pointsFree, decks: D.initialDecks, deckNames: D.initialNames, active: D.initialActive, ranked: D.initialRanked || null, presets: (() => { try { return findPresets(perso) || presetsFromDom(I, best); } catch (e) { return null; } })(), diag: (() => { try { let ai = null; try { ai = JSON.parse(localStorage.getItem('labo-allitems-diag') || 'null'); } catch (e) {} return { allItems: ai }; } catch (e) { return null; } })(), runesProbe },
@@ -1625,15 +1625,15 @@
   function cpLift(arr) { const out = [], seen = new Set(); const walk = (o, d) => { if (!o || typeof o !== 'object' || d > 7 || seen.has(o)) return; seen.add(o); if (!Array.isArray(o) && CP_WANT.some(f => { try { return f(o); } catch (e) { return false; } })) out.push(o); for (const k in o) walk(o[k], d + 1); }; for (const x of arr) walk(x, 0); return out; }
   let CP_DIAG = [], RSC_LAST = {};
   // Diagnostic sans données personnelles : uniquement les noms de champs des objets trouvés sur chaque page
-  function cpNote(path, pg, diag) { const e = Object.assign({ path, n: Array.isArray(pg) ? pg.length : typeof pg }, RSC_LAST); diag.push(e); try { const keys = new Set(); const walk = (o, d) => { if (!o || typeof o !== 'object' || d > 4 || keys.size > 60) return; if (!Array.isArray(o)) { const ks = Object.keys(o); if (ks.length >= 3 && ks.length <= 80) keys.add(ks.slice(0, 25).join(',')); } for (const k in o) { const v = o[k]; if (v && typeof v === 'object') walk(v, d + 1); } }; (Array.isArray(pg) ? pg : []).forEach(x => walk(x, 0)); e.keys = [...keys].slice(0, 50); } catch (err) { e.err = String(err && err.message || err).slice(0, 80); } }
+  function cpNote(path, pg, diag) { const pa = pg && typeof pg.all === 'function' ? pg.all() : (Array.isArray(pg) ? pg : []); pg = pa; const e = Object.assign({ path, n: pa.length }, RSC_LAST); diag.push(e); try { const keys = new Set(); const walk = (o, d) => { if (!o || typeof o !== 'object' || d > 4 || keys.size > 60) return; if (!Array.isArray(o)) { const ks = Object.keys(o); if (ks.length >= 3 && ks.length <= 80) keys.add(ks.slice(0, 25).join(',')); } for (const k in o) { const v = o[k]; if (v && typeof v === 'object') walk(v, d + 1); } }; (Array.isArray(pg) ? pg : []).forEach(x => walk(x, 0)); e.keys = [...keys].slice(0, 50); } catch (err) { e.err = String(err && err.message || err).slice(0, 80); } }
   async function charPages() {
     const out = [], diag = []; out._diag = diag; CP_DIAG = diag; const has = () => out.some(p => p && p.entries && p.slots) && out.some(p => p && p.rows && 'pointsFree' in p) && out.some(p => p && 'prestige' in p && 'level' in p && 'equipped' in p);
     // Lien réel du menu « Personnage et inventaire » (l'adresse a pu changer avec la fusion des pages)
     const navs = [...document.querySelectorAll('a[href]')].filter(x => /personnage|inventaire/i.test(x.textContent || '') || /personnage|inventaire/i.test(x.getAttribute('href') || '')).map(x => { try { const u = new URL(x.href, location.origin); return u.origin === location.origin ? u.pathname + u.search : null; } catch (e) { return null; } }).filter(Boolean);
-    for (const path of [...new Set(navs)].concat(['/personnage-et-inventaire', '/personnage-inventaire'])) { if (has()) break; try { const pg = await rsc(path); cpNote(path, pg, diag); if (Array.isArray(pg)) out.push(...pg, ...cpLift(pg)); } catch (e) { diag.push({ path, err: String(e && e.message || e).slice(0, 80) }); } }
+    for (const path of [...new Set(navs)].concat(['/personnage-et-inventaire', '/personnage-inventaire'])) { if (has()) break; try { const pg = await rsc(path); cpNote(path, pg, diag); { const all = pg && typeof pg.all === 'function' ? pg.all() : (Array.isArray(pg) ? pg : []); out.push(...all, ...cpLift(all)); } } catch (e) { diag.push({ path, err: String(e && e.message || e).slice(0, 80) }); } }
     if (has()) return out;
     for (const path of ['/inventaire', '/personnage', '/inventaire?onglet=caracteristiques', '/inventaire?onglet=equipement', '/inventaire?onglet=personnage', '/personnage?onglet=caracteristiques', '/inventaire?onglet=objets']) {
-      try { const pg = await rsc(path); cpNote(path, pg, diag); if (Array.isArray(pg)) out.push(...pg, ...cpLift(pg)); } catch (e) { diag.push({ path, err: String(e && e.message || e).slice(0, 80) }); }
+      try { const pg = await rsc(path); cpNote(path, pg, diag); { const all = pg && typeof pg.all === 'function' ? pg.all() : (Array.isArray(pg) ? pg : []); out.push(...all, ...cpLift(all)); } } catch (e) { diag.push({ path, err: String(e && e.message || e).slice(0, 80) }); }
       if (has()) break;
     }
     return out;
