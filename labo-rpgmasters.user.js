@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.13.0
+// @version      2.13.2
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -149,7 +149,7 @@
     rne: { st: { resPctNeutre: 3 } }, rte: { st: { resPctTerre: 3 } }, rfe: { st: { resPctFeu: 3 } }, rea: { st: { resPctEau: 3 } }, rai: { st: { resPctAir: 3 } }, tac: { st: { tacle: 10 } }, fui: { st: { fuite: 10 } },
     pui: { st: { puissance: 25 } }, do: { st: { dommages: 8 } }, dne: { st: { dommagesNeutre: 12 } }, dte: { st: { dommagesTerre: 12 } }, dfe: { st: { dommagesFeu: 12 } }, dea: { st: { dommagesEau: 12 } }, dai: { st: { dommagesAir: 12 } },
     cri: { st: { critique: 3 } }, rall: { st: { resPctAll: 2 } }, so: { st: { soins: 15 } }, dso: { st: { dmgPctSorts: 3 } }, ecl: { pct: 5 },
-    po: { st: { po: 1 } }, pm: { st: { pm: 1 } }, inv: { st: { invocations: 1 } }, pa: { st: { pa: 1 } }, dcr: { st: { dmgPctCrit: 8 } }, eve: { pct: 15 }, ele: { elem: true } };
+    po: { st: { po: 1 } }, pm: { st: { pm: 1 } }, inv: { st: { invocations: 1 } }, pa: { st: { pa: 1 } }, dcr: { st: { dmgPctCrit: 2 } }, eve: { pct: 15 }, ele: { elem: true } };
   const RUNE_NAMES = { vi: 'Vitalité', fo: 'Force', ine: 'Intelligence', cha: 'Chance', age: 'Agilité', sa: 'Sagesse', pros: 'Prospection', ini: 'Initiative', rne: 'Résistance Neutre', rte: 'Résistance Terre', rfe: 'Résistance Feu', rea: 'Résistance Eau', rai: 'Résistance Air', tac: 'Tacle', fui: 'Fuite', pui: 'Puissance', do: 'Dommages', dne: 'Dommages Neutre', dte: 'Dommages Terre', dfe: 'Dommages Feu', dea: 'Dommages Eau', dai: 'Dommages Air', cri: 'Critique', rall: 'Résistance', so: 'Soins', dso: 'Sorts', ecl: 'Éclat', po: 'Portée', pm: 'Mouvement', inv: 'Invocation', pa: 'Action', dcr: 'Fureur', eve: 'Éveil', ele: 'Élémentaire' };
   const RUNE_RARITY = { pui: 'epique', do: 'epique', dne: 'epique', dte: 'epique', dfe: 'epique', dea: 'epique', dai: 'epique', cri: 'epique', rall: 'epique', so: 'epique', dso: 'epique', ecl: 'epique', po: 'legendaire', pm: 'legendaire', inv: 'legendaire', pa: 'legendaire', dcr: 'legendaire', eve: 'legendaire', ele: 'legendaire' };
   function runeCodes(ru) { if (!ru) return []; if (Array.isArray(ru)) return ru.map(x => typeof x === 'string' ? x : x && (x.rune || x.id || x.code)).filter(c => RUNES[c]).slice(0, 2); if (typeof ru === 'object') for (const k in ru) { const c = runeCodes(ru[k]); if (c.length) return c; } return []; }
@@ -1261,7 +1261,7 @@
   const CAT_KEY = () => 'labo-cat-v1-' + PROFILE;
   function loadCat() { try { return JSON.parse(localStorage.getItem(CAT_KEY()) || 'null'); } catch (e) { return null; } }
   async function fetchCatalog() {
-    const deck = await rsc('/deck'), inv = await rsc('/inventaire');
+    const deck = await rsc('/deck'), inv = await charPages();
     const D = deck.find(p => p.collection && p.initialDecks), I = inv.find(p => p.entries && p.slots);
     if (!D) return null;
     const cat = { t: Date.now(), breedId: D.breedId, level: (I && I.level) || 200, cards: {}, weapons: {} };
@@ -1488,11 +1488,11 @@
 
   // ---------- Export pour le Labo (lecture seule des pages Inventaire, Deck, Personnage) ----------
   async function exportForLabo() {
-    const inv = await rsc('/inventaire'), deck = await rsc('/deck'), perso = await rsc('/personnage');
+    const inv = await charPages(), deck = await rsc('/deck'), perso = inv;
     let best = null; try { best = await fetchBestiary(true); } catch (e) { best = loadBest(); }
     const I = inv.find(p => p.entries && p.slots), D = deck.find(p => p.collection && p.initialDecks);
     const Pp = perso.find(p => p.rows && 'pointsFree' in p), H = perso.find(p => 'prestige' in p && 'level' in p && 'equipped' in p) || {};
-    if (!I || !D || !Pp) throw new Error('pages introuvables (es-tu connecté ?)');
+    if (!I || !D || !Pp) throw new Error('pages introuvables (' + [!I && 'inventaire', !D && 'deck', !Pp && 'caractéristiques'].filter(Boolean).join(', ') + ') : es-tu connecté ? Sinon envoie ce message au Labo');
     let forge = null; try { const fp = await rsc('/forgemagie'); const F = fp.find(p => 'orbs' in p && 'level' in p && 'xp' in p); if (F) { forge = { level: F.level, xp: F.xp }; for (const k in F) { const v = F[k]; if (typeof v === 'number' && !(k in forge)) forge[k] = v; else if (Array.isArray(v) && v.length && v.length <= 250 && JSON.stringify(v).length < 20000) forge[k] = v; } } } catch (e) {}
     // Compagnon (patch du 10/10, perso principal) : niveau et bonus d'équipement, lus sur sa page si elle existe ; structure encore inconnue, on garde un extrait brut pour l'analyse
     let companion = null; if (PROFILE !== 'saison') for (const path of ['/compagnon', '/companion']) { try { const cp = await rsc(path); const holder = cp.find(p => p && p.initial && typeof p.initial === 'object' && ('kibble' in p.initial || 'bonusPct' in p.initial)); const C = (holder && holder.initial) || cp.find(p => p && typeof p === 'object' && !Array.isArray(p) && Object.keys(p).some(k => /croq|kibble|compan|pet|food/i.test(k))) || cp.find(p => p && typeof p === 'object' && 'level' in p && Object.keys(p).some(k => /bonus|pct|percent|mult/i.test(k))); if (C) { companion = { path }; for (const [k, v] of Object.entries(C)) { if (typeof v === 'number' || typeof v === 'string' && v.length < 60) companion[k] = v; } const pk = Object.keys(C).find(k => /bonus|pct|percent|statmult|mult/i.test(k) && typeof C[k] === 'number'); if ('bonusPct' in C) companion.pct = C.bonusPct; else if (pk) companion.pct = C[pk]; companion.raw = JSON.stringify(C).slice(0, 2000); break; } } catch (e) {} }
@@ -1619,6 +1619,19 @@
     return f.v.map((x, i) => x ? { i, name: preName(x) || ('Équipement ' + (i + 1)), gear: preGear(x), alloc: preAlloc(x) } : { i, name: 'Équipement ' + (i + 1), gear: {}, alloc: null });
   }
   function presetsRaw(perso) { const f = presetArrays(perso)[0]; if (f) return JSON.stringify(f.v).slice(0, 40000); const s = JSON.stringify(perso); const m = s.match(/.{0,200}(preset|loadout|enregistr|saved|equipSet)[^]{0,3000}/i); return m ? m[0].slice(0, 6000) : null; }
+  // Pages Personnage + Inventaire (fusionnées en une seule page à onglets le 14/10) : on lit toutes les variantes connues et on garde ce qu'on y trouve
+  async function charPages() {
+    const out = []; const has = () => out.some(p => p && p.entries && p.slots) && out.some(p => p && p.rows && 'pointsFree' in p) && out.some(p => p && 'prestige' in p && 'level' in p && 'equipped' in p);
+    // Lien réel du menu « Personnage et inventaire » (l'adresse a pu changer avec la fusion des pages)
+    const navs = [...document.querySelectorAll('a[href]')].filter(x => /personnage|inventaire/i.test(x.textContent || '') || /personnage|inventaire/i.test(x.getAttribute('href') || '')).map(x => { try { const u = new URL(x.href, location.origin); return u.origin === location.origin ? u.pathname + u.search : null; } catch (e) { return null; } }).filter(Boolean);
+    for (const path of [...new Set(navs)].concat(['/personnage-et-inventaire', '/personnage-inventaire'])) { if (has()) break; try { const pg = await rsc(path); if (Array.isArray(pg)) out.push(...pg); } catch (e) {} }
+    if (has()) return out;
+    for (const path of ['/inventaire', '/personnage', '/inventaire?onglet=caracteristiques', '/inventaire?onglet=equipement', '/inventaire?onglet=personnage', '/personnage?onglet=caracteristiques', '/inventaire?onglet=objets']) {
+      try { const pg = await rsc(path); if (Array.isArray(pg)) out.push(...pg); } catch (e) {}
+      if (has()) break;
+    }
+    return out;
+  }
   async function rsc(path, asRsc) {
       const h = await origFetch(path, asRsc ? { credentials: 'include', headers: { RSC: '1' } } : { credentials: 'include' }).then(r => r.text());
       return parsePage(h);
@@ -1802,9 +1815,9 @@
     if (!LR) { cmp = { status: 'err', msg: 'moteur indisponible' }; render(); return; }
     cmp = { status: 'load' }; render();
     try {
-      const inv = await rsc('/inventaire'), deck = await rsc('/deck'), perso = await rsc('/personnage');
+      const inv = await charPages(), deck = await rsc('/deck'), perso = inv;
       const I = inv.find(p => p.entries && p.slots), D = deck.find(p => p.collection && p.initialDecks), Pp = perso.find(p => p.rows && 'pointsFree' in p), H = perso.find(p => 'prestige' in p && 'level' in p && 'equipped' in p) || {};
-      if (!I || !D || !Pp) throw new Error('pages introuvables (es-tu connecté ?)');
+      if (!I || !D || !Pp) throw new Error('pages introuvables (' + [!I && 'inventaire', !D && 'deck', !Pp && 'caractéristiques'].filter(Boolean).join(', ') + ') : es-tu connecté ? Sinon envoie ce message au Labo');
       let forgeLv = 0; try { const fp = await rsc('/forgemagie'); const F = fp.find(p => 'orbs' in p && 'level' in p && 'xp' in p); if (F) forgeLv = F.level; } catch (e) {}
       const bench = benchGroup(); if (!bench) throw new Error('pas encore assez de combats enregistrés pour savoir contre qui comparer');
       const level = I.level || 200;
