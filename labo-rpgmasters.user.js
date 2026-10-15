@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.13.2
+// @version      2.13.3
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -1492,7 +1492,7 @@
     let best = null; try { best = await fetchBestiary(true); } catch (e) { best = loadBest(); }
     const I = inv.find(p => p.entries && p.slots), D = deck.find(p => p.collection && p.initialDecks);
     const Pp = perso.find(p => p.rows && 'pointsFree' in p), H = perso.find(p => 'prestige' in p && 'level' in p && 'equipped' in p) || {};
-    if (!I || !D || !Pp) throw new Error('pages introuvables (' + [!I && 'inventaire', !D && 'deck', !Pp && 'caractéristiques'].filter(Boolean).join(', ') + ') : es-tu connecté ? Sinon envoie ce message au Labo');
+    if (!I || !D || !Pp) { try { navigator.clipboard.writeText(JSON.stringify({ diag: 'labo-pages', url: location.pathname, pages: CP_DIAG })); } catch (e) {} } if (!I || !D || !Pp) throw new Error('diagnostic copié dans le presse-papiers, colle-le au Labo · pages introuvables (' + [!I && 'inventaire', !D && 'deck', !Pp && 'caractéristiques'].filter(Boolean).join(', ') + ') : es-tu connecté ? Sinon envoie ce message au Labo');
     let forge = null; try { const fp = await rsc('/forgemagie'); const F = fp.find(p => 'orbs' in p && 'level' in p && 'xp' in p); if (F) { forge = { level: F.level, xp: F.xp }; for (const k in F) { const v = F[k]; if (typeof v === 'number' && !(k in forge)) forge[k] = v; else if (Array.isArray(v) && v.length && v.length <= 250 && JSON.stringify(v).length < 20000) forge[k] = v; } } } catch (e) {}
     // Compagnon (patch du 10/10, perso principal) : niveau et bonus d'équipement, lus sur sa page si elle existe ; structure encore inconnue, on garde un extrait brut pour l'analyse
     let companion = null; if (PROFILE !== 'saison') for (const path of ['/compagnon', '/companion']) { try { const cp = await rsc(path); const holder = cp.find(p => p && p.initial && typeof p.initial === 'object' && ('kibble' in p.initial || 'bonusPct' in p.initial)); const C = (holder && holder.initial) || cp.find(p => p && typeof p === 'object' && !Array.isArray(p) && Object.keys(p).some(k => /croq|kibble|compan|pet|food/i.test(k))) || cp.find(p => p && typeof p === 'object' && 'level' in p && Object.keys(p).some(k => /bonus|pct|percent|mult/i.test(k))); if (C) { companion = { path }; for (const [k, v] of Object.entries(C)) { if (typeof v === 'number' || typeof v === 'string' && v.length < 60) companion[k] = v; } const pk = Object.keys(C).find(k => /bonus|pct|percent|statmult|mult/i.test(k) && typeof C[k] === 'number'); if ('bonusPct' in C) companion.pct = C.bonusPct; else if (pk) companion.pct = C[pk]; companion.raw = JSON.stringify(C).slice(0, 2000); break; } } catch (e) {} }
@@ -1620,14 +1620,20 @@
   }
   function presetsRaw(perso) { const f = presetArrays(perso)[0]; if (f) return JSON.stringify(f.v).slice(0, 40000); const s = JSON.stringify(perso); const m = s.match(/.{0,200}(preset|loadout|enregistr|saved|equipSet)[^]{0,3000}/i); return m ? m[0].slice(0, 6000) : null; }
   // Pages Personnage + Inventaire (fusionnées en une seule page à onglets le 14/10) : on lit toutes les variantes connues et on garde ce qu'on y trouve
+  // Page fusionnée : les données peuvent être imbriquées (ex. props.inventory.entries) ; on remonte aussi les sous-objets utiles
+  const CP_WANT = [o => o.entries && o.slots, o => o.rows && 'pointsFree' in o, o => 'prestige' in o && 'level' in o && 'equipped' in o];
+  function cpLift(arr) { const out = [], seen = new Set(); const walk = (o, d) => { if (!o || typeof o !== 'object' || d > 7 || seen.has(o)) return; seen.add(o); if (!Array.isArray(o) && CP_WANT.some(f => { try { return f(o); } catch (e) { return false; } })) out.push(o); for (const k in o) walk(o[k], d + 1); }; for (const x of arr) walk(x, 0); return out; }
+  let CP_DIAG = [];
+  // Diagnostic sans données personnelles : uniquement les noms de champs des objets trouvés sur chaque page
+  function cpNote(path, pg) { try { const keys = new Set(); const walk = (o, d) => { if (!o || typeof o !== 'object' || d > 4) return; if (!Array.isArray(o)) { const ks = Object.keys(o); if (ks.length >= 3 && ks.length <= 60) keys.add(ks.slice(0, 25).join(',')); } for (const k in o) if (o[k] && typeof o[k] === 'object') walk(o[k], d + 1); }; (pg || []).forEach(x => walk(x, 0)); CP_DIAG.push({ path, n: (pg || []).length, keys: [...keys].slice(0, 40) }); } catch (e) {} }
   async function charPages() {
-    const out = []; const has = () => out.some(p => p && p.entries && p.slots) && out.some(p => p && p.rows && 'pointsFree' in p) && out.some(p => p && 'prestige' in p && 'level' in p && 'equipped' in p);
+    const out = []; CP_DIAG = []; const has = () => out.some(p => p && p.entries && p.slots) && out.some(p => p && p.rows && 'pointsFree' in p) && out.some(p => p && 'prestige' in p && 'level' in p && 'equipped' in p);
     // Lien réel du menu « Personnage et inventaire » (l'adresse a pu changer avec la fusion des pages)
     const navs = [...document.querySelectorAll('a[href]')].filter(x => /personnage|inventaire/i.test(x.textContent || '') || /personnage|inventaire/i.test(x.getAttribute('href') || '')).map(x => { try { const u = new URL(x.href, location.origin); return u.origin === location.origin ? u.pathname + u.search : null; } catch (e) { return null; } }).filter(Boolean);
-    for (const path of [...new Set(navs)].concat(['/personnage-et-inventaire', '/personnage-inventaire'])) { if (has()) break; try { const pg = await rsc(path); if (Array.isArray(pg)) out.push(...pg); } catch (e) {} }
+    for (const path of [...new Set(navs)].concat(['/personnage-et-inventaire', '/personnage-inventaire'])) { if (has()) break; try { const pg = await rsc(path); cpNote(path, pg); if (Array.isArray(pg)) out.push(...pg, ...cpLift(pg)); } catch (e) { CP_DIAG.push({ path, err: String(e && e.message || e).slice(0, 80) }); } }
     if (has()) return out;
     for (const path of ['/inventaire', '/personnage', '/inventaire?onglet=caracteristiques', '/inventaire?onglet=equipement', '/inventaire?onglet=personnage', '/personnage?onglet=caracteristiques', '/inventaire?onglet=objets']) {
-      try { const pg = await rsc(path); if (Array.isArray(pg)) out.push(...pg); } catch (e) {}
+      try { const pg = await rsc(path); cpNote(path, pg); if (Array.isArray(pg)) out.push(...pg, ...cpLift(pg)); } catch (e) { CP_DIAG.push({ path, err: String(e && e.message || e).slice(0, 80) }); }
       if (has()) break;
     }
     return out;
@@ -1817,7 +1823,7 @@
     try {
       const inv = await charPages(), deck = await rsc('/deck'), perso = inv;
       const I = inv.find(p => p.entries && p.slots), D = deck.find(p => p.collection && p.initialDecks), Pp = perso.find(p => p.rows && 'pointsFree' in p), H = perso.find(p => 'prestige' in p && 'level' in p && 'equipped' in p) || {};
-      if (!I || !D || !Pp) throw new Error('pages introuvables (' + [!I && 'inventaire', !D && 'deck', !Pp && 'caractéristiques'].filter(Boolean).join(', ') + ') : es-tu connecté ? Sinon envoie ce message au Labo');
+      if (!I || !D || !Pp) { try { navigator.clipboard.writeText(JSON.stringify({ diag: 'labo-pages', url: location.pathname, pages: CP_DIAG })); } catch (e) {} } if (!I || !D || !Pp) throw new Error('diagnostic copié dans le presse-papiers, colle-le au Labo · pages introuvables (' + [!I && 'inventaire', !D && 'deck', !Pp && 'caractéristiques'].filter(Boolean).join(', ') + ') : es-tu connecté ? Sinon envoie ce message au Labo');
       let forgeLv = 0; try { const fp = await rsc('/forgemagie'); const F = fp.find(p => 'orbs' in p && 'level' in p && 'xp' in p); if (F) forgeLv = F.level; } catch (e) {}
       const bench = benchGroup(); if (!bench) throw new Error('pas encore assez de combats enregistrés pour savoir contre qui comparer');
       const level = I.level || 200;
