@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Labo RpgMasters — collecteur
 // @namespace    labo-rpgmasters
-// @version      2.13.5
+// @version      2.13.6
 // @description  Enregistre en lecture seule tes combats RpgMasters (monstres, boss, mécaniques, tours, dégâts, butin), prévient quand un boss connu revient et exporte pour le Labo. N'envoie aucune action au jeu.
 // @match        https://rpgmasters.houk.fr/*
 // @updateURL    https://venominones.github.io/Dofusrpg/labo-rpgmasters.user.js
@@ -1630,9 +1630,9 @@
     const out = [], diag = []; out._diag = diag; CP_DIAG = diag; const has = () => out.some(p => p && p.entries && p.slots) && out.some(p => p && p.rows && 'pointsFree' in p) && out.some(p => p && 'prestige' in p && 'level' in p && 'equipped' in p);
     // Lien réel du menu « Personnage et inventaire » (l'adresse a pu changer avec la fusion des pages)
     const navs = [...document.querySelectorAll('a[href]')].filter(x => /personnage|inventaire/i.test(x.textContent || '') || /personnage|inventaire/i.test(x.getAttribute('href') || '')).map(x => { try { const u = new URL(x.href, location.origin); return u.origin === location.origin ? u.pathname + u.search : null; } catch (e) { return null; } }).filter(Boolean);
-    for (const path of [...new Set(navs)].concat(['/personnage-et-inventaire', '/personnage-inventaire'])) { if (has()) break; try { const pg = await rsc(path); cpNote(path, pg, diag); { const all = pg && typeof pg.all === 'function' ? pg.all() : (Array.isArray(pg) ? pg : []); out.push(...all, ...cpLift(all)); } } catch (e) { diag.push({ path, err: String(e && e.message || e).slice(0, 80) }); } }
+    for (const path of [...new Set(navs)].concat(['/personnage', '/personnage?onglet=stats'])) { if (has()) break; try { const pg = await rsc(path); cpNote(path, pg, diag); { const all = pg && typeof pg.all === 'function' ? pg.all() : (Array.isArray(pg) ? pg : []); out.push(...all, ...cpLift(all)); } } catch (e) { diag.push({ path, err: String(e && e.message || e).slice(0, 80) }); } }
     if (has()) return out;
-    for (const path of ['/inventaire', '/personnage', '/inventaire?onglet=caracteristiques', '/inventaire?onglet=equipement', '/inventaire?onglet=personnage', '/personnage?onglet=caracteristiques', '/inventaire?onglet=objets']) {
+    for (const path of ['/personnage?onglet=stats', '/personnage?onglet=caracteristiques', '/inventaire', '/personnage', '/inventaire?onglet=caracteristiques', '/inventaire?onglet=equipement', '/inventaire?onglet=personnage', '/personnage?onglet=caracteristiques', '/inventaire?onglet=objets']) {
       try { const pg = await rsc(path); cpNote(path, pg, diag); { const all = pg && typeof pg.all === 'function' ? pg.all() : (Array.isArray(pg) ? pg : []); out.push(...all, ...cpLift(all)); } } catch (e) { diag.push({ path, err: String(e && e.message || e).slice(0, 80) }); }
       if (has()) break;
     }
